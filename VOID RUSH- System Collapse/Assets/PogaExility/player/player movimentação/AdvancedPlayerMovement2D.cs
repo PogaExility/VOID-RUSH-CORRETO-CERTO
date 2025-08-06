@@ -1,3 +1,6 @@
+
+
+using TMPro;
 using UnityEngine;
 
 public class AdvancedPlayerMovement2D : MonoBehaviour
@@ -13,10 +16,11 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public float jumpCutMultiplier = 0.5f;
     
     [Header("Verificação de Chão")]
-    public Transform groundCheck;
-    public float groundCheckRadius = 0.2f;
     public LayerMask groundLayer;
     public float coyoteTime = 0.1f;
+
+    [Header("UI")]
+    public TextMeshProUGUI groundStatusText;
     
     [Header("Mouse")]
     public bool useMouseDirection = true;
@@ -47,9 +51,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isWallSliding;
     private bool isDashing;
     private bool canDash = true;
-    private bool hasDoubleJump = true;
-    private bool hasUsedDoubleJump;
     
+    private int jumpCount = 1; // 1 = pode pular, 0 = não pode pular
     private float jumpTimeCounter;
     private float coyoteTimeCounter;
     private float dashTimeCounter;
@@ -61,6 +64,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isTouchingWallRight;
     private bool isHoldingLeft;
     private bool isHoldingRight;
+    private bool hasUsedDoubleJump = false;
+    private bool hasDoubleJump = true;
     
     private PlayerAnimatorController playerAnimatorController;
 
@@ -78,7 +83,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     void Update()
     {
         HandleInput();
-        CheckGround();
         CheckWall();
         HandleDash();
 
@@ -144,13 +148,15 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         // Jump
         if (Input.GetKeyDown(jumpKey))
         {
-            if (isGrounded || coyoteTimeCounter > 0)
+            if (jumpCount > 0)
             {
                 Jump();
+                jumpCount--;
             }
             else if (!hasUsedDoubleJump && hasDoubleJump)
             {
                 DoubleJump();
+                hasUsedDoubleJump = true;
             }
             else if (isWallSliding)
             {
@@ -169,49 +175,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     
     private float groundFriction = 1f;
 
-    void CheckGround()
-    {
-        bool wasGrounded = isGrounded;
-        isGrounded = false;
-
-        // Usar LayerMask específico para chão
-        Collider2D[] hits = Physics2D.OverlapCircleAll(groundCheck.position, groundCheckRadius, groundLayer);
-        foreach (var hit in hits)
-        {
-            if (hit != null)
-            {
-                isGrounded = true;
-                // Aqui pode-se adicionar lógica para ajustar groundFriction se necessário
-                break;
-            }
-        }
-
-        // Corrigir pulo infinito: só resetar hasUsedDoubleJump se realmente tocou chão
-        if (isGrounded && !wasGrounded)
-        {
-            hasUsedDoubleJump = false;
-        }
-
-        if (isGrounded)
-        {
-            coyoteTimeCounter = coyoteTime;
-            canDash = true;
-            isWallSliding = false;
-
-            // Executar animação de pousando
-            if (!wasGrounded)
-            {
-                if (playerAnimatorController != null)
-                {
-                    playerAnimatorController.UpdateAnimator(false, false, true, false, false);
-                }
-            }
-        }
-        else
-        {
-            coyoteTimeCounter -= Time.deltaTime;
-        }
-    }
+    // Removido método CheckGround pois groundCheck será feito via colisão com collider
 
     void HandleWallSlide()
     {
@@ -351,12 +315,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     
     void OnDrawGizmos()
     {
-        if (groundCheck != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
-        }
-        
         if (wallCheckLeft != null)
         {
             Gizmos.color = Color.blue;
@@ -367,6 +325,38 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         {
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(wallCheckRight.position, wallCheckRight.position + Vector3.right * wallCheckDistance);
+        }
+    }
+
+    // Métodos de colisão para detecção de chão
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
+        {
+            isGrounded = true;
+            jumpCount = 1; // Resetar contador de pulos quando tocar o chão
+            coyoteTimeCounter = coyoteTime;
+            
+            // Resetar double jump
+            hasUsedDoubleJump = false;
+        }
+    }
+
+    void OnCollisionExit2D(Collision2D collision)
+    {
+        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
+        {
+            isGrounded = false;
+            coyoteTimeCounter = coyoteTime;
+        }
+    }
+
+    void OnCollisionStay2D(Collision2D collision)
+    {
+        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
+        {
+            isGrounded = true;
+            coyoteTimeCounter = coyoteTime;
         }
     }
 }
