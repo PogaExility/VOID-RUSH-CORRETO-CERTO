@@ -1,4 +1,4 @@
-lsing UnityEngine;
+using UnityEngine;
 
 public class AdvancedPlayerMovement2D : MonoBehaviour
 {
@@ -110,7 +110,15 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     
     void HandleInput()
     {
-        moveInput = Input.GetAxisRaw("Horizontal");
+        // Se estiver derrapando, bloquear movimentação horizontal
+        if (isWallSliding)
+        {
+            moveInput = 0f;
+        }
+        else
+        {
+            moveInput = Input.GetAxisRaw("Horizontal");
+        }
         
         // Flip horizontal do player baseado na posição do mouse
         Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -166,18 +174,14 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         bool wasGrounded = isGrounded;
         isGrounded = false;
 
-        // Usar colisão com TerrainTypeSO para detectar chão
-        Collider2D[] hits = Physics2D.OverlapCircleAll(groundCheck.position, groundCheckRadius);
+        // Usar LayerMask específico para chão
+        Collider2D[] hits = Physics2D.OverlapCircleAll(groundCheck.position, groundCheckRadius, groundLayer);
         foreach (var hit in hits)
         {
-            Terrain terrain = hit.GetComponent<Terrain>();
-            if (terrain != null && terrain.terrainType != null)
+            if (hit != null)
             {
                 isGrounded = true;
-                groundFriction = terrain.terrainType.friction;
-
-                // Atualizar layer do chão para colisão correta
-                groundLayer = terrain.terrainType.layer;
+                // Aqui pode-se adicionar lógica para ajustar groundFriction se necessário
                 break;
             }
         }
@@ -222,7 +226,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         }
 
         // Cancelar todo movimento horizontal e impedir movimentação lateral
-        rb.velocity = new Vector2(0, -wallSlideSpeed);
+        rb.linearVelocity = new Vector2(0, -wallSlideSpeed);
     }
     
     void CheckWall()
@@ -248,22 +252,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         }
         
         isWallSliding = shouldWallSlide;
-    }
-    
-    void HandleWallSlide()
-    {
-        // Ativar animação de derrapagem e garantir que o parâmetro seja atualizado no PlayerAnimatorController
-        if (playerAnimatorController != null)
-        {
-            playerAnimatorController.UpdateAnimator(false, false, false, true, false);
-        }
-        else if (animator != null)
-        {
-            animator.SetBool("derrapagem", true);
-        }
-        
-        // Cancelar todo movimento horizontal e impedir movimentação lateral
-        rb.linearVelocity = new Vector2(0, -wallSlideSpeed);
     }
     
     void Move()
