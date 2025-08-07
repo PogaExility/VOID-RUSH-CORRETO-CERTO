@@ -222,7 +222,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 0, y: 0, z: -405.41852, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -585,6 +585,9 @@ GameObject:
   - component: {fileID: 1030804733}
   - component: {fileID: 1030804734}
   - component: {fileID: 1030804735}
+  - component: {fileID: 1030804738}
+  - component: {fileID: 1030804737}
+  - component: {fileID: 1030804736}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -738,34 +741,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33da5420c5c97044e8f4dfefe29b4ff3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  mainCamera: {fileID: 1653574506}
+  groundCheckStatusText: {fileID: 321207476}
   moveSpeed: 5
   acceleration: 10
   deceleration: 15
   jumpForce: 12
-  maxJumpTime: 0.3
-  jumpCutMultiplier: 0.5
-  groundCheck: {fileID: 5067843483969816440, guid: e320674860513c54198dec2788953f7b, type: 3}
-  groundCheckRadius: 0.2
-  groundLayer:
+  gravityScaleOnFall: 2.5
+  baseGravity: 1
+  collisionLayer:
     serializedVersion: 2
     m_Bits: 64
-  coyoteTime: 0.1
-  groundStatusText: {fileID: 321207476}
-  useMouseDirection: 1
-  wallCheckLeft: {fileID: 5067843483969816440, guid: e320674860513c54198dec2788953f7b, type: 3}
-  wallCheckRight: {fileID: 5067843483969816440, guid: e320674860513c54198dec2788953f7b, type: 3}
+  groundCheckDistance: 0.1
   wallCheckDistance: 0.5
-  wallLayer:
-    serializedVersion: 2
-    m_Bits: 64
+  coyoteTime: 0.1
+  maxGroundAngle: 45
   wallSlideSpeed: 2
-  wallJumpForce: 8
-  wallJumpUpForce: 6
-  dashForce: 15
-  dashDuration: 0.2
-  dashCooldown: 1
-  jumpKey: 32
-  dashKey: 113
+  wallJumpForce: {x: 10, y: 18}
 --- !u!95 &1030804734
 Animator:
   serializedVersion: 7
@@ -800,7 +792,53 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23c4e3fb562ed8740a66cd1a8b86a1d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animator: {fileID: 1030804734}
+--- !u!114 &1030804736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1030804727}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e69a52f39a95884a8ec7453243faa6c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1030804737
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1030804727}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad31e029f525bd647b6e8defa5bf5217, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  availableSkills: []
+  maxActiveSkills: 3
+--- !u!114 &1030804738
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1030804727}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3babf61b07b25e9448531c11c1d86368, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  skillRelease: {fileID: 1030804736}
+  movementScript: {fileID: 1030804733}
+  animatorController: {fileID: 1030804735}
+  energyBar: {fileID: -5421322646431288019, guid: e65d1732d38771b459a1709e4319e1da, type: 3}
+  skillManager: {fileID: 1030804737}
+  jumpSkill: {fileID: 11400000, guid: b385639fbe1a1cf47bb1d00a832d3268, type: 2}
+  dashSkill: {fileID: 11400000, guid: cbfa55ca3bf17bf4a82a1e0f788a79ac, type: 2}
+  skillSlot1: {fileID: 0}
+  skillSlot2: {fileID: 0}
 --- !u!1001 &1516846308
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1100,6 +1138,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2032793477}
     m_Modifications:
+    - target: {fileID: 699825360497275949, guid: e65d1732d38771b459a1709e4319e1da, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 699825360497275949, guid: e65d1732d38771b459a1709e4319e1da, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0

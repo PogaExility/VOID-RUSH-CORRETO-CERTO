@@ -1,3 +1,4 @@
+// ARQUIVO: EnergyBarController.cs
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,6 +7,17 @@ public class EnergyBarController : MonoBehaviour
     public Slider energySlider;
     private float maxEnergy;
     private float currentEnergy;
+
+    // >> FUNÇÃO ADICIONADA <<
+    /// <summary>
+    /// Verifica se a energia atual é suficiente para cobrir um custo.
+    /// </summary>
+    /// <param name="amountToConsume">A quantidade de energia necessária.</param>
+    /// <returns>True se tiver energia suficiente, False caso contrário.</returns>
+    public bool HasEnoughEnergy(float amountToConsume)
+    {
+        return currentEnergy >= amountToConsume;
+    }
 
     public void SetMaxEnergy(float max)
     {

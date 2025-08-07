@@ -1,362 +1,202 @@
-
-
-using TMPro;
 using UnityEngine;
+using TMPro;
 
+[RequireComponent(typeof(Rigidbody2D), typeof(CapsuleCollider2D))]
 public class AdvancedPlayerMovement2D : MonoBehaviour
 {
-    [Header("Movimento")]
-    public float moveSpeed = 5f;
-    public float acceleration = 10f;
-    public float deceleration = 15f;
-    
+    [Header("Referências")]
+    public Camera mainCamera;
+    public TextMeshProUGUI groundCheckStatusText;
+
+    [Header("Movimento Horizontal")]
+    public float moveSpeed = 8f;
+    public float acceleration = 50f;
+    public float deceleration = 60f;
+
     [Header("Pulo")]
-    public float jumpForce = 12f;
-    public float maxJumpTime = 0.3f;
-    public float jumpCutMultiplier = 0.5f;
-    
-    [Header("Verificação de Chão")]
-    public LayerMask groundLayer;
+    public float jumpForce = 15f;
+    public float gravityScaleOnFall = 2.5f;
+    public float baseGravity = 1f;
+
+    [Header("Verificações (Checks)")]
+    public LayerMask collisionLayer;
+    public float groundCheckDistance = 0.1f;
+    public float wallCheckDistance = 0.1f;
     public float coyoteTime = 0.1f;
+    [Range(0f, 90f)] public float maxGroundAngle = 45f;
 
-    [Header("UI")]
-    public TextMeshProUGUI groundStatusText;
-    
-    [Header("Mouse")]
-    public bool useMouseDirection = true;
-    
-    [Header("Wall Sliding")]
-    public Transform wallCheckLeft;
-    public Transform wallCheckRight;
-    public float wallCheckDistance = 0.5f;
-    public LayerMask wallLayer;
+    [Header("Parede (Wall Mechanics)")]
     public float wallSlideSpeed = 2f;
-    public float wallJumpForce = 8f;
-    public float wallJumpUpForce = 6f;
-    
-    [Header("Dash")]
-    public float dashForce = 15f;
-    public float dashDuration = 0.2f;
-    public float dashCooldown = 1f;
-    
-    [Header("Controles")]
-    public KeyCode jumpKey = KeyCode.Space;
-    public KeyCode dashKey = KeyCode.Q;
-    
-    // Componentes
-    private Rigidbody2D rb;
-    private Animator animator;
-    private bool isGrounded;
-    private bool isJumping;
-    private bool isWallSliding;
-    private bool isDashing;
-    private bool canDash = true;
-    
-    private int jumpCount = 1; // 1 = pode pular, 0 = não pode pular
-    private float jumpTimeCounter;
-    private float coyoteTimeCounter;
-    private float dashTimeCounter;
-    private float dashCooldownCounter;
-    private float moveInput;
-    private Vector2 mouseDirection;
-    
-    private bool isTouchingWallLeft;
-    private bool isTouchingWallRight;
-    private bool isHoldingLeft;
-    private bool isHoldingRight;
-    private bool hasUsedDoubleJump = false;
-    private bool hasDoubleJump = true;
-    
-    private PlayerAnimatorController playerAnimatorController;
+    public Vector2 wallJumpForce = new Vector2(10f, 18f);
 
-    void Start()
+    // --- Componentes e Estado Interno ---
+    private Rigidbody2D rb;
+    private CapsuleCollider2D capsuleCollider;
+    private float moveInput;
+    private bool isFacingRight = true;
+    private bool isGrounded;
+    private bool isTouchingWall;
+    private bool isWallSliding;
+    private float coyoteTimeCounter;
+
+    void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        animator = GetComponent<Animator>();
-        playerAnimatorController = GetComponent<PlayerAnimatorController>();
-        if (rb == null)
-        {
-            rb = gameObject.AddComponent<Rigidbody2D>();
-        }
+        capsuleCollider = GetComponent<CapsuleCollider2D>();
+        if (mainCamera == null) mainCamera = Camera.main;
     }
 
     void Update()
     {
-        HandleInput();
-        CheckWall();
-        HandleDash();
+        // A leitura de input agora é feita pelo PlayerController, mas o movimento horizontal ainda é lido aqui.
+        moveInput = Input.GetAxisRaw("Horizontal");
 
-        // Atualizar animações
-        if (playerAnimatorController != null)
-        {
-            bool running = Mathf.Abs(moveInput) > 0.1f && !isWallSliding && !isDashing && isGrounded;
-            bool falling = rb.linearVelocity.y < -0.1f && !isGrounded && !isWallSliding;
-            bool jumping = isJumping && !isWallSliding;
-            bool wallSlidingAnim = isWallSliding;
-            playerAnimatorController.UpdateAnimator(running, jumping, falling, wallSlidingAnim, isDashing);
-        }
+        HandleFlipLogic();
+        UpdateTimers();
+        UpdateDebugUI();
     }
-    
+
     void FixedUpdate()
     {
-        if (!isDashing)
+        CheckCollisions();
+        HandleWallSlideLogic();
+        HandleMovement();
+        HandleGravity();
+    }
+
+    // --- LÓGICAS DE MOVIMENTO E COLISÃO (FIXED UPDATE) ---
+
+    private void CheckCollisions()
+    {
+        Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset;
+        Vector2 capsuleSize = capsuleCollider.size;
+
+        RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, groundCheckDistance, collisionLayer);
+
+        isGrounded = false;
+        if (hit.collider != null)
         {
-            if (isWallSliding)
+            if (Vector2.Angle(hit.normal, Vector2.up) < maxGroundAngle)
             {
-                HandleWallSlide();
-            }
-            else
-            {
-                Move();
+                isGrounded = true;
+                coyoteTimeCounter = coyoteTime;
             }
         }
+
+        float direction = isFacingRight ? 1f : -1f;
+        float wallRayStartOffset = capsuleCollider.size.x * 0.5f;
+        RaycastHit2D wallHit = Physics2D.Raycast(capsuleCenter, new Vector2(direction, 0f), wallRayStartOffset + wallCheckDistance, collisionLayer);
+        isTouchingWall = wallHit.collider != null && !isGrounded; // Parede não é detectada se estiver no chão
     }
-    
-    void HandleInput()
+
+    private void HandleWallSlideLogic()
     {
-        // Se estiver derrapando, bloquear movimentação horizontal
+        bool isPressingAgainstWall = (isFacingRight && moveInput > 0) || (!isFacingRight && moveInput < 0);
+        isWallSliding = isTouchingWall && !isGrounded && isPressingAgainstWall;
+    }
+
+    private void HandleMovement()
+    {
         if (isWallSliding)
         {
-            moveInput = 0f;
+            if (rb.linearVelocity.y < -wallSlideSpeed)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed);
+            }
+            return;
+        }
+
+        float targetSpeed = moveInput * moveSpeed;
+        float speedDiff = targetSpeed - rb.linearVelocity.x;
+        float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
+        float movement = speedDiff * accelRate;
+        rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
+    }
+
+    private void HandleGravity()
+    {
+        if (rb.linearVelocity.y < 0 && !isWallSliding)
+        {
+            rb.gravityScale = gravityScaleOnFall;
         }
         else
         {
-            moveInput = Input.GetAxisRaw("Horizontal");
-        }
-        
-        // Flip horizontal do player baseado na posição do mouse
-        Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        if (mousePos.x > transform.position.x)
-        {
-            transform.localScale = new Vector3(1, 1, 1);
-        }
-        else
-        {
-            transform.localScale = new Vector3(-1, 1, 1);
-        }
-        
-        // Check wall input
-        isHoldingLeft = Input.GetKey(KeyCode.A);
-        isHoldingRight = Input.GetKey(KeyCode.D);
-        
-        // Dash detection
-        if (Input.GetKeyDown(dashKey) && canDash && !isDashing)
-        {
-            StartDash();
-        }
-        
-        // Jump
-        if (Input.GetKeyDown(jumpKey))
-        {
-            if (jumpCount > 0)
-            {
-                Jump();
-                jumpCount--;
-            }
-            else if (!hasUsedDoubleJump && hasDoubleJump)
-            {
-                DoubleJump();
-                hasUsedDoubleJump = true;
-            }
-            else if (isWallSliding)
-            {
-                if ((isTouchingWallLeft && isHoldingLeft) || (isTouchingWallRight && isHoldingRight))
-                {
-                    WallJump();
-                }
-            }
-        }
-        
-        if (Input.GetKeyUp(jumpKey) && isJumping)
-        {
-            EndJump();
+            rb.gravityScale = baseGravity;
         }
     }
-    
-    private float groundFriction = 1f;
 
-    // Removido método CheckGround pois groundCheck será feito via colisão com collider
-
-    void HandleWallSlide()
+    private void UpdateTimers()
     {
-        // Ativar animação de derrapagem e garantir que o parâmetro seja atualizado no PlayerAnimatorController
-        if (playerAnimatorController != null)
+        if (!isGrounded)
         {
-            playerAnimatorController.UpdateAnimator(false, false, false, true, false);
+            coyoteTimeCounter -= Time.deltaTime;
         }
-        else if (animator != null)
-        {
-            animator.SetBool("derrapagem", true);
-        }
-
-        // Cancelar todo movimento horizontal e impedir movimentação lateral
-        rb.linearVelocity = new Vector2(0, -wallSlideSpeed);
     }
-    
-    void CheckWall()
+
+    private void HandleFlipLogic()
     {
-        isTouchingWallLeft = Physics2D.Raycast(wallCheckLeft.position, Vector2.left, wallCheckDistance, wallLayer);
-        isTouchingWallRight = Physics2D.Raycast(wallCheckRight.position, Vector2.right, wallCheckDistance, wallLayer);
-        
-        bool shouldWallSlide = false;
-        
-        if (isTouchingWallLeft && !isGrounded && rb.linearVelocity.y < 0)
+        if (isWallSliding) return;
+
+        Vector3 mouseWorldPosition = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+
+        if (mouseWorldPosition.x > transform.position.x && !isFacingRight)
         {
-            if (isHoldingLeft)
-            {
-                shouldWallSlide = true;
-            }
+            Flip();
         }
-        else if (isTouchingWallRight && !isGrounded && rb.linearVelocity.y < 0)
+        else if (mouseWorldPosition.x < transform.position.x && isFacingRight)
         {
-            if (isHoldingRight)
-            {
-                shouldWallSlide = true;
-            }
+            Flip();
         }
-        
-        isWallSliding = shouldWallSlide;
     }
-    
-    void Move()
+
+    private void Flip()
     {
+        isFacingRight = !isFacingRight;
+        transform.Rotate(0f, 180f, 0f);
+    }
+
+    // --- MÉTODOS PÚBLICOS (API para outros scripts) ---
+
+    public bool IsGrounded() => isGrounded;
+    public bool IsWallSliding() => isWallSliding;
+    public float GetVerticalVelocity() => rb.linearVelocity.y;
+    public float GetHorizontalInput() => moveInput;
+    public Vector2 GetFacingDirection() => isFacingRight ? Vector2.right : Vector2.left;
+
+    public void SetGravityScale(float scale) => rb.gravityScale = scale;
+    public float GetGravityScale() => rb.gravityScale;
+    public void SetVelocity(float x, float y) => rb.linearVelocity = new Vector2(x, y);
+
+    public bool CanJump()
+    {
+        // Retorna true se o jogador pode pular do chão, da parede ou usando coyote time.
+        return coyoteTimeCounter > 0f || isWallSliding;
+    }
+
+    public void DoJump(float multiplier)
+    {
+        // Pulo normal/aéreo
         if (!isWallSliding)
         {
-            if (animator != null)
-            {
-                animator.SetBool("derrapagem", false);
-            }
-            
-            float targetSpeed = moveInput * moveSpeed;
-            float speedDiff = targetSpeed - rb.linearVelocity.x;
-            
-            float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
-            
-            float movement = speedDiff * accelRate;
-            
-            rb.AddForce(movement * Vector2.right);
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier);
+            coyoteTimeCounter = 0f; // Impede uso de coyote time depois de um pulo aéreo
         }
-    }
-    
-    void Jump()
-    {
-        isJumping = true;
-        jumpTimeCounter = maxJumpTime;
-        rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-    }
-    
-    void DoubleJump()
-    {
-        hasUsedDoubleJump = true;
-        rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-    }
-    
-    void WallJump()
-    {
-        isWallSliding = false;
-        
-        Vector2 wallJumpDirection = Vector2.zero;
-        
-        if (isTouchingWallLeft)
+        // Pulo da parede
+        else
         {
-            wallJumpDirection = new Vector2(1, 1);
-        }
-        else if (isTouchingWallRight)
-        {
-            wallJumpDirection = new Vector2(-1, 1);
-        }
-        
-        rb.linearVelocity = new Vector2(wallJumpDirection.x * wallJumpForce, wallJumpUpForce);
-    }
-    
-    void EndJump()
-    {
-        isJumping = false;
-        if (rb.linearVelocity.y > 0)
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * jumpCutMultiplier);
-        }
-    }
-    
-    void StartDash()
-    {
-        Vector2 dashDirection = new Vector2(moveInput, 0).normalized;
-        if (dashDirection == Vector2.zero)
-            dashDirection = new Vector2(transform.localScale.x, 0);
-        
-        isDashing = true;
-        canDash = false;
-        dashTimeCounter = dashDuration;
-        dashCooldownCounter = dashCooldown;
-        
-        rb.linearVelocity = dashDirection * dashForce;
-    }
-    
-    void HandleDash()
-    {
-        if (isDashing)
-        {
-            dashTimeCounter -= Time.deltaTime;
-            if (dashTimeCounter <= 0)
-            {
-                isDashing = false;
-            }
-        }
-        
-        if (!canDash)
-        {
-            dashCooldownCounter -= Time.deltaTime;
-            if (dashCooldownCounter <= 0)
-            {
-                canDash = true;
-            }
-        }
-    }
-    
-    void OnDrawGizmos()
-    {
-        if (wallCheckLeft != null)
-        {
-            Gizmos.color = Color.blue;
-            Gizmos.DrawLine(wallCheckLeft.position, wallCheckLeft.position + Vector3.left * wallCheckDistance);
-        }
-        
-        if (wallCheckRight != null)
-        {
-            Gizmos.color = Color.blue;
-            Gizmos.DrawLine(wallCheckRight.position, wallCheckRight.position + Vector3.right * wallCheckDistance);
+            isWallSliding = false;
+            float forceX = isFacingRight ? -wallJumpForce.x : wallJumpForce.x;
+            rb.linearVelocity = new Vector2(forceX, wallJumpForce.y * multiplier);
+            Flip();
         }
     }
 
-    // Métodos de colisão para detecção de chão
-    void OnCollisionEnter2D(Collision2D collision)
+    // --- DEBUG ---
+    private void UpdateDebugUI()
     {
-        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
+        if (groundCheckStatusText != null)
         {
-            isGrounded = true;
-            jumpCount = 1; // Resetar contador de pulos quando tocar o chão
-            coyoteTimeCounter = coyoteTime;
-            
-            // Resetar double jump
-            hasUsedDoubleJump = false;
-        }
-    }
-
-    void OnCollisionExit2D(Collision2D collision)
-    {
-        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
-        {
-            isGrounded = false;
-            coyoteTimeCounter = coyoteTime;
-        }
-    }
-
-    void OnCollisionStay2D(Collision2D collision)
-    {
-        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
-        {
-            isGrounded = true;
-            coyoteTimeCounter = coyoteTime;
+            groundCheckStatusText.text = $"Grounded: {isGrounded}\nWallSliding: {isWallSliding}\nTouchingWall: {isTouchingWall}";
         }
     }
 }
