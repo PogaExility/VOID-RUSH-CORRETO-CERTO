@@ -7,88 +7,68 @@ public class SkillRelease : MonoBehaviour
 
     public bool ActivateSkill(SkillSO skill, AdvancedPlayerMovement2D movement, PlayerAnimatorController animator)
     {
-        if (skill == null || movement.IsDashing()) return false;
-
-        bool success = false;
-        if (skill.skillClass == SkillClass.Movimento)
-        {
-            success = HandleMovementSkill(skill, movement, animator);
-        }
-        return success;
+        if (skill == null) return false;
+        if (skill.skillClass == SkillClass.Movimento) return HandleMovementSkill(skill, movement);
+        return false;
     }
 
-    private bool HandleMovementSkill(SkillSO skill, AdvancedPlayerMovement2D movement, PlayerAnimatorController animator)
+    private bool HandleMovementSkill(SkillSO skill, AdvancedPlayerMovement2D movement)
     {
         if (skill.movementSkillType == MovementSkillType.SuperJump)
         {
-            // Reseta os pulos aéreos se estiver no chão ou parede
-            if (movement.IsGrounded() || movement.IsWallSliding())
-            {
-                currentAirJumps = skill.airJumps;
-            }
+            if (movement.IsDashing() || movement.IsWallJumping()) return false;
+            if (movement.IsGrounded() || movement.IsWallSliding()) currentAirJumps = skill.airJumps;
 
-            // TENTA UM WALL JUMP PRIMEIRO (MAIOR PRIORIDADE)
             if (movement.IsWallSliding())
             {
-                movement.DoWallJump(skill.jumpHeightMultiplier);
-                animator.SetJumping(true);
+                StartCoroutine(ExecuteWallJumpCoroutine(skill, movement));
                 return true;
             }
-            // TENTA UM PULO DO CHÃO/COYOTE TIME
-            else if (movement.CanJumpFromGround())
+            else if (movement.CanJumpFromGround() || currentAirJumps > 0)
             {
+                if (!movement.CanJumpFromGround()) currentAirJumps--;
                 movement.DoJump(skill.jumpHeightMultiplier);
-                animator.SetJumping(true);
-                return true;
-            }
-            // TENTA UM PULO AÉREO
-            else if (currentAirJumps > 0)
-            {
-                currentAirJumps--;
-                movement.DoJump(skill.jumpHeightMultiplier);
-                animator.SetJumping(true);
                 return true;
             }
         }
         else if (skill.movementSkillType == MovementSkillType.Dash)
         {
-            if (movement.IsWallSliding())
-            {
-                StartCoroutine(ExecuteWallDashCoroutine(skill, movement, animator));
-                return true;
-            }
-            else
-            {
-                if (!movement.IsGrounded() && !skill.canDashInAir) return false;
-                StartCoroutine(ExecuteDashCoroutine(skill, movement, animator));
-                return true;
-            }
+            if (movement.IsDashing()) return false;
+            if (!movement.IsGrounded() && !skill.canDashInAir) return false;
+            StartCoroutine(ExecuteDashCoroutine(skill, movement));
+            return true;
         }
-
-        // Se nenhuma condição de pulo/dash for satisfeita
         return false;
     }
 
-    // Coroutines de Dash (sem alterações)
-    private IEnumerator ExecuteDashCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement, PlayerAnimatorController animator)
+    private IEnumerator ExecuteWallJumpCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement)
     {
-        animator.SetDashing(true);
-        float dashDuration = (skill.dashSpeed > 0) ? skill.dashDistance / skill.dashSpeed : 0.1f;
-        movement.OnDashStart();
-        movement.SetVelocity(movement.GetDashDirection().x * skill.dashSpeed, 0f);
-        yield return new WaitForSeconds(dashDuration);
-        movement.OnDashEnd();
-        animator.SetDashing(false);
+        movement.DoWallJump(skill.jumpHeightMultiplier);
+        yield return new WaitForSeconds(0.3f);
+        movement.OnWallJumpEnd();
     }
 
-    private IEnumerator ExecuteWallDashCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement, PlayerAnimatorController animator)
+    private IEnumerator ExecuteDashCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement)
     {
-        animator.SetDashing(true);
-        float dashDuration = (skill.dashSpeed > 0) ? skill.dashDistance / skill.dashSpeed : 0.1f;
-        movement.OnDashStart(true);
-        movement.SetVelocity(movement.GetWallEjectDirection().x * skill.dashSpeed, 0f);
+        movement.OnDashStart();
+        float verticalSpeed = movement.GetVerticalVelocity();
+        float dashDuration = skill.dashDistance / skill.dashSpeed;
+
+        if (skill.ignoresGravity)
+        {
+            movement.SetGravityScale(0f);
+            movement.SetVelocity(movement.GetDashDirection().x * skill.dashSpeed, verticalSpeed);
+        }
+        else
+        {
+            movement.SetGravityScale(movement.baseGravity);
+            movement.SetVelocity(movement.GetDashDirection().x * skill.dashSpeed, 0);
+        }
+
         yield return new WaitForSeconds(dashDuration);
+
         movement.OnDashEnd();
-        animator.SetDashing(false);
+        movement.SetGravityScale(movement.baseGravity);
+        movement.SetVelocity(0, movement.GetVerticalVelocity());
     }
 }

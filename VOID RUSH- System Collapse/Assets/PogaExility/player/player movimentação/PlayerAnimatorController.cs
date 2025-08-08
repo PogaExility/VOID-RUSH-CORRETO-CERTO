@@ -4,14 +4,7 @@ using UnityEngine;
 public class PlayerAnimatorController : MonoBehaviour
 {
     private Animator animator;
-
-    // Hashes dos seus parâmetros (TODOS BOOLS)
-    private int paradoHash;
-    private int andandoHash;
-    private int pousandoHash;
-    private int derrapagemHash;
-    private int pulandoHash;
-    private int isDashingHash;
+    private int paradoHash, andandoHash, pousandoHash, derrapagemHash, pulandoHash, isDashingHash;
 
     void Awake()
     {
@@ -24,23 +17,13 @@ public class PlayerAnimatorController : MonoBehaviour
         isDashingHash = Animator.StringToHash("isDashing");
     }
 
-    // Atualiza os estados contínuos (andar, cair, etc.)
-    public void UpdateAnimator(bool idle, bool running, bool falling, bool wallSliding)
+    public void UpdateAnimationState(bool idle, bool running, bool falling, bool wallSliding, bool jumping, bool dashing)
     {
         animator.SetBool(paradoHash, idle);
         animator.SetBool(andandoHash, running);
         animator.SetBool(pousandoHash, falling);
         animator.SetBool(derrapagemHash, wallSliding);
-    }
-
-    // Métodos específicos para LIGAR/DESLIGAR as animações de ação
-    public void SetJumping(bool isJumping)
-    {
-        animator.SetBool(pulandoHash, isJumping);
-    }
-
-    public void SetDashing(bool isDashing)
-    {
-        animator.SetBool(isDashingHash, isDashing);
+        animator.SetBool(pulandoHash, jumping);
+        animator.SetBool(isDashingHash, dashing);
     }
 }
