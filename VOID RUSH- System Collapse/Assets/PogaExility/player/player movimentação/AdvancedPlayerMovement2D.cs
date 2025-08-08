@@ -4,29 +4,31 @@ using TMPro;
 [RequireComponent(typeof(Rigidbody2D), typeof(CapsuleCollider2D))]
 public class AdvancedPlayerMovement2D : MonoBehaviour
 {
-    // --- Variáveis do Inspector (sem alterações) ---
     [Header("Referências")]
     public Camera mainCamera;
     public TextMeshProUGUI groundCheckStatusText;
+
     [Header("Movimento Horizontal")]
     public float moveSpeed = 8f;
     public float acceleration = 50f;
     public float deceleration = 60f;
+
     [Header("Pulo")]
     public float jumpForce = 15f;
     public float gravityScaleOnFall = 2.5f;
     public float baseGravity = 1f;
+
     [Header("Verificações (Checks)")]
     public LayerMask collisionLayer;
     public float groundCheckDistance = 0.1f;
     public float wallCheckDistance = 0.1f;
     public float coyoteTime = 0.1f;
     [Range(0f, 90f)] public float maxGroundAngle = 45f;
+
     [Header("Parede (Wall Mechanics)")]
     public float wallSlideSpeed = 2f;
     public Vector2 wallJumpForce = new Vector2(10f, 18f);
 
-    // --- Componentes e Estado Interno ---
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
     private float moveInput;
@@ -48,11 +50,14 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     void Update()
     {
         if (isDashing) return;
+
         moveInput = Input.GetAxisRaw("Horizontal");
+
         if (!isWallSliding)
         {
             HandleFlipLogic();
         }
+
         UpdateTimers();
         UpdateDebugUI();
     }
@@ -82,34 +87,14 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer);
     }
 
-    private void HandleWallSlideLogic()
-    {
-        bool wasSliding = isWallSliding;
-        bool isSlidingOnRightWall = isTouchingWallRight && !isGrounded && moveInput > 0.1f;
-        bool isSlidingOnLeftWall = isTouchingWallLeft && !isGrounded && moveInput < -0.1f;
-        isWallSliding = isSlidingOnRightWall || isSlidingOnLeftWall;
-
-        // SE COMEÇOU A DESLIZAR AGORA, ANULA TODO O MOVIMENTO
-        if (!wasSliding && isWallSliding)
-        {
-            rb.linearVelocity = Vector2.zero; // Regra #1: Zera a velocidade
-
-            // Força a orientação correta
-            if (isSlidingOnRightWall && isFacingRight) Flip();
-            else if (isSlidingOnLeftWall && !isFacingRight) Flip();
-        }
-    }
-
     private void HandleMovement()
     {
         if (isWallSliding)
         {
-            // Aplica a velocidade de deslize constante
             rb.linearVelocity = new Vector2(0, -wallSlideSpeed);
             return;
         }
 
-        // Movimento normal
         float targetSpeed = moveInput * moveSpeed;
         float speedDiff = targetSpeed - rb.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
@@ -117,9 +102,33 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
     }
 
+    private void HandleWallSlideLogic()
+    {
+        bool wantsToSlideRight = isTouchingWallRight && !isGrounded && moveInput > 0.1f;
+        bool wantsToSlideLeft = isTouchingWallLeft && !isGrounded && moveInput < -0.1f;
+
+        if (!isWallSliding && (wantsToSlideRight || wantsToSlideLeft))
+        {
+            isWallSliding = true;
+            rb.linearVelocity = Vector2.zero;
+            if (wantsToSlideRight && isFacingRight) Flip();
+            else if (wantsToSlideLeft && !isFacingRight) Flip();
+        }
+
+        if (isWallSliding)
+        {
+            bool stillTouchingWall = (isFacingRight && isTouchingWallLeft) || (!isFacingRight && isTouchingWallRight);
+            bool pullingAway = (isFacingRight && moveInput > 0.1f) || (!isFacingRight && moveInput < -0.1f);
+
+            if (!stillTouchingWall || isGrounded || pullingAway)
+            {
+                isWallSliding = false;
+            }
+        }
+    }
+
     private void HandleGravity()
     {
-        // A gravidade é controlada pelo HandleMovement durante o Wall Slide
         if (isWallSliding)
         {
             rb.gravityScale = 0;
@@ -161,7 +170,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         transform.Rotate(0f, 180f, 0f);
     }
 
-    // --- MÉTODOS PÚBLICOS (API) ---
     public bool IsGrounded() => isGrounded;
     public bool IsWallSliding() => isWallSliding;
     public float GetVerticalVelocity() => rb.linearVelocity.y;
@@ -175,50 +183,55 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public void SetGravityScale(float scale) => rb.gravityScale = scale;
     public float GetGravityScale() => rb.gravityScale;
     public void SetVelocity(float x, float y) => rb.linearVelocity = new Vector2(x, y);
-    public bool CanJump()
+
+    public bool CanJumpFromGround()
     {
-        return coyoteTimeCounter > 0f || isWallSliding;
+        return coyoteTimeCounter > 0f;
     }
 
     public void DoJump(float multiplier)
     {
-        if (isWallSliding)
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier);
+        coyoteTimeCounter = 0f;
+    }
+
+    public void DoWallJump(float multiplier)
+    {
+        isWallSliding = false;
+        rb.gravityScale = baseGravity;
+        Vector2 ejectDirection = GetWallEjectDirection();
+        Vector2 force = new Vector2(ejectDirection.x * wallJumpForce.x, wallJumpForce.y * multiplier);
+        rb.linearVelocity = force;
+        Flip();
+    }
+
+    public Vector2 GetWallEjectDirection()
+    {
+        return isTouchingWallLeft ? Vector2.right : Vector2.left;
+    }
+
+    public void OnDashStart(bool isWallDash = false)
+    {
+        isDashing = true;
+        isWallSliding = false;
+        rb.gravityScale = 0f;
+        if (isWallDash)
         {
-            // Regra #2: PULO DA PAREDE É FIXO E IGNORA INPUT
-            isWallSliding = false;
-            rb.gravityScale = baseGravity;
-
-            // Determina a força para a direção oposta da parede que estava tocando
-            float forceX = isTouchingWallLeft ? wallJumpForce.x : -wallJumpForce.x;
-
-            // Zera a velocidade antes de aplicar a nova força para um pulo consistente
-            rb.linearVelocity = Vector2.zero;
-            rb.AddForce(new Vector2(forceX, wallJumpForce.y * multiplier), ForceMode2D.Impulse);
-
-            // Vira o personagem para a nova direção do pulo
-            if ((forceX > 0 && !isFacingRight) || (forceX < 0 && isFacingRight))
+            Vector2 ejectDirection = GetWallEjectDirection();
+            if ((ejectDirection.x > 0 && !isFacingRight) || (ejectDirection.x < 0 && isFacingRight))
             {
                 Flip();
             }
         }
-        else // Pulo normal/aéreo
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier);
-            coyoteTimeCounter = 0f;
-        }
     }
 
-    public void OnDashStart()
-    {
-        isDashing = true;
-        rb.gravityScale = 0f;
-    }
     public void OnDashEnd()
     {
         isDashing = false;
         rb.gravityScale = baseGravity;
         rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
     }
+
     public bool IsDashing()
     {
         return isDashing;

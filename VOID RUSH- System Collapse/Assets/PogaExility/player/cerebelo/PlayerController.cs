@@ -39,40 +39,30 @@ public class PlayerController : MonoBehaviour
         }
 
         energyBar.SetMaxEnergy(100f);
-        // Garante que o jogo comece no modo básico e com os visuais corretos
         SetPowerMode(false);
     }
 
     void Update()
     {
-        // --- LÓGICA DE TROCA DE MODO ---
         HandlePowerModeToggle();
-
-        // --- LEITURA DE INPUTS DE HABILIDADE ---
         HandleSkillInput();
-
-        // --- ATUALIZAÇÃO DE ANIMAÇÕES ---
         UpdateAnimations();
     }
 
     private void HandlePowerModeToggle()
     {
-        // Se o jogador apertar G, tenta trocar o modo
         if (Input.GetKeyDown(KeyCode.G))
         {
-            // Se o modo estiver desligado, tenta ligar (só se tiver energia)
             if (!isPowerModeActive && energyBar.GetCurrentEnergy() > 0)
             {
                 SetPowerMode(true);
             }
-            // Se o modo já estiver ligado, desliga
             else
             {
                 SetPowerMode(false);
             }
         }
 
-        // Desativa o modo automaticamente se a energia acabar
         if (isPowerModeActive && energyBar.GetCurrentEnergy() <= 0)
         {
             SetPowerMode(false);
@@ -82,7 +72,6 @@ public class PlayerController : MonoBehaviour
 
     private void HandleSkillInput()
     {
-        // Pulo e Dash sempre funcionam, mas usam a skill que estiver ativa (básica ou com upgrade)
         if (activeJumpSkill != null && Input.GetKeyDown(KeyCode.Space))
         {
             TryActivateSkill(activeJumpSkill);
@@ -93,7 +82,6 @@ public class PlayerController : MonoBehaviour
             TryActivateSkill(activeDashSkill);
         }
 
-        // Skills de Slot só funcionam se o Modo de Poder estiver ativo
         if (isPowerModeActive)
         {
             if (skillSlot1 != null && Input.GetKeyDown(skillSlot1.activationKey)) TryActivateSkill(skillSlot1);
@@ -101,7 +89,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Centraliza a lógica de troca de modo
     private void SetPowerMode(bool isActive)
     {
         isPowerModeActive = isActive;
@@ -139,13 +126,27 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ====================================================================
+    // A ÚNICA MUDANÇA ESTÁ AQUI
+    // ====================================================================
     private void UpdateAnimations()
     {
+        bool isGrounded = movementScript.IsGrounded();
         bool isWallSliding = movementScript.IsWallSliding();
-        bool isFalling = movementScript.GetVerticalVelocity() < -0.1f && !movementScript.IsGrounded() && !isWallSliding;
-        bool isRunning = movementScript.GetHorizontalInput() != 0 && movementScript.IsGrounded();
-        bool isIdle = !isRunning && !isFalling && !isWallSliding && movementScript.IsGrounded();
 
+        bool isFalling = movementScript.GetVerticalVelocity() < -0.1f && !isGrounded && !isWallSliding;
+        bool isRunning = movementScript.GetHorizontalInput() != 0 && isGrounded;
+        bool isIdle = !isRunning && !isFalling && !isWallSliding && isGrounded;
+
+        // Se o jogador está no chão (parado ou correndo), ele definitivamente não está pulando.
+        // Isso desliga a animação de pulo assim que ele aterrissa.
+        if (isGrounded)
+        {
+            animatorController.SetJumping(false);
+        }
+
+        // Envia os estados contínuos para o Animator
         animatorController.UpdateAnimator(isIdle, isRunning, isFalling, isWallSliding);
     }
+    // ====================================================================
 }
