@@ -21,9 +21,6 @@ MonoBehaviour:
   dashDistance: 5
   dashSpeed: 25
   canDashInAir: 0
+  ignoresGravity: 0
   jumpHeightMultiplier: 1
   airJumps: 0
-  buffDuration: 0
-  buffAmount: 0
-  damageAmount: 0
-  attackRange: 0
