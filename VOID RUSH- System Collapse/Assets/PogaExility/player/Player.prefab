@@ -236,7 +236,7 @@ MonoBehaviour:
   skillRelease: {fileID: 2162577942725488806}
   movementScript: {fileID: 3876722879697417920}
   animatorController: {fileID: 4704508919990121328}
-  energyBar: {fileID: 0}
+  energyBar: {fileID: 7027529704756789590, guid: 802c836ad5adf1a428dd3301faf5f77c, type: 3}
   powerModeIndicator: {fileID: 6849349237244683194}
   baseJumpSkill: {fileID: 11400000, guid: 33bdc072d22c0d948a8b4fda27d947a0, type: 2}
   baseDashSkill: {fileID: 11400000, guid: b39e077050357654ab0fdaaf2cd24349, type: 2}

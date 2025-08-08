@@ -34,10 +34,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isTouchingWallRight;
     private bool isTouchingWallLeft;
     private bool isWallSliding;
+    private bool isJumping;
 
-    private bool isDashing = false;
-    private bool isWallJumping = false;
-    private bool isJumping = false;
+    // A nova variável única para bloquear controle
+    private bool isInAction = false;
 
     void Awake()
     {
@@ -48,33 +48,19 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     void Update()
     {
-        // --- ATUALIZAÇÃO DE ESTADOS (SEMPRE ACONTECE) ---
-        // A lógica de isJumping foi movida para cá para nunca ser bloqueada.
-        if (rb.linearVelocity.y > 0.1f && !isGrounded && !isWallSliding)
-        {
-            isJumping = true;
-        }
-        else
-        {
-            isJumping = false;
-        }
-        // ---------------------------------------------
-
-        // --- LEITURA DE INPUT ---
-        // Só lê input de movimento se não estiver em uma ação que o bloqueia.
-        if (isDashing || isWallJumping) { moveInput = 0; }
+        if (isInAction) { moveInput = 0; }
         else { moveInput = Input.GetAxisRaw("Horizontal"); }
 
-        if (!isWallSliding && !isDashing && !isWallJumping) HandleFlipLogic();
+        isJumping = rb.linearVelocity.y > 0.1f && !isGrounded && !isWallSliding;
+
+        if (!isWallSliding && !isInAction) HandleFlipLogic();
         UpdateTimers();
         UpdateDebugUI();
     }
 
     void FixedUpdate()
     {
-        // Se estiver em uma ação que bloqueia a física, pula o resto.
-        if (isDashing || isWallJumping) return;
-
+        if (isInAction) return;
         CheckCollisions();
         HandleWallSlideLogic();
         HandleMovement();
@@ -87,12 +73,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         Vector2 capsuleSize = capsuleCollider.size;
         RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, 0.1f, collisionLayer);
         isGrounded = hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) < 45f;
-
-        if (isGrounded)
-        {
-            isWallJumping = false;
-            coyoteTimeCounter = coyoteTime;
-        }
+        if (isGrounded) coyoteTimeCounter = coyoteTime;
 
         float wallRayStartOffset = capsuleCollider.size.x * 0.5f;
         isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer);
@@ -132,7 +113,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     private void HandleGravity()
     {
-        // A gravidade agora só se preocupa com a física, não com o estado de 'isJumping'
         rb.gravityScale = isWallSliding ? 0 : (rb.linearVelocity.y < 0 ? gravityScaleOnFall : baseGravity);
     }
 
@@ -169,24 +149,20 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public void DoJump(float multiplier)
     {
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier);
-        coyoteTimeCounter = 0f;
     }
 
     public void DoWallJump(float multiplier)
     {
         isWallSliding = false;
-        isWallJumping = true;
         Vector2 ejectDirection = GetWallEjectDirection();
         rb.linearVelocity = new Vector2(ejectDirection.x * wallJumpForce.x, wallJumpForce.y * multiplier);
         Flip();
     }
 
     public Vector2 GetWallEjectDirection() => isTouchingWallLeft ? Vector2.right : Vector2.left;
-    public void OnDashStart() => isDashing = true;
-    public void OnDashEnd() => isDashing = false;
-    public bool IsDashing() => isDashing;
-    public void OnWallJumpEnd() => isWallJumping = false;
-    public bool IsWallJumping() => isWallJumping;
+    public void StartAction() => isInAction = true;
+    public void EndAction() => isInAction = false;
+    public bool IsInAction() => isInAction;
     public bool IsJumping() => isJumping;
     public bool IsFacingRight() => isFacingRight;
 
@@ -194,7 +170,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         if (groundCheckStatusText != null)
         {
-            groundCheckStatusText.text = $"Grounded: {isGrounded}\nWallSliding: {isWallSliding}\nIsJumping: {isJumping}";
+            groundCheckStatusText.text = $"Grounded: {isGrounded}\nWallSliding: {isWallSliding}\nInAction: {isInAction}";
         }
     }
 }

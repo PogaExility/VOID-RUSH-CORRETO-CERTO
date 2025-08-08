@@ -18,6 +18,12 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        if (skillRelease == null || movementScript == null || animatorController == null || energyBar == null)
+        {
+            Debug.LogError("ERRO CRÍTICO: Referências faltando no PlayerController!", this.gameObject);
+            this.enabled = false;
+            return;
+        }
         energyBar.SetMaxEnergy(100f);
         SetPowerMode(false);
     }
@@ -73,16 +79,22 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ====================================================================
+    // A CORREÇÃO ESTÁ AQUI
+    // ====================================================================
     private void UpdateAnimations()
     {
         bool isGrounded = movementScript.IsGrounded();
         bool isWallSliding = movementScript.IsWallSliding();
-        bool isDashing = movementScript.IsDashing();
+        // Usa o novo método IsInAction() para saber se o dash (ou wall jump) está acontecendo
+        bool isInAction = movementScript.IsInAction();
         bool isJumping = movementScript.IsJumping();
         bool isFalling = movementScript.GetVerticalVelocity() < -0.1f && !isGrounded && !isWallSliding && !isJumping;
         bool isRunning = movementScript.IsMoving() && isGrounded;
         bool isIdle = !isRunning && isGrounded;
 
-        animatorController.UpdateAnimationState(isIdle, isRunning, isFalling, isWallSliding, isJumping, isDashing);
+        // O bool de 'dashing' para o animator agora é o mesmo do 'isInAction'
+        animatorController.UpdateAnimationState(isIdle, isRunning, isFalling, isWallSliding, isJumping, isInAction);
     }
+    // ====================================================================
 }
