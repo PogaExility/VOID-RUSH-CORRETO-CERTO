@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dcd2bd671c9f9d74e8e050bd52ee256a, type: 3}
-  m_Name: Dash
+  m_Name: SuperJump
   m_EditorClassIdentifier: 
-  skillName: Dash
-  activationKey: 113
-  energyCost: 0
+  skillName: SuperJump
+  activationKey: 32
+  energyCost: 10
   skillClass: 0
   visualEffectPrefab: {fileID: 0}
-  movementSkillType: 1
+  movementSkillType: 2
   dashDistance: 5
   dashSpeed: 25
   canDashInAir: 0
-  jumpHeightMultiplier: 1
-  airJumps: 0
+  jumpHeightMultiplier: 1.5
+  airJumps: 1
   buffDuration: 0
   buffAmount: 0
   damageAmount: 0

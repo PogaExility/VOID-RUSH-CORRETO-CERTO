@@ -28,14 +28,14 @@ public class SkillSOEditor : Editor
                 switch (skill.movementSkillType)
                 {
                     case MovementSkillType.Dash:
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashCount"), new GUIContent("Quantidade de Dash"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashDistance"), new GUIContent("Distância do Dash"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashSpeed"), new GUIContent("Velocidade do Dash"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashDistance"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashSpeed"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("canDashInAir"));
                         break;
 
                     case MovementSkillType.SuperJump:
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("jumpHeightMultiplier"), new GUIContent("Multiplicador de Altura"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("airJumps"), new GUIContent("Pulos Aéreos Extras")); // <-- A LINHA QUE FALTAVA
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("jumpHeightMultiplier"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("airJumps"));
                         break;
                 }
                 break;

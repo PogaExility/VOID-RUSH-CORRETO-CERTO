@@ -1,50 +1,75 @@
-// ARQUIVO: EnergyBarController.cs
 using UnityEngine;
 using UnityEngine.UI;
 
 public class EnergyBarController : MonoBehaviour
 {
-    public Slider energySlider;
-    private float maxEnergy;
-    private float currentEnergy;
+    [Header("Referência Visual")]
+    [Tooltip("Arraste aqui a Imagem do 'Fill'. O script vai falhar se estiver vazio.")]
+    public Image fillImage;
 
-    // >> FUNÇÃO ADICIONADA <<
-    /// <summary>
-    /// Verifica se a energia atual é suficiente para cobrir um custo.
-    /// </summary>
-    /// <param name="amountToConsume">A quantidade de energia necessária.</param>
-    /// <returns>True se tiver energia suficiente, False caso contrário.</returns>
+    [Header("Configurações de Energia")]
+    public float maxEnergy = 100f;
+    public float energyRegenPerSecond = 20f;
+    public float regenDelay = 1.5f;
+
+    // --- Controle Interno ---
+    private float currentEnergy;
+    private float regenDelayTimer;
+
+    void Awake()
+    {
+        if (fillImage == null)
+        {
+            Debug.LogError("ERRO CRÍTICO: 'fillImage' não foi atribuída no EnergyBarController!", this.gameObject);
+            this.enabled = false;
+            return;
+        }
+    }
+
+    void Update()
+    {
+        regenDelayTimer += Time.deltaTime;
+        if (regenDelayTimer >= regenDelay && currentEnergy < maxEnergy)
+        {
+            currentEnergy += energyRegenPerSecond * Time.deltaTime;
+            if (currentEnergy > maxEnergy)
+            {
+                currentEnergy = maxEnergy;
+            }
+        }
+        UpdateVisuals();
+    }
+
+    private void UpdateVisuals()
+    {
+        if (maxEnergy > 0)
+        {
+            fillImage.fillAmount = currentEnergy / maxEnergy;
+        }
+    }
+
     public bool HasEnoughEnergy(float amountToConsume)
     {
         return currentEnergy >= amountToConsume;
-    }
-
-    public void SetMaxEnergy(float max)
-    {
-        maxEnergy = max;
-        currentEnergy = maxEnergy;
-        UpdateUI();
     }
 
     public void ConsumeEnergy(float amount)
     {
         currentEnergy -= amount;
         if (currentEnergy < 0) currentEnergy = 0;
-        UpdateUI();
+        regenDelayTimer = 0f;
     }
 
-    public void RecoverEnergy(float amount)
+    public void SetMaxEnergy(float newMax)
     {
-        currentEnergy += amount;
-        if (currentEnergy > maxEnergy) currentEnergy = maxEnergy;
-        UpdateUI();
+        maxEnergy = newMax;
+        currentEnergy = maxEnergy;
+        regenDelayTimer = regenDelay;
+        UpdateVisuals();
     }
 
-    private void UpdateUI()
+    public float GetCurrentEnergy()
     {
-        if (energySlider != null)
-        {
-            energySlider.value = currentEnergy / maxEnergy;
-        }
+        return currentEnergy;
     }
 }

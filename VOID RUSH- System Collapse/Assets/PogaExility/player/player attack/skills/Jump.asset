@@ -14,15 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   skillName: Jump
   activationKey: 32
-  energyCost: 10
+  energyCost: 0
   skillClass: 0
   visualEffectPrefab: {fileID: 0}
   movementSkillType: 2
-  dashCount: 0
-  dashDistance: 0
-  dashSpeed: 0
-  jumpHeightMultiplier: 1.2
-  airJumps: 1
+  dashDistance: 5
+  dashSpeed: 25
+  canDashInAir: 0
+  jumpHeightMultiplier: 1
+  airJumps: 0
   buffDuration: 0
   buffAmount: 0
   damageAmount: 0
