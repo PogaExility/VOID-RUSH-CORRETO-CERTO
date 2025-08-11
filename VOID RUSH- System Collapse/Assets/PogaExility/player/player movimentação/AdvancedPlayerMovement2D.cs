@@ -8,18 +8,15 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public Camera mainCamera;
     public TextMeshProUGUI groundCheckStatusText;
     public LayerMask collisionLayer;
-
     [Header("Movimento")]
     public float moveSpeed = 8f;
     public float acceleration = 50f;
     public float deceleration = 60f;
-
     [Header("Pulo")]
     public float jumpForce = 15f;
     public float gravityScaleOnFall = 2.5f;
     public float baseGravity = 1f;
     public float coyoteTime = 0.1f;
-
     [Header("Parede")]
     public float wallSlideSpeed = 2f;
     public Vector2 wallJumpForce = new Vector2(12f, 20f);
@@ -37,11 +34,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isDashing = false;
     private bool isWallJumping = false;
     private bool isJumping = false;
-    private float dashSpeedX = 0f;
-    public Rigidbody2D GetRigidbody()
-    {
-        return rb;
-    }
 
     void Awake()
     {
@@ -52,10 +44,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     void Update()
     {
         isJumping = rb.linearVelocity.y > 0.1f && !isGrounded;
-
         if (isDashing || isWallJumping) { moveInput = 0; }
         else { moveInput = Input.GetAxisRaw("Horizontal"); }
-
         if (!isWallSliding && !isDashing && !isWallJumping) HandleFlipLogic();
         UpdateTimers();
         UpdateDebugUI();
@@ -76,47 +66,27 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         Vector2 capsuleSize = capsuleCollider.size;
         RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, 0.1f, collisionLayer);
         isGrounded = hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) < 45f;
-        if (isGrounded)
-        {
-            isWallJumping = false;
-            coyoteTimeCounter = coyoteTime;
-            dashSpeedX = 0f; // RESETA A VELOCIDADE DO DASH
-        }
+        if (isGrounded) { isWallJumping = false; coyoteTimeCounter = coyoteTime; }
         float wallRayStartOffset = capsuleCollider.size.x * 0.5f;
         isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer);
         isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer);
     }
-    // LÓGICA DE AGARRAR NA PAREDE. SIMPLES E DIRETA.
+
     private void HandleWallSlideLogic()
     {
         if (isWallSliding)
         {
-            if (!IsTouchingWall() || isGrounded)
-            {
-                isWallSliding = false;
-            }
+            if (!IsTouchingWall() || isGrounded) isWallSliding = false;
         }
     }
 
     private void HandleMovement()
     {
-        if (isWallSliding)
-        {
-            rb.linearVelocity = new Vector2(0, -wallSlideSpeed);
-            return;
-        }
-
-        if (Mathf.Abs(dashSpeedX) > 0.01f)
-        {
-            rb.linearVelocity = new Vector2(dashSpeedX, rb.linearVelocity.y);
-        }
-        else
-        {
-            float targetSpeed = moveInput * moveSpeed;
-            float speedDiff = targetSpeed - rb.linearVelocity.x;
-            float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
-            rb.AddForce(speedDiff * accelRate * Vector2.right);
-        }
+        if (isWallSliding) { rb.linearVelocity = new Vector2(0, -wallSlideSpeed); return; }
+        float targetSpeed = moveInput * moveSpeed;
+        float speedDiff = targetSpeed - rb.linearVelocity.x;
+        float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
+        rb.AddForce(speedDiff * accelRate * Vector2.right);
     }
 
     private void HandleGravity()
@@ -128,7 +98,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     private void HandleFlipLogic()
     {
-        Vector3 mouseWorldPosition = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+        Vector3 mouseWorldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         if ((mouseWorldPosition.x > transform.position.x && !isFacingRight) || (mouseWorldPosition.x < transform.position.x && isFacingRight)) Flip();
     }
 
@@ -157,7 +127,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         isWallJumping = true;
         Vector2 ejectDirection = GetWallEjectDirection();
         rb.linearVelocity = new Vector2(ejectDirection.x * wallJumpForce.x, wallJumpForce.y * multiplier);
-        dashSpeedX = rb.linearVelocity.x; // Guarda a velocidade do wall jump
         Flip();
     }
 
@@ -170,21 +139,18 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         if ((isTouchingWallRight && isFacingRight) || (isTouchingWallLeft && !isFacingRight)) Flip();
     }
 
-    public void OnDashStart(float newDashSpeed)
-    {
-        isDashing = true;
-        dashSpeedX = newDashSpeed;
-    }
-
+    public void OnDashStart() => isDashing = true;
     public void OnDashEnd()
     {
         isDashing = false;
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x * 0.5f, rb.linearVelocity.y);
     }
     public bool IsDashing() => isDashing;
     public void OnWallJumpEnd() => isWallJumping = false;
     public bool IsWallJumping() => isWallJumping;
     public bool IsJumping() => isJumping;
     public bool IsFacingRight() => isFacingRight;
+    public Rigidbody2D GetRigidbody() => rb;
 
     private void UpdateDebugUI()
     {

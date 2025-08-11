@@ -912,20 +912,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 1653574506}
-  groundCheckStatusText: {fileID: 321207476}
+  groundCheckStatusText: {fileID: 0}
   collisionLayer:
     serializedVersion: 2
     m_Bits: 64
-  moveSpeed: 5
-  acceleration: 10
-  deceleration: 15
+  moveSpeed: 8
+  acceleration: 50
+  deceleration: 60
   jumpForce: 12
-  gravityScaleOnFall: 2.5
+  gravityScaleOnFall: 1.6
   baseGravity: 1
   coyoteTime: 0.1
   wallSlideSpeed: 2
-  wallJumpForce: {x: 10, y: 18}
-  wallCheckDistance: 0.5
+  wallJumpForce: {x: 12, y: 20}
+  wallCheckDistance: 0.1
 --- !u!95 &1030804734
 Animator:
   serializedVersion: 7
@@ -6092,7 +6092,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.84614855}
   m_AnchorMax: {x: 0.50586724, y: 1}
-  m_AnchoredPosition: {x: -1.2155762, y: 2.9772034}
+  m_AnchoredPosition: {x: -1.2156067, y: 2.9772034}
   m_SizeDelta: {x: 3.9647827, y: -0.6243286}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2032793478
