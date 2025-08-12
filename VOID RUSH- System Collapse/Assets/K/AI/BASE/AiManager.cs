@@ -5,11 +5,9 @@ using UnityEngine;
 public class AIManager : MonoBehaviour
 {
     // --- Padrão Singleton ---
-    // A propriedade estática 'Instance' é o nosso ponto de acesso global.
     public static AIManager Instance { get; private set; }
 
     // --- Referências Globais ---
-    // Armazena a referência ao Transform do jogador.
     [Tooltip("Referência ao transform do jogador. Preenchida automaticamente se a tag 'Player' existir.")]
     public Transform playerTarget;
 
@@ -18,22 +16,20 @@ public class AIManager : MonoBehaviour
         // Lógica do Singleton
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject); // Garante que só haja uma instância.
+            Destroy(gameObject);
         }
         else
         {
             Instance = this;
-            // DontDestroyOnLoad(gameObject); // Descomente se precisar que ele persista entre cenas.
+            // DontDestroyOnLoad(gameObject);
         }
     }
 
     private void Start()
     {
-        // Se a referência do jogador não foi definida manualmente, procure-a pela tag.
         if (playerTarget == null)
         {
             GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
-
             if (playerObject != null)
             {
                 playerTarget = playerObject.transform;
