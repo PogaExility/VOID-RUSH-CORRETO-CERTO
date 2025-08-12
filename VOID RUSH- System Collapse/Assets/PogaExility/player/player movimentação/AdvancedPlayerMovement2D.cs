@@ -44,7 +44,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     void Update()
     {
         isJumping = rb.linearVelocity.y > 0.1f && !isGrounded;
-        if (isDashing || isWallJumping) { moveInput = 0; }
+        if (isDashing || isWallJumping || isWallSliding) { moveInput = 0; }
         else { moveInput = Input.GetAxisRaw("Horizontal"); }
         if (!isWallSliding && !isDashing && !isWallJumping) HandleFlipLogic();
         UpdateTimers();
@@ -60,6 +60,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         HandleGravity();
     }
 
+    // ====================================================================
+    // A FUNÇÃO QUE FALTAVA ESTÁ DE VOLTA
+    // ====================================================================
     private void CheckCollisions()
     {
         Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset;
@@ -67,10 +70,12 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, 0.1f, collisionLayer);
         isGrounded = hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) < 45f;
         if (isGrounded) { isWallJumping = false; coyoteTimeCounter = coyoteTime; }
+
         float wallRayStartOffset = capsuleCollider.size.x * 0.5f;
         isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer);
         isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer);
     }
+    // ====================================================================
 
     private void HandleWallSlideLogic()
     {
@@ -82,7 +87,15 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     private void HandleMovement()
     {
-        if (isWallSliding) { rb.linearVelocity = new Vector2(0, -wallSlideSpeed); return; }
+        // A checagem de Wall Slide foi movida para o topo.
+        // Se estiver deslizando, NENHUMA força horizontal é aplicada.
+        if (isWallSliding)
+        {
+            rb.linearVelocity = new Vector2(0, -wallSlideSpeed);
+            return;
+        }
+
+        // O código abaixo só é executado se NÃO estiver deslizando.
         float targetSpeed = moveInput * moveSpeed;
         float speedDiff = targetSpeed - rb.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
@@ -131,7 +144,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     }
 
     public Vector2 GetWallEjectDirection() => isTouchingWallLeft ? Vector2.right : Vector2.left;
-
     public void StartWallSlide()
     {
         isWallSliding = true;
@@ -140,11 +152,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     }
 
     public void OnDashStart() => isDashing = true;
-    public void OnDashEnd()
-    {
-        isDashing = false;
-        rb.linearVelocity = new Vector2(rb.linearVelocity.x * 0.5f, rb.linearVelocity.y);
-    }
+    public void OnDashEnd() => isDashing = false;
     public bool IsDashing() => isDashing;
     public void OnWallJumpEnd() => isWallJumping = false;
     public bool IsWallJumping() => isWallJumping;

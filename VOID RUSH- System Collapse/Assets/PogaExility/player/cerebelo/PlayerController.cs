@@ -87,7 +87,8 @@ public class PlayerController : MonoBehaviour
         bool isDashing = movementScript.IsDashing();
         bool isJumping = movementScript.IsJumping();
         bool isWallJumping = movementScript.IsWallJumping();
-        bool isFalling = movementScript.GetVerticalVelocity() < -0.1f && !isGrounded && !isJumping;
+        // A queda só é ativada se NÃO estiver deslizando
+        bool isFalling = movementScript.GetVerticalVelocity() < -0.1f && !isGrounded && !isWallSliding;
         bool isRunning = movementScript.IsMoving() && isGrounded;
         bool isIdle = !isRunning && isGrounded;
 
