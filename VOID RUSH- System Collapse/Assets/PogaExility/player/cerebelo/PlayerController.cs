@@ -48,10 +48,27 @@ public class PlayerController : MonoBehaviour
         if (isPowerModeActive && energyBar.GetCurrentEnergy() <= 0) SetPowerMode(false);
     }
 
+    // --- MÉTODO MODIFICADO ---
     private void HandleSkillInput()
     {
-        if (activeJumpSkill != null && Input.GetKeyDown(KeyCode.Space)) TryActivateSkill(activeJumpSkill);
-        if (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey)) TryActivateSkill(activeDashSkill);
+        // Lógica para INICIAR o pulo quando a tecla é pressionada.
+        if (activeJumpSkill != null && Input.GetKeyDown(KeyCode.Space))
+        {
+            TryActivateSkill(activeJumpSkill);
+        }
+
+        // Lógica para CORTAR o pulo quando a tecla é solta.
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            movementScript.CutJump();
+        }
+
+        // Outras skills continuam funcionando normalmente.
+        if (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey))
+        {
+            TryActivateSkill(activeDashSkill);
+        }
+
         if (isPowerModeActive)
         {
             if (skillSlot1 != null && Input.GetKeyDown(skillSlot1.activationKey)) TryActivateSkill(skillSlot1);
@@ -87,7 +104,6 @@ public class PlayerController : MonoBehaviour
         bool isDashing = movementScript.IsDashing();
         bool isJumping = movementScript.IsJumping();
         bool isWallJumping = movementScript.IsWallJumping();
-        // A queda só é ativada se NÃO estiver deslizando
         bool isFalling = movementScript.GetVerticalVelocity() < -0.1f && !isGrounded && !isWallSliding;
         bool isRunning = movementScript.IsMoving() && isGrounded;
         bool isIdle = !isRunning && isGrounded;

@@ -5,7 +5,6 @@ public class SkillRelease : MonoBehaviour
 {
     private int currentAirJumps;
     private Coroutine currentDashCoroutine;
-    private bool canInitiateWallSlide = false;
 
     public bool ActivateSkill(SkillSO skill, AdvancedPlayerMovement2D movement, PlayerAnimatorController animator)
     {
@@ -20,34 +19,35 @@ public class SkillRelease : MonoBehaviour
         if (skill.movementSkillType == MovementSkillType.Dash)
         {
             if (movement.IsDashing()) return false;
+            if (!movement.IsGrounded() && !movement.IsWallSliding() && !skill.canDashInAir) return false;
 
-            // Wall Dash tem prioridade se estiver deslizando
+            Vector2 dashDirection;
             if (movement.IsWallSliding())
             {
-                if (currentDashCoroutine != null) StopCoroutine(currentDashCoroutine);
-                currentDashCoroutine = StartCoroutine(ExecuteWallDashCoroutine(skill, movement));
-                return true;
+                dashDirection = movement.GetWallEjectDirection();
+                if ((dashDirection.x > 0 && !movement.IsFacingRight()) || (dashDirection.x < 0 && movement.IsFacingRight()))
+                {
+                    movement.Flip();
+                }
+            }
+            else
+            {
+                dashDirection = movement.GetDashDirection();
             }
 
-            // O Dash pode ser usado durante um Wall Jump para cancelar e dar um novo impulso
-            if (!movement.IsGrounded() && !skill.canDashInAir) return false;
-
             if (currentDashCoroutine != null) StopCoroutine(currentDashCoroutine);
-            currentDashCoroutine = StartCoroutine(ExecuteDashCoroutine(skill, movement));
+            currentDashCoroutine = StartCoroutine(ExecuteDashCoroutine(skill, movement, dashDirection));
             return true;
         }
         // --- LÓGICA DE PULO ---
         else if (skill.movementSkillType == MovementSkillType.SuperJump)
         {
-            // O pulo PODE cancelar um dash
             if (movement.IsWallJumping()) return false;
-            if (movement.IsGrounded()) { currentAirJumps = skill.airJumps; canInitiateWallSlide = false; }
+            if (movement.IsGrounded()) { currentAirJumps = skill.airJumps; }
 
-            // Lógica de "Agarrar"
-            if (movement.IsTouchingWall() && !movement.IsGrounded() && canInitiateWallSlide)
+            if (!movement.IsGrounded() && movement.IsTouchingWall() && !movement.IsWallSliding())
             {
                 movement.StartWallSlide();
-                canInitiateWallSlide = false;
                 return true;
             }
             if (movement.IsWallSliding())
@@ -59,7 +59,6 @@ public class SkillRelease : MonoBehaviour
             {
                 if (!movement.CanJumpFromGround()) currentAirJumps--;
                 movement.DoJump(skill.jumpHeightMultiplier);
-                canInitiateWallSlide = true;
                 return true;
             }
         }
@@ -72,37 +71,37 @@ public class SkillRelease : MonoBehaviour
         yield return new WaitForSeconds(0.3f);
         movement.OnWallJumpEnd();
     }
-    
-    private IEnumerator ExecuteDashCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement)
+
+    private IEnumerator ExecuteDashCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement, Vector2 direction)
     {
+        // 1. Inicia o estado de IMPULSO do dash.
         movement.OnDashStart();
         float verticalSpeed = movement.GetVerticalVelocity();
         float dashDuration = (skill.dashSpeed > 0) ? skill.dashDistance / skill.dashSpeed : 0.01f;
 
+        // 2. Aplica a velocidade inicial.
         if (skill.ignoresGravity)
         {
             movement.SetGravityScale(0f);
-            movement.SetVelocity(movement.GetDashDirection().x * skill.dashSpeed, movement.jumpForce * 0.75f);
+            movement.SetVelocity(direction.x * skill.dashSpeed, movement.jumpForce * 0.75f);
         }
         else
         {
             movement.SetGravityScale(movement.baseGravity);
-            movement.SetVelocity(movement.GetDashDirection().x * skill.dashSpeed, movement.jumpForce * 0.5f);
+            movement.SetVelocity(direction.x * skill.dashSpeed, verticalSpeed);
         }
-        yield return new WaitForSeconds(dashDuration);
-        movement.OnDashEnd();
-    }
 
-    private IEnumerator ExecuteWallDashCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement)
-    {
-        movement.OnDashStart();
-        float dashDuration = (skill.dashSpeed > 0) ? skill.dashDistance / skill.dashSpeed : 0.1f;
-        Vector2 ejectDirection = movement.GetWallEjectDirection();
-        if ((ejectDirection.x > 0 && !movement.IsFacingRight()) || (ejectDirection.x < 0 && movement.IsFacingRight())) movement.Flip();
-        movement.SetVelocity(ejectDirection.x * skill.dashSpeed, 0f);
+        // 3. Espera a duração do impulso.
         yield return new WaitForSeconds(dashDuration);
+
+        // 4. Finaliza o estado de IMPULSO.
         movement.OnDashEnd();
-        movement.SetGravityScale(movement.baseGravity);
-        movement.SetVelocity(0, 0);
+
+        // 5. Se, ao final do impulso, o jogador estiver no ar...
+        if (!movement.IsGrounded())
+        {
+            // ...inicia o estado de "carregar momento" no script de movimento.
+            movement.StartMomentumCarry();
+        }
     }
 }
