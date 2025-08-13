@@ -45,6 +45,17 @@ public class SkillRelease : MonoBehaviour
             if (movement.IsWallJumping()) return false;
             if (movement.IsGrounded()) { currentAirJumps = skill.airJumps; }
 
+            // Lógica para pular durante um dash terrestre
+            if (movement.IsDashing() && movement.IsGrounded())
+            {
+                if (currentDashCoroutine != null) StopCoroutine(currentDashCoroutine);
+                movement.OnDashEnd();
+                movement.InhibitAirDeceleration = true; // Ativa a inibição
+                movement.DoJump(skill.jumpHeightMultiplier); // Pula
+                return true;
+            }
+
+            // Lógica Padrão de Pulo e Parede
             if (!movement.IsGrounded() && movement.IsTouchingWall() && !movement.IsWallSliding())
             {
                 movement.StartWallSlide();
@@ -58,6 +69,7 @@ public class SkillRelease : MonoBehaviour
             else if (movement.CanJumpFromGround() || currentAirJumps > 0)
             {
                 if (!movement.CanJumpFromGround()) currentAirJumps--;
+                movement.InhibitAirDeceleration = false; // Garante que um pulo normal tenha atrito
                 movement.DoJump(skill.jumpHeightMultiplier);
                 return true;
             }
@@ -67,6 +79,7 @@ public class SkillRelease : MonoBehaviour
 
     private IEnumerator ExecuteWallJumpCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement)
     {
+        movement.InhibitAirDeceleration = false;
         movement.DoWallJump(skill.jumpHeightMultiplier);
         yield return new WaitForSeconds(0.3f);
         movement.OnWallJumpEnd();
@@ -74,16 +87,18 @@ public class SkillRelease : MonoBehaviour
 
     private IEnumerator ExecuteDashCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement, Vector2 direction)
     {
-        // 1. Inicia o estado de IMPULSO do dash.
         movement.OnDashStart();
         float verticalSpeed = movement.GetVerticalVelocity();
         float dashDuration = (skill.dashSpeed > 0) ? skill.dashDistance / skill.dashSpeed : 0.01f;
 
-        // 2. Aplica a velocidade inicial.
+        // Se for um dash terrestre, a inibição está desligada no início.
+        // Se for um dash aéreo, a inibição também deve estar desligada.
+        movement.InhibitAirDeceleration = false;
+
         if (skill.ignoresGravity)
         {
             movement.SetGravityScale(0f);
-            movement.SetVelocity(direction.x * skill.dashSpeed, movement.jumpForce * 0.75f);
+            movement.SetVelocity(direction.x * skill.dashSpeed, 0f);
         }
         else
         {
@@ -91,17 +106,14 @@ public class SkillRelease : MonoBehaviour
             movement.SetVelocity(direction.x * skill.dashSpeed, verticalSpeed);
         }
 
-        // 3. Espera a duração do impulso.
         yield return new WaitForSeconds(dashDuration);
 
-        // 4. Finaliza o estado de IMPULSO.
         movement.OnDashEnd();
 
-        // 5. Se, ao final do impulso, o jogador estiver no ar...
-        if (!movement.IsGrounded())
+        // Se era um dash terrestre que terminou no ar, ATIVA a inibição.
+        if (!skill.canDashInAir && !movement.IsGrounded())
         {
-            // ...inicia o estado de "carregar momento" no script de movimento.
-            movement.StartMomentumCarry();
+            movement.InhibitAirDeceleration = true;
         }
     }
 }
