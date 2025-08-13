@@ -12,6 +12,11 @@ public class DefenseHandler : MonoBehaviour
     private bool _isBlocking = false;
     private bool _canParry = false;
     private float _blockStartTime;
+    public bool IsInParryWindow()
+    {
+        // Retorna true apenas se o jogador estiver bloqueando E dentro da janela de tempo.
+        return _isBlocking && Time.time - _blockStartTime <= parryWindow;
+    }
 
     void Awake()
     {

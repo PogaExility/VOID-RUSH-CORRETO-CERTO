@@ -7,6 +7,7 @@ using UnityEngine;
 [RequireComponent(typeof(DefenseHandler))]
 public class PlayerController : MonoBehaviour
 {
+    // ... (Todas as suas referências e variáveis permanecem iguais)
     [Header("Referências de Movimento")]
     public SkillRelease skillRelease;
     public AdvancedPlayerMovement2D movementScript;
@@ -19,9 +20,19 @@ public class PlayerController : MonoBehaviour
     public PlayerAttack playerAttack;
     public DefenseHandler defenseHandler;
 
-    [Header("Skills Ativas")]
-    public SkillSO activeJumpSkill;
-    public SkillSO activeDashSkill;
+    [Header("Skills Básicas")]
+    public SkillSO baseJumpSkill;
+    public SkillSO baseDashSkill;
+
+    [Header("Skills com Upgrades")]
+    public SkillSO upgradedJumpSkill;
+    public SkillSO upgradedDashSkill;
+    public SkillSO skillSlot1;
+    public SkillSO skillSlot2;
+
+    private SkillSO activeJumpSkill;
+    private SkillSO activeDashSkill;
+    private bool isPowerModeActive = false;
 
     void Awake()
     {
@@ -30,44 +41,57 @@ public class PlayerController : MonoBehaviour
         combatController = GetComponent<CombatController>();
         playerAttack = GetComponent<PlayerAttack>();
         defenseHandler = GetComponent<DefenseHandler>();
+        if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
+    }
+
+    void Start()
+    {
+        energyBar.SetMaxEnergy(100f);
+        SetPowerMode(false);
     }
 
     void Update()
     {
-        // Verifica se o jogador está ocupado com uma ação de combate.
         bool isCombatLocked = playerAttack.IsAttacking() || playerAttack.IsReloading() || defenseHandler.IsBlocking();
-        // Verifica se o jogador está ocupado com uma ação de movimento.
         bool isMovementLocked = movementScript.IsDashing();
 
-        // Só permite inputs de movimento se não estiver ocupado com nada.
         if (!isCombatLocked && !isMovementLocked)
         {
             HandleMovementInput();
         }
-
-        // Só permite inputs de combate se não estiver ocupado com movimento.
         if (!isMovementLocked)
         {
             combatController.ProcessCombatInput();
         }
-
+        HandlePowerModeToggle();
         UpdateAnimations();
     }
 
     private void HandleMovementInput()
     {
-        if (activeJumpSkill != null && Input.GetKeyDown(KeyCode.Space))
+        if (activeJumpSkill != null && Input.GetKeyDown(KeyCode.Space)) { TryActivateSkill(activeJumpSkill); }
+        if (Input.GetKeyUp(KeyCode.Space)) { movementScript.CutJump(); }
+        if (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey)) { TryActivateSkill(activeDashSkill); }
+        if (isPowerModeActive)
         {
-            TryActivateSkill(activeJumpSkill);
+            if (skillSlot1 != null && Input.GetKeyDown(skillSlot1.activationKey)) TryActivateSkill(skillSlot1);
+            if (skillSlot2 != null && Input.GetKeyDown(skillSlot2.activationKey)) TryActivateSkill(skillSlot2);
         }
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            movementScript.CutJump();
-        }
-        if (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey))
-        {
-            TryActivateSkill(activeDashSkill);
-        }
+    }
+
+    private void HandlePowerModeToggle()
+    {
+        if (Input.GetKeyDown(KeyCode.G)) SetPowerMode(!isPowerModeActive);
+        if (isPowerModeActive && energyBar.GetCurrentEnergy() <= 0) SetPowerMode(false);
+    }
+
+    private void SetPowerMode(bool isActive)
+    {
+        if (isActive && energyBar.GetCurrentEnergy() <= 0) isActive = false;
+        isPowerModeActive = isActive;
+        activeJumpSkill = isActive ? upgradedJumpSkill : baseJumpSkill;
+        activeDashSkill = isActive ? upgradedDashSkill : baseDashSkill;
+        if (powerModeIndicator != null) powerModeIndicator.SetActive(isActive);
     }
 
     private void TryActivateSkill(SkillSO skillToUse)
@@ -82,17 +106,79 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // ====================================================================
+    // FUNÇÃO DE ANIMAÇÃO REESCRITA COM HIERARQUIA
+    // ====================================================================
     private void UpdateAnimations()
     {
+        // Pega todos os estados de uma vez.
         bool isGrounded = movementScript.IsGrounded();
         bool isWallSliding = movementScript.IsWallSliding();
         bool isDashing = movementScript.IsDashing();
         bool isJumping = movementScript.IsJumping();
-        bool isWallJumping = movementScript.IsWallJumping();
         bool isFalling = movementScript.GetVerticalVelocity() < -0.1f && !isGrounded && !isWallSliding;
         bool isRunning = movementScript.IsMoving() && isGrounded;
-        bool isIdle = !isRunning && isGrounded;
+        bool isBlocking = defenseHandler.IsBlocking();
+        bool isParrying = defenseHandler.IsInParryWindow();
 
-        animatorController.UpdateAnimationState(isIdle, isRunning, isFalling, isWallSliding, isJumping, isDashing || isWallJumping);
+        // Variáveis que serão enviadas para o Animator
+        bool animIdle = false;
+        bool animRunning = false;
+        bool animJumping = false;
+        bool animFalling = false;
+        bool animWallSliding = false;
+        bool animDashing = false;
+        bool animBlocking = false;
+        bool animParrying = false;
+
+        // HIERARQUIA DE PRIORIDADE:
+        // Ações de combate e estados aéreos têm prioridade sobre o movimento no chão.
+
+        if (isBlocking)
+        {
+            animBlocking = true;
+            // O parry só pode acontecer se estiver bloqueando.
+            if (isParrying)
+            {
+                animParrying = true;
+            }
+        }
+        else if (isDashing)
+        {
+            animDashing = true;
+        }
+        else if (!isGrounded) // Se estiver no ar...
+        {
+            if (isWallSliding)
+            {
+                animWallSliding = true;
+            }
+            else if (isJumping)
+            {
+                animJumping = true;
+            }
+            else if (isFalling)
+            {
+                animFalling = true;
+            }
+        }
+        else // Se estiver no chão...
+        {
+            if (isRunning)
+            {
+                animRunning = true;
+            }
+            else
+            {
+                animIdle = true;
+            }
+        }
+
+        // Envia os valores finais e limpos para o Animator Controller.
+        animatorController.UpdateAnimationState(
+            animIdle, animRunning, animFalling, animWallSliding,
+            animJumping, animDashing,
+            animBlocking, animParrying, false // 'flipping' ainda não implementado
+        );
     }
 }
