@@ -1,88 +1,73 @@
 using UnityEngine;
 
+[RequireComponent(typeof(AdvancedPlayerMovement2D))]
+[RequireComponent(typeof(SkillRelease))]
+[RequireComponent(typeof(CombatController))]
+[RequireComponent(typeof(PlayerAttack))]
+[RequireComponent(typeof(DefenseHandler))]
 public class PlayerController : MonoBehaviour
 {
-    [Header("Referências")]
+    [Header("Referências de Movimento")]
     public SkillRelease skillRelease;
     public AdvancedPlayerMovement2D movementScript;
     public PlayerAnimatorController animatorController;
     public EnergyBarController energyBar;
     public GameObject powerModeIndicator;
 
-    [Header("Skills Básicas")]
-    public SkillSO baseJumpSkill;
-    public SkillSO baseDashSkill;
+    [Header("Referências de Combate")]
+    public CombatController combatController;
+    public PlayerAttack playerAttack;
+    public DefenseHandler defenseHandler;
 
-    [Header("Skills com Upgrades")]
-    public SkillSO upgradedJumpSkill;
-    public SkillSO upgradedDashSkill;
-    public SkillSO skillSlot1;
-    public SkillSO skillSlot2;
+    [Header("Skills Ativas")]
+    public SkillSO activeJumpSkill;
+    public SkillSO activeDashSkill;
 
-    private SkillSO activeJumpSkill;
-    private SkillSO activeDashSkill;
-    private bool isPowerModeActive = false;
-
-    void Start()
+    void Awake()
     {
-        if (skillRelease == null || movementScript == null || animatorController == null || energyBar == null)
-        {
-            Debug.LogError("ERRO CRÍTICO: Referências faltando no PlayerController!", this.gameObject);
-            this.enabled = false;
-            return;
-        }
-        energyBar.SetMaxEnergy(100f);
-        SetPowerMode(false);
+        movementScript = GetComponent<AdvancedPlayerMovement2D>();
+        skillRelease = GetComponent<SkillRelease>();
+        combatController = GetComponent<CombatController>();
+        playerAttack = GetComponent<PlayerAttack>();
+        defenseHandler = GetComponent<DefenseHandler>();
     }
 
     void Update()
     {
-        HandlePowerModeToggle();
-        HandleSkillInput();
+        // Verifica se o jogador está ocupado com uma ação de combate.
+        bool isCombatLocked = playerAttack.IsAttacking() || playerAttack.IsReloading() || defenseHandler.IsBlocking();
+        // Verifica se o jogador está ocupado com uma ação de movimento.
+        bool isMovementLocked = movementScript.IsDashing();
+
+        // Só permite inputs de movimento se não estiver ocupado com nada.
+        if (!isCombatLocked && !isMovementLocked)
+        {
+            HandleMovementInput();
+        }
+
+        // Só permite inputs de combate se não estiver ocupado com movimento.
+        if (!isMovementLocked)
+        {
+            combatController.ProcessCombatInput();
+        }
+
         UpdateAnimations();
     }
 
-    private void HandlePowerModeToggle()
+    private void HandleMovementInput()
     {
-        if (Input.GetKeyDown(KeyCode.G)) SetPowerMode(!isPowerModeActive);
-        if (isPowerModeActive && energyBar.GetCurrentEnergy() <= 0) SetPowerMode(false);
-    }
-
-    // --- MÉTODO MODIFICADO ---
-    private void HandleSkillInput()
-    {
-        // Lógica para INICIAR o pulo quando a tecla é pressionada.
         if (activeJumpSkill != null && Input.GetKeyDown(KeyCode.Space))
         {
             TryActivateSkill(activeJumpSkill);
         }
-
-        // Lógica para CORTAR o pulo quando a tecla é solta.
         if (Input.GetKeyUp(KeyCode.Space))
         {
             movementScript.CutJump();
         }
-
-        // Outras skills continuam funcionando normalmente.
         if (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey))
         {
             TryActivateSkill(activeDashSkill);
         }
-
-        if (isPowerModeActive)
-        {
-            if (skillSlot1 != null && Input.GetKeyDown(skillSlot1.activationKey)) TryActivateSkill(skillSlot1);
-            if (skillSlot2 != null && Input.GetKeyDown(skillSlot2.activationKey)) TryActivateSkill(skillSlot2);
-        }
-    }
-
-    private void SetPowerMode(bool isActive)
-    {
-        if (isActive && energyBar.GetCurrentEnergy() <= 0) isActive = false;
-        isPowerModeActive = isActive;
-        activeJumpSkill = isActive ? upgradedJumpSkill : baseJumpSkill;
-        activeDashSkill = isActive ? upgradedDashSkill : baseDashSkill;
-        if (powerModeIndicator != null) powerModeIndicator.SetActive(isActive);
     }
 
     private void TryActivateSkill(SkillSO skillToUse)

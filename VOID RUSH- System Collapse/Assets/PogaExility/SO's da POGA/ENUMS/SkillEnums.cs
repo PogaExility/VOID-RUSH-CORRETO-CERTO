@@ -1,5 +1,4 @@
 // ARQUIVO: SkillEnums.cs
-// FUNÇÃO: Centraliza todas as definições de enum para o sistema de Skills.
 
 public enum SkillClass
 {
@@ -10,12 +9,22 @@ public enum SkillClass
 
 public enum MovementSkillType
 {
-    None, // Valor padrão para evitar erros
+    None,
     Dash,
-    SuperJump, // Nome mais específico que "Jump"
+    SuperJump,
     Stealth
 }
 
-// Futuramente, podemos adicionar mais enums aqui:
-// public enum BuffType { ... }
-// public enum DamageType { ... }
+// <<< NOVO ENUM PARA OS TIPOS DE DASH >>>
+public enum DashType
+{
+    Normal, // Dash terrestre que pode carregar momento
+    Aereo   // Dash aéreo omnidirecional
+
+}
+public enum WeaponType
+{
+    Melee,
+    Firearm,
+    Buster
+}

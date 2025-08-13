@@ -15,14 +15,13 @@ public class SkillSO : ScriptableObject
     [Header("Configurações de Movimento")]
     public MovementSkillType movementSkillType;
 
-    // Dash
+    // --- Configurações de Dash ---
+    // <<< MUDANÇA: 'Can Dash In Air' e 'ignoresGravity' foram substituídos pelo enum >>>
+    public DashType dashType;
     public float dashDistance = 5f;
     public float dashSpeed = 25f;
-    public bool canDashInAir = false;
-    [Tooltip("Se marcado, o dash será uma linha reta que ignora a gravidade. Senão, será uma parábola.")]
-    public bool ignoresGravity = false; // <-- CAMPO ADICIONADO
 
-    // Pulo
+    // --- Configurações de Pulo ---
     public float jumpHeightMultiplier = 1f;
     public int airJumps = 0;
 }
