@@ -15,7 +15,7 @@ TagManager:
   - UI
   - Chao
   - Parede
-  - 
+  - EnemyBodyPart
   - 
   - 
   - 
@@ -42,6 +42,15 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: EnemyFar
+    uniqueID: 2548790603
+    locked: 0
+  - name: EnemyMiddle
+    uniqueID: 3536677643
+    locked: 0
+  - name: EnemyNear
+    uniqueID: 77996003
     locked: 0
   m_RenderingLayers:
   - Default
