@@ -1,7 +1,5 @@
 using UnityEngine;
-using System.Collections;
 
-// O Cérebro principal do Ragdoll. Ele dá as intenções de movimento.
 public class AIRagdollController : MonoBehaviour
 {
     private enum State { Patrolling, Chasing, Attacking }
@@ -9,84 +7,64 @@ public class AIRagdollController : MonoBehaviour
 
     [Header("Referências")]
     public Transform playerTarget;
-    public AIHeadController headController;
-    public AILegController legController; // <- NOVO
+    public AIProceduralAnimator proceduralAnimator;
+    [Tooltip("O Rigidbody2D do corpo principal, geralmente o Torso.")]
+    public Rigidbody2D mainBodyRb; // Usado para medir distância
 
-    [Header("Parâmetros de Comportamento")]
+    [Header("Parâmetros")]
+    public float moveSpeed = 3f;
     public float detectionRange = 15f;
-    public float attackRange = 2f;
-    // ... outros parâmetros ...
+    public float attackRange = 4f;
 
     void Start()
     {
-        playerTarget = AIManager.Instance.playerTarget;
-        ChangeState(State.Patrolling);
+        // Tenta encontrar as referências automaticamente
+        if (playerTarget == null) playerTarget = AIManager.Instance?.playerTarget;
+        if (proceduralAnimator == null) proceduralAnimator = GetComponent<AIProceduralAnimator>();
+
+        // Verificações de segurança
+        if (playerTarget == null) Debug.LogError("Jogador (Player Target) não encontrado! Verifique o AIManager e a tag do Player.", this);
+        if (proceduralAnimator == null) Debug.LogError("Animator Procedural não encontrado! Verifique se o script está no mesmo objeto.", this);
+        if (mainBodyRb == null) Debug.LogError("Rigidbody Principal (Main Body Rb) não foi atribuído no Inspector!", this);
     }
 
     void Update()
     {
-        if (playerTarget == null) return;
-
-        // --- TRANSIÇÕES DE ESTADO ---
-        if (IsPlayerInAttackRange()) ChangeState(State.Attacking);
-        else if (IsPlayerInDetectionRange()) ChangeState(State.Chasing);
-        else ChangeState(State.Patrolling);
-
-        // --- ORDENS CONTÍNUAS ---
-        HandleHeadLook();
+        if (playerTarget == null || mainBodyRb == null) return;
+        UpdateState();
     }
 
     void FixedUpdate()
     {
-        if (playerTarget == null) return;
+        if (playerTarget == null || proceduralAnimator == null || mainBodyRb == null) return;
 
-        // --- LÓGICA DE AÇÃO FÍSICA ---
+        Vector2 moveDirection = Vector2.zero;
         switch (currentState)
         {
-            case State.Patrolling: PatrolLogic(); break;
-            case State.Chasing: ChaseLogic(); break;
-            case State.Attacking: AttackLogic(); break;
+            case State.Patrolling:
+                // Em patrulha, ele se move para a direita por padrão
+                moveDirection = new Vector2(1, 0) * moveSpeed;
+                break;
+            case State.Chasing:
+                // Persegue o jogador
+                float direction = (playerTarget.position.x > mainBodyRb.position.x) ? 1 : -1;
+                moveDirection = new Vector2(direction, 0) * moveSpeed;
+                break;
+            case State.Attacking:
+                // Para de se mover quando está atacando
+                moveDirection = Vector2.zero;
+                break;
         }
+        proceduralAnimator.SetMoveIntention(moveDirection);
     }
 
-    private void ChangeState(State newState)
+    void UpdateState()
     {
-        if (currentState == newState) return;
-        currentState = newState;
+        if (IsPlayerInAttackRange()) currentState = State.Attacking;
+        else if (IsPlayerInDetectionRange()) currentState = State.Chasing;
+        else currentState = State.Patrolling;
     }
 
-    void PatrolLogic()
-    {
-        // Intenção: andar para a direita
-        legController.MoveInDirection(1);
-    }
-
-    void ChaseLogic()
-    {
-        float directionToPlayer = (playerTarget.position.x > transform.position.x) ? 1 : -1;
-        // Intenção: andar na direção do jogador
-        legController.MoveInDirection(directionToPlayer);
-    }
-
-    void AttackLogic()
-    {
-        // Intenção: parar de andar
-        legController.StopMoving();
-    }
-
-    void HandleHeadLook()
-    {
-        if (headController == null) return;
-        if (currentState == State.Chasing || currentState == State.Attacking)
-        {
-            headController.LookAt(playerTarget.position);
-        }
-        else
-        {
-            headController.ResetLookDirection(legController.GetBodyTransform()); // Usa o corpo como referência
-        }
-    }
-
-    private bool IsPlayerInDetectionRange() => Vector2.Distance(legController.GetBodyTransform().position, playerTarget.position) < detectionRange;
-    private bool IsPlayerInAttackRange() => Vector2.Distance(legController.GetBodyTransform().position, playerTarget.position) < attackRange;
+    private bool IsPlayerInDetectionRange() => Vector2.Distance(mainBodyRb.position, playerTarget.position) < detectionRange;
+    private bool IsPlayerInAttackRange() => Vector2.Distance(mainBodyRb.position, playerTarget.position) < attackRange;
 }
