@@ -15,26 +15,21 @@ public class CombatController : MonoBehaviour
 
     void Awake()
     {
+        // ====================================================================
+        // A SOLUÇÃO: Pega todas as referências automaticamente no Awake().
+        // ====================================================================
         _inventoryManager = GetComponent<InventoryManager>();
         playerAttack = GetComponent<PlayerAttack>();
         defenseHandler = GetComponent<DefenseHandler>();
     }
 
-    // A função Update agora só se preocupa em trocar a postura.
-    // O processamento do input foi movido para a função pública abaixo.
     void Update()
     {
         HandleStanceSwitch();
     }
 
-    // ====================================================================
-    // FUNÇÃO CORRIGIDA para ser pública e com o nome certo
-    // ====================================================================
     public void ProcessCombatInput()
     {
-        // Só permite ações de combate se o jogador não estiver fazendo outra coisa (como dar um dash).
-        // Isso será aprimorado no PlayerController.
-
         if (Input.GetButtonDown("Fire1"))
         {
             switch (activeStance)
