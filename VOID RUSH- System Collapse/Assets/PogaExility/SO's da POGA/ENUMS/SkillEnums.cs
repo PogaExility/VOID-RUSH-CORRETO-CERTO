@@ -1,21 +1,15 @@
-// ARQUIVO: SkillEnums.cs
-// FUNÇÃO: Centraliza todas as definições de enum para o sistema de Skills.
+public enum SkillClass { Movimento, Buff, Dano }
+public enum DashType { Normal, Aereo }
+public enum WeaponType { Melee, Firearm, Buster }
 
-public enum SkillClass
-{
-    Movimento,
-    Buff,
-    Dano
-}
-
+// <<< ESTA É A ESTRUTURA CORRETA E COMPLETA >>>
 public enum MovementSkillType
 {
-    None, // Valor padrão para evitar erros
+    None,
     Dash,
-    SuperJump, // Nome mais específico que "Jump"
+    SuperJump,
+    WallJump,     // Ação separada
+    WallDash,     // Ação separada
+    WallDashJump, // A AÇÃO COMBINADA
     Stealth
 }
-
-// Futuramente, podemos adicionar mais enums aqui:
-// public enum BuffType { ... }
-// public enum DamageType { ... }

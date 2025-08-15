@@ -18,12 +18,8 @@ MonoBehaviour:
   skillClass: 0
   visualEffectPrefab: {fileID: 0}
   movementSkillType: 1
+  dashType: 1
   dashDistance: 10
   dashSpeed: 100
-  canDashInAir: 1
   jumpHeightMultiplier: 1
   airJumps: 0
-  buffDuration: 0
-  buffAmount: 0
-  damageAmount: 0
-  attackRange: 0
