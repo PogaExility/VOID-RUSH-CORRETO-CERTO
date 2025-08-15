@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dcd2bd671c9f9d74e8e050bd52ee256a, type: 3}
   m_Name: WallDashJump
   m_EditorClassIdentifier: 
-  skillName: WallJump
-  activationKey: 113
+  skillName: WallDashJump
+  activationKey: 120
   energyCost: 0
   skillClass: 0
   visualEffectPrefab: {fileID: 0}
-  movementSkillType: 4
+  movementSkillType: 5
   dashType: 0
   dashDistance: 5
   dashSpeed: 25

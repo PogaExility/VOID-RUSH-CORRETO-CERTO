@@ -903,7 +903,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33da5420c5c97044e8f4dfefe29b4ff3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animatorController: {fileID: 0}
+  animatorController: {fileID: 1030804735}
   mainCamera: {fileID: 1653574506}
   groundCheckStatusText: {fileID: 321207476}
   collisionLayer:
@@ -917,7 +917,7 @@ MonoBehaviour:
   baseGravity: 1
   coyoteTime: 0.1
   wallSlideSpeed: 2
-  wallJumpForce: {x: 12, y: 20}
+  wallJumpForce: {x: 10, y: 12}
   wallCheckDistance: 0.1
 --- !u!95 &1030804734
 Animator:

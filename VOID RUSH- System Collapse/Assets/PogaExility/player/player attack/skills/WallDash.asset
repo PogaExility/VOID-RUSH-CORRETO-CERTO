@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dcd2bd671c9f9d74e8e050bd52ee256a, type: 3}
   m_Name: WallDash
   m_EditorClassIdentifier: 
-  skillName: WallJump
+  skillName: WallDash
   activationKey: 113
   energyCost: 0
   skillClass: 0
