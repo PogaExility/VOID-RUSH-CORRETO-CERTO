@@ -10,12 +10,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     [Header("Parede")] public float wallSlideSpeed = 2f; public Vector2 wallJumpForce = new Vector2(10f, 12f); public float wallCheckDistance = 0.1f;
 
     [Header("Física do WallDashJump")]
-    [Tooltip("O atrito do ar (linear damping) que causa a perda gradual de velocidade.")]
     public float parabolaLinearDamping = 0.3f;
-    [Tooltip("A velocidade horizontal MÁXIMA que o jogador pode atingir com o controle aéreo.")]
-    public float parabolaMaxAirSpeed = 20f;
-    [Tooltip("A força do controle aéreo (steering).")]
     public float parabolaSteeringForce = 100f;
+    public float parabolaMaxAirSpeed = 20f;
 
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
@@ -34,8 +31,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     void Awake() { rb = GetComponent<Rigidbody2D>(); capsuleCollider = GetComponent<CapsuleCollider2D>(); if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>(); }
 
-    // Corrige o bug do flip no ar
-    void Update() { isJumping = rb.linearVelocity.y > 0.1f && !isGrounded; if (!isLanding) { moveInput = Input.GetAxisRaw("Horizontal"); } else { moveInput = 0; } if (!isWallSliding && !isWallJumping && !isInParabolaArc) { HandleFlipLogic(); } UpdateTimers(); UpdateDebugUI(); }
+    // ===== INÍCIO DA ALTERAÇÃO: CORRIGINDO O "NO FLIP" =====
+    void Update() { isJumping = rb.linearVelocity.y > 0.1f && !isGrounded; if (!isLanding) { moveInput = Input.GetAxisRaw("Horizontal"); } else { moveInput = 0; } if (!isWallSliding && !isWallJumping) { HandleFlipLogic(); } UpdateTimers(); UpdateDebugUI(); }
 
     void FixedUpdate() { CheckCollisions(); if (isLanding) { rb.linearVelocity = Vector2.zero; return; } if (isDashing || isWallJumping) return; HandleWallSlideLogic(); HandleMovement(); HandleGravity(); }
 
@@ -61,30 +58,22 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private void HandleFlipLogic() { if (moveInput > 0.01f && !isFacingRight) Flip(); else if (moveInput < -0.01f && isFacingRight) Flip(); }
     public void StartWallSlide() { isWallSliding = true; if ((isFacingRight && isTouchingWallRight) || (!isFacingRight && isTouchingWallLeft)) { Flip(); } }
 
-    // ===== FÍSICA FINAL E CORRETA =====
     private void HandleMovement()
     {
         if (isInParabolaArc)
         {
-            // Se o jogador estiver tentando acelerar na direção em que já está se movendo,
-            // e já estiver acima da velocidade máxima, não faz nada.
             if ((moveInput > 0 && rb.linearVelocity.x >= parabolaMaxAirSpeed) ||
                 (moveInput < 0 && rb.linearVelocity.x <= -parabolaMaxAirSpeed))
             {
                 return;
             }
-
-            // Caso contrário, aplica a força de controle aéreo.
             rb.AddForce(Vector2.right * moveInput * parabolaSteeringForce);
         }
         else
         {
-            // Lógica de movimento original, com a proteção restaurada para não travar
             if (isWallSliding) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed); return; }
-
             bool isPushingAgainstWall = !isGrounded && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
             if (isPushingAgainstWall) return;
-
             float targetSpeed = moveInput * moveSpeed;
             float speedDiff = targetSpeed - rb.linearVelocity.x;
             float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;

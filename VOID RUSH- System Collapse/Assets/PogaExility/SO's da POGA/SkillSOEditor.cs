@@ -33,14 +33,19 @@ public class SkillSOEditor : Editor
                 switch (skill.movementSkillType)
                 {
                     case MovementSkillType.Dash:
-                        // ====================================================================
-                        // MUDANÇA APLICADA AQUI
-                        // ====================================================================
-                        // Mostra o novo dropdown 'Dash Type' em vez do antigo booleano.
+                        // Campos para o Dash NORMAL (de chão ou aéreo)
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("dashType"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("dashDistance"));
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("dashSpeed"));
                         break;
+
+                    // ===== INÍCIO DA CORREÇÃO =====
+                    // NOVO CASO: Mostra os campos corretos APENAS para o Wall Dash
+                    case MovementSkillType.WallDash:
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashSpeed"));
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashDuration"));
+                        break;
+                    // ===== FIM DA CORREÇÃO =====
 
                     case MovementSkillType.SuperJump:
                         EditorGUILayout.PropertyField(serializedObject.FindProperty("jumpHeightMultiplier"));
@@ -50,15 +55,13 @@ public class SkillSOEditor : Editor
                 break;
 
             case SkillClass.Buff:
-                // Exemplo para futuras skills (não implementado no seu código de jogo)
-                // EditorGUILayout.PropertyField(serializedObject.FindProperty("buffDuration"));
-                // EditorGUILayout.PropertyField(serializedObject.FindProperty("buffAmount"));
+                // Exemplo para futuras skills
+                EditorGUILayout.HelpBox("Configurações para skills de Buff ainda não implementadas.", MessageType.Info);
                 break;
 
             case SkillClass.Dano:
-                // Exemplo para futuras skills (não implementado no seu código de jogo)
-                // EditorGUILayout.PropertyField(serializedObject.FindProperty("damageAmount"));
-                // EditorGUILayout.PropertyField(serializedObject.FindProperty("attackRange"));
+                // Exemplo para futuras skills
+                EditorGUILayout.HelpBox("Configurações para skills de Dano ainda não implementadas.", MessageType.Info);
                 break;
         }
 

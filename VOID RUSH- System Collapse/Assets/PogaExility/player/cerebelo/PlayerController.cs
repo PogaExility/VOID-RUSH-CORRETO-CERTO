@@ -8,9 +8,11 @@ public class PlayerController : MonoBehaviour
     [Header("Skills Básicas")] public SkillSO baseJumpSkill; public SkillSO baseDashSkill;
     [Header("Skills com Upgrades")] public SkillSO upgradedJumpSkill; public SkillSO upgradedDashSkill; public SkillSO skillSlot1; public SkillSO skillSlot2;
 
+    // ===== INÍCIO DA ALTERAÇÃO: AUMENTANDO A JANELA DE TEMPO =====
     [Header("Configurações de Input")]
     [Tooltip("A janela de tempo em segundos para executar a combinação.")]
-    public float wallInputBufferTime = 0.15f;
+    public float wallInputBufferTime = 0.25f; // VALOR AUMENTADO PARA 0.25
+                                              // ===== FIM DA ALTERAÇÃO =====
 
     private float _lastWallJumpInputTime = -10f;
     private float _lastWallDashInputTime = -10f;
