@@ -8,7 +8,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     [Header("Movimento")] public float moveSpeed = 8f; public float acceleration = 50f; public float deceleration = 60f;
     [Header("Pulo")] public float jumpForce = 10f; public float gravityScaleOnFall = 2.5f; public float baseGravity = 1f; public float coyoteTime = 0.1f;
     [Header("Parede")] public float wallSlideSpeed = 2f; public Vector2 wallJumpForce = new Vector2(10f, 12f); public float wallCheckDistance = 0.1f;
-    [Header("Combinação")] public float comboAirMaxSpeed = 9f; public float comboAirAccel = 50f; public float comboAirDrag = 14f; public float maxComboTime = 2.0f;
+    [Header("Combinação")] public float comboAirMaxSpeed = 9f; public float comboAirAccel = 50f; public float comboAirDrag = 18f; public float maxComboTime = 2.0f;
 
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
@@ -37,7 +37,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         UpdateTimers();
         UpdateDebugUI();
 
-        if (_isComboArc) { _comboTimer -= Time.deltaTime; if (_comboTimer <= 0) { _isComboArc = false; } }
+        if (_isComboArc) { _comboTimer -= Time.deltaTime; if (_comboTimer <= 0f) { _isComboArc = false; } }
     }
 
     void FixedUpdate()
@@ -49,12 +49,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         if (_isComboArc)
         {
             float targetX = moveInput * comboAirMaxSpeed;
-            float newX;
-            if (Mathf.Abs(moveInput) > 0.01f)
-                newX = Mathf.MoveTowards(rb.linearVelocity.x, targetX, comboAirAccel * Time.fixedDeltaTime);
-            else
-                newX = Mathf.MoveTowards(rb.linearVelocity.x, 0f, comboAirDrag * Time.fixedDeltaTime);
-
+            float newX = (Mathf.Abs(moveInput) > 0.01f)
+                ? Mathf.MoveTowards(rb.linearVelocity.x, targetX, comboAirAccel * Time.fixedDeltaTime)
+                : Mathf.MoveTowards(rb.linearVelocity.x, 0f, comboAirDrag * Time.fixedDeltaTime);
             rb.linearVelocity = new Vector2(newX, rb.linearVelocity.y);
             HandleGravity();
             return;
@@ -108,8 +105,20 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public void Flip() { isFacingRight = !isFacingRight; transform.Rotate(0f, 180f, 0f); }
     private void HandleFlipLogic() { if (moveInput > 0.01f && !isFacingRight) Flip(); else if (moveInput < -0.01f && isFacingRight) Flip(); }
     public void StartWallSlide() { isWallSliding = true; if ((isFacingRight && isTouchingWallRight) || (!isFacingRight && isTouchingWallLeft)) { Flip(); } }
+
+    private void HandleWallSlideLogic()
+    {
+        if (!isGrounded && !isWallSliding && IsTouchingWall() && rb.linearVelocity.y <= 0f)
+        {
+            bool empurrandoContraParede = (moveInput > 0f && isTouchingWallRight) || (moveInput < 0f && isTouchingWallLeft);
+            if (empurrandoContraParede)
+                isWallSliding = true;
+        }
+        if (isWallSliding && (isGrounded || !IsTouchingWall()))
+            isWallSliding = false;
+    }
+
     private void HandleMovement() { if (isWallSliding) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed); return; } bool isPushingAgainstWall = !isGrounded && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft)); if (isPushingAgainstWall) return; float targetSpeed = moveInput * moveSpeed; float speedDiff = targetSpeed - rb.linearVelocity.x; float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration; rb.AddForce(speedDiff * accelRate * Vector2.right); }
-    private void HandleWallSlideLogic() { if (isWallSliding && (!IsTouchingWall() || isGrounded)) { isWallSliding = false; } }
     private void HandleGravity() { rb.gravityScale = isWallSliding ? 0 : (rb.linearVelocity.y < 0 ? gravityScaleOnFall : baseGravity); }
     private void UpdateTimers() { if (!isGrounded) coyoteTimeCounter -= Time.deltaTime; }
     public void CutJump() { if (rb.linearVelocity.y > 0) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f); } }

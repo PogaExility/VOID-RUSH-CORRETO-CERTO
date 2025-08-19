@@ -56,8 +56,7 @@ public class SkillRelease : MonoBehaviour
                 StartCoroutine(ExecuteWallJumpCoroutine(skill, movement));
                 return true;
             }
-            // Bloco removido para corrigir o bug do "freio de mão aéreo"
-            // else if (!movement.IsGrounded() && movement.IsTouchingWall()) { ... }
+            // Bloco removido que forçava o WallSlide com o pulo
             else
             {
                 return movement.TryJump(skill.jumpHeightMultiplier);

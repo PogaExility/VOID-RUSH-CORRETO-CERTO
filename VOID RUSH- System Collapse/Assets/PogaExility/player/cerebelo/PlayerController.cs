@@ -38,11 +38,11 @@ public class PlayerController : MonoBehaviour
                 if (jumpInputDown) _lastWallJumpInputTime = Time.time;
                 if (dashInputDown) _lastWallDashInputTime = Time.time;
 
-                bool isJumpBuffered = Time.time - _lastWallJumpInputTime < wallInputBufferTime;
-                bool isDashBuffered = Time.time - _lastWallDashInputTime < wallInputBufferTime;
+                bool isCombo = (jumpInputDown && Time.time - _lastWallDashInputTime < wallInputBufferTime)
+                            || (dashInputDown && Time.time - _lastWallJumpInputTime < wallInputBufferTime);
 
-                if (jumpInputDown && isDashBuffered) { TryActivateCombinedSkill(); return; }
-                if (dashInputDown && isJumpBuffered) { TryActivateCombinedSkill(); return; }
+                if (isCombo) { TryActivateCombinedSkill(); return; }
+                if (dashInputDown) { TryActivateSkill(activeDashSkill); return; }
             }
 
             if (jumpInputDown) TryActivateSkill(activeJumpSkill);
