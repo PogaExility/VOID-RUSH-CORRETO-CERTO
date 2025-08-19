@@ -18,9 +18,9 @@ MonoBehaviour:
   skillClass: 0
   visualEffectPrefab: {fileID: 0}
   movementSkillType: 1
+  dashType: 0
   dashDistance: 5
-  dashSpeed: 25
-  canDashInAir: 0
-  ignoresGravity: 0
+  dashSpeed: 10
   jumpHeightMultiplier: 1
   airJumps: 0
+  wallJumpForce: {x: 0, y: 0}
