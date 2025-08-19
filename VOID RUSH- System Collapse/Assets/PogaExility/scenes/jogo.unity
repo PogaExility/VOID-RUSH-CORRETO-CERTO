@@ -992,6 +992,7 @@ MonoBehaviour:
   upgradedDashSkill: {fileID: 11400000, guid: 1e71423f8a0f7c54dadb9cedbf71d7fe, type: 2}
   skillSlot1: {fileID: 0}
   skillSlot2: {fileID: 0}
+  wallInputBufferTime: 0.1
 --- !u!114 &1030804739
 MonoBehaviour:
   m_ObjectHideFlags: 0
