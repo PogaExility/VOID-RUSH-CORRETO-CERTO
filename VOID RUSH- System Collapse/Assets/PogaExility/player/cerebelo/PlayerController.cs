@@ -7,6 +7,16 @@ public class PlayerController : MonoBehaviour
     [Header("Referências de Combate")] public CombatController combatController; public PlayerAttack playerAttack; public DefenseHandler defenseHandler;
     [Header("Skills Básicas")] public SkillSO baseJumpSkill; public SkillSO baseDashSkill;
     [Header("Skills com Upgrades")] public SkillSO upgradedJumpSkill; public SkillSO upgradedDashSkill; public SkillSO skillSlot1; public SkillSO skillSlot2;
+
+    // ===== INÍCIO DA ALTERAÇÃO 1: RESTAURANDO A JANELA DE TEMPO =====
+    [Header("Configurações de Input")]
+    [Tooltip("A janela de tempo em segundos para executar a combinação.")]
+    public float wallInputBufferTime = 0.15f;
+
+    private float _lastWallJumpInputTime = -10f;
+    private float _lastWallDashInputTime = -10f;
+    // ===== FIM DA ALTERAÇÃO 1 =====
+
     private SkillSO activeJumpSkill; private SkillSO activeDashSkill; private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
@@ -26,10 +36,23 @@ public class PlayerController : MonoBehaviour
         {
             if (movementScript.IsWallSliding())
             {
-                if ((jumpInputDown && Input.GetKey(activeDashSkill.activationKey)) || (dashInputDown && Input.GetKey(KeyCode.Space)))
+                if (jumpInputDown)
                 {
-                    TryActivateCombinedSkill();
-                    return;
+                    _lastWallJumpInputTime = Time.time;
+                    if (Time.time - _lastWallDashInputTime <= wallInputBufferTime)
+                    {
+                        TryActivateCombinedSkill();
+                        return;
+                    }
+                }
+                if (dashInputDown)
+                {
+                    _lastWallDashInputTime = Time.time;
+                    if (Time.time - _lastWallJumpInputTime <= wallInputBufferTime)
+                    {
+                        TryActivateCombinedSkill();
+                        return;
+                    }
                 }
             }
 
