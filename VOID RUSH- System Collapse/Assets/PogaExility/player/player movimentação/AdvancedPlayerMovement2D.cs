@@ -10,9 +10,11 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     [Header("Parede")] public float wallSlideSpeed = 2f; public Vector2 wallJumpForce = new Vector2(10f, 12f); public float wallCheckDistance = 0.1f;
 
     [Header("Física do WallDashJump")]
-    [Tooltip("O atrito do ar (drag) que causa a perda gradual de velocidade.")]
-    public float parabolaDrag = 0.3f;
-    [Tooltip("A força do controle aéreo (steering). AUMENTE para mais controle.")]
+    [Tooltip("O atrito do ar (linear damping) que causa a perda gradual de velocidade.")]
+    public float parabolaLinearDamping = 0.3f;
+    [Tooltip("A velocidade horizontal MÁXIMA que o jogador pode atingir com o controle aéreo.")]
+    public float parabolaMaxAirSpeed = 20f;
+    [Tooltip("A força do controle aéreo (steering).")]
     public float parabolaSteeringForce = 100f;
 
     private Rigidbody2D rb;
@@ -25,13 +27,16 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isTouchingWallLeft;
     private bool isWallSliding;
     private bool isDashing = false;
-    private bool isWallJumping = false; // Flag para o Wall Jump CURTO original.
-    private bool isInParabolaArc = false; // Flag EXCLUSIVA para o WallDashJump LONGO.
+    private bool isWallJumping = false;
+    private bool isInParabolaArc = false;
     private bool isJumping = false;
     private bool isLanding = false;
 
     void Awake() { rb = GetComponent<Rigidbody2D>(); capsuleCollider = GetComponent<CapsuleCollider2D>(); if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>(); }
-    void Update() { isJumping = rb.linearVelocity.y > 0.1f && !isGrounded; if (!isLanding) { moveInput = Input.GetAxisRaw("Horizontal"); } else { moveInput = 0; } if (!isWallSliding) { HandleFlipLogic(); } UpdateTimers(); UpdateDebugUI(); }
+
+    // Corrige o bug do flip no ar
+    void Update() { isJumping = rb.linearVelocity.y > 0.1f && !isGrounded; if (!isLanding) { moveInput = Input.GetAxisRaw("Horizontal"); } else { moveInput = 0; } if (!isWallSliding && !isWallJumping && !isInParabolaArc) { HandleFlipLogic(); } UpdateTimers(); UpdateDebugUI(); }
+
     void FixedUpdate() { CheckCollisions(); if (isLanding) { rb.linearVelocity = Vector2.zero; return; } if (isDashing || isWallJumping) return; HandleWallSlideLogic(); HandleMovement(); HandleGravity(); }
 
     public void OnLandingStart() { isLanding = true; }
@@ -46,7 +51,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         rb.linearVelocity = new Vector2(ejectDirection.x * horizontalForce, verticalForce);
         if ((ejectDirection.x > 0 && !isFacingRight) || (ejectDirection.x < 0 && isFacingRight)) { Flip(); }
-        rb.linearDamping = parabolaDrag;
+        rb.linearDamping = parabolaLinearDamping;
     }
 
     private void CheckCollisions() { Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset; Vector2 capsuleSize = capsuleCollider.size; RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, 0.1f, collisionLayer); isGrounded = hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) < 45f; if (isGrounded) { if (isInParabolaArc || isWallJumping) rb.linearDamping = 0f; isWallJumping = false; isInParabolaArc = false; coyoteTimeCounter = coyoteTime; isJumping = false; } float wallRayStartOffset = capsuleCollider.size.x * 0.5f; isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer); isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer); }
@@ -56,19 +61,27 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private void HandleFlipLogic() { if (moveInput > 0.01f && !isFacingRight) Flip(); else if (moveInput < -0.01f && isFacingRight) Flip(); }
     public void StartWallSlide() { isWallSliding = true; if ((isFacingRight && isTouchingWallRight) || (!isFacingRight && isTouchingWallLeft)) { Flip(); } }
 
-    // ===== INÍCIO DA ALTERAÇÃO 2: FÍSICA CORRETA PARA CADA ESTADO =====
+    // ===== FÍSICA FINAL E CORRETA =====
     private void HandleMovement()
     {
-        if (isWallSliding) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed); return; }
-
         if (isInParabolaArc)
         {
-            // Aplica a força de controle aéreo (steering) que INFLUENCIA o movimento
+            // Se o jogador estiver tentando acelerar na direção em que já está se movendo,
+            // e já estiver acima da velocidade máxima, não faz nada.
+            if ((moveInput > 0 && rb.linearVelocity.x >= parabolaMaxAirSpeed) ||
+                (moveInput < 0 && rb.linearVelocity.x <= -parabolaMaxAirSpeed))
+            {
+                return;
+            }
+
+            // Caso contrário, aplica a força de controle aéreo.
             rb.AddForce(Vector2.right * moveInput * parabolaSteeringForce);
         }
-        else // Movimento normal (chão, pulo, queda)
+        else
         {
-            // Restaura a proteção contra se colar na parede
+            // Lógica de movimento original, com a proteção restaurada para não travar
+            if (isWallSliding) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed); return; }
+
             bool isPushingAgainstWall = !isGrounded && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
             if (isPushingAgainstWall) return;
 
@@ -78,7 +91,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             rb.AddForce(speedDiff * accelRate * Vector2.right);
         }
     }
-    // ===== FIM DA ALTERAÇÃO 2 =====
 
     private void HandleWallSlideLogic() { if (isWallSliding && (!IsTouchingWall() || isGrounded)) { isWallSliding = false; } }
     private void HandleGravity() { rb.gravityScale = isWallSliding ? 0 : (rb.linearVelocity.y < 0 ? gravityScaleOnFall : baseGravity); }
@@ -87,6 +99,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public Vector2 GetWallEjectDirection() { return isTouchingWallLeft ? Vector2.right : Vector2.left; }
     public bool IsGrounded() { return isGrounded; }
     public bool IsWallSliding() { return isWallSliding; }
+    public bool IsInParabolaArc() { return isInParabolaArc; }
     public float GetVerticalVelocity() { return rb.linearVelocity.y; }
     public bool IsMoving() { return Mathf.Abs(moveInput) > 0.1f; }
     public Vector2 GetDashDirection() { return Mathf.Abs(moveInput) > 0.01f ? (moveInput > 0 ? Vector2.right : Vector2.left) : GetFacingDirection(); }

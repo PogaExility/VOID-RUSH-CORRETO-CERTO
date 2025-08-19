@@ -15,10 +15,13 @@ public class SkillSO : ScriptableObject
     [Header("Configurações de Movimento")]
     public MovementSkillType movementSkillType;
 
+    // ===== INÍCIO DA ALTERAÇÃO =====
     [Header("Configurações de Dash")]
     public DashType dashType;
     public float dashDistance = 5f;
     public float dashSpeed = 25f;
+    public float dashDuration = 0.3f; // NOVO: Duração do Dash (especialmente o de parede)
+    // ===== FIM DA ALTERAÇÃO =====
 
     [Header("Configurações de Pulo")]
     public float jumpHeightMultiplier = 1f;
