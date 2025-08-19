@@ -6,16 +6,19 @@ public class SkillRelease : MonoBehaviour
     private int currentAirJumps;
     private Coroutine currentDashCoroutine;
 
-    // NOVO MÉTODO: Apenas para a manobra combinada
     public bool ActivateWallDashJump(SkillSO jumpSkill, SkillSO dashSkill, AdvancedPlayerMovement2D movement)
     {
         if (!movement.IsWallSliding()) return false;
 
-        float horizontalForce = dashSkill.dashSpeed * 1.5f; // Bônus de 50% para um pulo mais forte
+        float horizontalForce = dashSkill.dashSpeed * 1.5f;
         float verticalForce = movement.wallJumpForce.y * jumpSkill.jumpHeightMultiplier;
 
         movement.DoWallDashJump(horizontalForce, verticalForce);
-        StartCoroutine(WallJumpEndDelay(movement));
+
+        // ===== A CORREÇÃO ESTÁ AQUI =====
+        // A LINHA ABAIXO FOI REMOVIDA PARA PERMITIR A PARÁBOLA LONGA.
+        // StartCoroutine(WallJumpEndDelay(movement)); 
+
         return true;
     }
 
