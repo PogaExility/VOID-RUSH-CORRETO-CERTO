@@ -1090,6 +1090,14 @@ PrefabInstance:
       propertyPath: energyBar
       value: 
       objectReference: {fileID: 633267560}
+    - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: wallDashSkill
+      value: 
+      objectReference: {fileID: 11400000, guid: 36704b31bbc9d9943ac64e5a550749a4, type: 2}
+    - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: wallJumpSkill
+      value: 
+      objectReference: {fileID: 11400000, guid: ebe4f492f4225a244819f893403ad033, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

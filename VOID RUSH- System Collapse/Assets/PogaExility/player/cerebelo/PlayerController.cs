@@ -8,14 +8,11 @@ public class PlayerController : MonoBehaviour
     [Header("Skills Básicas")] public SkillSO baseJumpSkill; public SkillSO baseDashSkill;
     [Header("Skills com Upgrades")] public SkillSO upgradedJumpSkill; public SkillSO upgradedDashSkill; public SkillSO skillSlot1; public SkillSO skillSlot2;
 
-    // ===== INÍCIO DA ALTERAÇÃO: AUMENTANDO A JANELA DE TEMPO =====
-    [Header("Configurações de Input")]
-    [Tooltip("A janela de tempo em segundos para executar a combinação.")]
-    public float wallInputBufferTime = 0.25f; // VALOR AUMENTADO PARA 0.25
-                                              // ===== FIM DA ALTERAÇÃO =====
-
-    private float _lastWallJumpInputTime = -10f;
-    private float _lastWallDashInputTime = -10f;
+    // ===== INÍCIO DA ALTERAÇÃO 1: ADICIONANDO SLOTS PARA SKILLS DE PAREDE =====
+    [Header("Skills de Parede")]
+    public SkillSO wallJumpSkill;
+    public SkillSO wallDashSkill;
+    // ===== FIM DA ALTERAÇÃO 1 =====
 
     private SkillSO activeJumpSkill; private SkillSO activeDashSkill; private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
@@ -30,34 +27,33 @@ public class PlayerController : MonoBehaviour
         if (isLanding) return;
 
         bool jumpInputDown = Input.GetKeyDown(KeyCode.Space);
-        bool dashInputDown = (activeDashSkill != null) && Input.GetKeyDown(activeDashSkill.activationKey);
+        // A checagem do input de dash agora deve considerar o wallDashSkill também
+        bool dashInputDown = (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey)) ||
+                             (wallDashSkill != null && Input.GetKeyDown(wallDashSkill.activationKey));
 
         if (!playerAttack.IsAttacking() && !playerAttack.IsReloading())
         {
+            // ===== INÍCIO DA ALTERAÇÃO 2: USANDO AS SKILLS DE PAREDE DEDICADAS =====
             if (movementScript.IsWallSliding())
             {
-                if (jumpInputDown)
+                // A combinação agora usa as skills de parede dedicadas
+                if ((jumpInputDown && Input.GetKey(wallDashSkill.activationKey)) || (dashInputDown && Input.GetKey(KeyCode.Space)))
                 {
-                    _lastWallJumpInputTime = Time.time;
-                    if (Time.time - _lastWallDashInputTime <= wallInputBufferTime)
-                    {
-                        TryActivateCombinedSkill();
-                        return;
-                    }
+                    TryActivateCombinedSkill();
+                    return;
                 }
-                if (dashInputDown)
-                {
-                    _lastWallDashInputTime = Time.time;
-                    if (Time.time - _lastWallJumpInputTime <= wallInputBufferTime)
-                    {
-                        TryActivateCombinedSkill();
-                        return;
-                    }
-                }
-            }
 
-            if (jumpInputDown) TryActivateSkill(activeJumpSkill);
-            if (dashInputDown) TryActivateSkill(activeDashSkill);
+                // Chamadas para as skills isoladas de parede
+                if (jumpInputDown) TryActivateSkill(wallJumpSkill);
+                if (dashInputDown) TryActivateSkill(wallDashSkill);
+            }
+            else // Se NÃO estiver em WallSlide, usa as skills normais
+            {
+                if (jumpInputDown) TryActivateSkill(activeJumpSkill);
+                if (dashInputDown) TryActivateSkill(activeDashSkill);
+            }
+            // ===== FIM DA ALTERAÇÃO 2 =====
+
             if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
         }
 
@@ -68,17 +64,20 @@ public class PlayerController : MonoBehaviour
 
     private void TryActivateCombinedSkill()
     {
-        float combinedCost = activeJumpSkill.energyCost + activeDashSkill.energyCost;
+        // Garante que as skills de parede estão atribuídas
+        if (wallJumpSkill == null || wallDashSkill == null) return;
+
+        float combinedCost = wallJumpSkill.energyCost + wallDashSkill.energyCost;
         if (energyBar.HasEnoughEnergy(combinedCost))
         {
-            if (skillRelease.ActivateWallDashJump(activeJumpSkill, activeDashSkill, movementScript))
+            if (skillRelease.ActivateWallDashJump(wallJumpSkill, wallDashSkill, movementScript))
             {
                 energyBar.ConsumeEnergy(combinedCost);
             }
         }
     }
 
-    private void UpdateAnimations() { if (isLanding) { return; } if (!wasGroundedLastFrame && movementScript.IsGrounded()) { isLanding = true; movementScript.OnLandingStart(); animatorController.PlayState(PlayerAnimState.pousando); return; } if (defenseHandler.IsBlocking()) { if (defenseHandler.IsInParryWindow()) animatorController.PlayState(PlayerAnimState.parry); else animatorController.PlayState(PlayerAnimState.block); } else if (!movementScript.IsGrounded()) { if (movementScript.IsWallSliding()) animatorController.PlayState(PlayerAnimState.derrapagem); else if (movementScript.IsInParabolaArc()) animatorController.PlayState(PlayerAnimState.dashAereo); else if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dashAereo); else if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando); else animatorController.PlayState(PlayerAnimState.falling); } else { if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dash); else if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando); else animatorController.PlayState(PlayerAnimState.parado); } }
+    private void UpdateAnimations() { if (isLanding) { return; } if (!wasGroundedLastFrame && movementScript.IsGrounded()) { isLanding = true; movementScript.OnLandingStart(); animatorController.PlayState(PlayerAnimState.pousando); return; } if (defenseHandler.IsBlocking()) { if (defenseHandler.IsInParryWindow()) animatorController.PlayState(PlayerAnimState.parry); else animatorController.PlayState(PlayerAnimState.block); } else if (!movementScript.IsGrounded()) { if (movementScript.IsWallSliding()) animatorController.PlayState(PlayerAnimState.derrapagem); else if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dashAereo); else if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando); else animatorController.PlayState(PlayerAnimState.falling); } else { if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dash); else if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando); else animatorController.PlayState(PlayerAnimState.parado); } }
     public void OnLandingComplete() { isLanding = false; movementScript.OnLandingComplete(); }
     private void TryActivateSkill(SkillSO skillToUse) { if (skillToUse == null) return; if (energyBar.HasEnoughEnergy(skillToUse.energyCost)) { if (skillRelease.ActivateSkill(skillToUse, movementScript, animatorController)) { energyBar.ConsumeEnergy(skillToUse.energyCost); } } }
     private void HandlePowerModeToggle() { if (Input.GetKeyDown(KeyCode.G)) SetPowerMode(!isPowerModeActive); if (isPowerModeActive && energyBar.GetCurrentEnergy() <= 0) SetPowerMode(false); }

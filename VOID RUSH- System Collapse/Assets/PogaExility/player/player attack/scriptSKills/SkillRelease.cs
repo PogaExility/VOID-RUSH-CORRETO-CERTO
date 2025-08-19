@@ -24,26 +24,56 @@ public class SkillRelease : MonoBehaviour
         return false;
     }
 
+    // ===== INÍCIO DA ALTERAÇÃO: SEPARANDO A LÓGICA DE CADA SKILL =====
     private bool HandleMovementSkill(SkillSO skill, AdvancedPlayerMovement2D movement)
     {
-        if (skill.movementSkillType == MovementSkillType.Dash)
+        switch (skill.movementSkillType)
         {
-            if (skill.dashType == DashType.Normal && !movement.IsGrounded() && !movement.IsWallSliding()) { return false; }
-            if (movement.IsDashing()) return false;
-            if (currentDashCoroutine != null) StopCoroutine(currentDashCoroutine);
-            currentDashCoroutine = StartCoroutine(ExecuteDashCoroutine(skill, movement));
+            // Lógica para Dash de Chão/Aéreo
+            case MovementSkillType.Dash:
+                if (skill.dashType == DashType.Normal && !movement.IsGrounded()) return false; // Dash Normal só no chão
+                if (movement.IsDashing()) return false;
+                if (currentDashCoroutine != null) StopCoroutine(currentDashCoroutine);
+                currentDashCoroutine = StartCoroutine(ExecuteDashCoroutine(skill, movement));
+                return true;
+
+            // Lógica para Pulo Normal e Pulo Aéreo
+            case MovementSkillType.SuperJump:
+                if (movement.IsWallJumping() || movement.IsWallSliding()) return false; // SuperJump não funciona na parede
+                if (movement.IsGrounded()) { currentAirJumps = skill.airJumps; }
+                if (movement.CanJumpFromGround() || currentAirJumps > 0)
+                {
+                    if (!movement.CanJumpFromGround()) currentAirJumps--;
+                    movement.DoJump(skill.jumpHeightMultiplier);
+                    return true;
+                }
+                break;
+
+            // Lógica EXCLUSIVA para Wall Jump
+            case MovementSkillType.WallJump:
+                if (!movement.IsWallSliding()) return false;
+                StartCoroutine(ExecuteWallJumpCoroutine(skill, movement));
+                return true;
+
+            // Lógica EXCLUSIVA para Wall Dash
+            case MovementSkillType.WallDash:
+                if (!movement.IsWallSliding()) return false;
+                if (movement.IsDashing()) return false;
+                if (currentDashCoroutine != null) StopCoroutine(currentDashCoroutine);
+                currentDashCoroutine = StartCoroutine(ExecuteDashCoroutine(skill, movement));
+                return true;
+        }
+
+        // Lógica para iniciar o Wall Slide (ainda parte do pulo geral)
+        if (!movement.IsGrounded() && movement.IsTouchingWall() && !movement.IsWallSliding())
+        {
+            movement.StartWallSlide();
             return true;
         }
-        else if (skill.movementSkillType == MovementSkillType.SuperJump)
-        {
-            if (movement.IsWallJumping() || movement.IsInParabolaArc()) return false;
-            if (movement.IsGrounded()) { currentAirJumps = skill.airJumps; }
-            if (movement.IsWallSliding()) { StartCoroutine(ExecuteWallJumpCoroutine(skill, movement)); return true; }
-            else if (!movement.IsGrounded() && movement.IsTouchingWall()) { movement.StartWallSlide(); return true; }
-            else if (movement.CanJumpFromGround() || currentAirJumps > 0) { if (!movement.CanJumpFromGround()) currentAirJumps--; movement.DoJump(skill.jumpHeightMultiplier); return true; }
-        }
+
         return false;
     }
+    // ===== FIM DA ALTERAÇÃO =====
 
     private IEnumerator ExecuteWallJumpCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement) { movement.DoWallJump(skill.jumpHeightMultiplier); yield return new WaitForSeconds(0.2f); movement.OnWallJumpEnd(); }
 
@@ -53,9 +83,7 @@ public class SkillRelease : MonoBehaviour
         if (movement.IsWallSliding())
         {
             movement.StopWallSlide();
-            // ===== INÍCIO DA ALTERAÇÃO: USANDO A DURAÇÃO AJUSTÁVEL =====
-            float dashDuration = skill.wallDashDuration; // USA O VALOR DO SKILLSO
-            // ===== FIM DA ALTERAÇÃO =====
+            float dashDuration = 0.2f;
             float timer = 0;
             movement.SetGravityScale(0f);
             Vector2 direction = movement.GetWallEjectDirection();
@@ -63,7 +91,7 @@ public class SkillRelease : MonoBehaviour
             while (timer < dashDuration) { movement.SetVelocity(direction.x * skill.dashSpeed, 0); timer += Time.deltaTime; yield return null; }
             movement.SetGravityScale(movement.baseGravity);
         }
-        else
+        else // Dash normal (chão ou aéreo)
         {
             float dashStartTime = Time.time;
             if (skill.dashType == DashType.Aereo) { float dashDuration = (skill.dashSpeed > 0) ? skill.dashDistance / skill.dashSpeed : 0.01f; float timer = 0; movement.SetGravityScale(0f); while (timer < dashDuration) { if (movement.IsTouchingWall()) break; Vector2 direction = movement.GetFacingDirection(); movement.SetVelocity(direction.x * skill.dashSpeed, 0); timer += Time.deltaTime; yield return null; } movement.SetGravityScale(movement.baseGravity); }
