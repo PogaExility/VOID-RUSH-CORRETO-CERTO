@@ -1,10 +1,6 @@
 using UnityEngine;
 
-[RequireComponent(typeof(AdvancedPlayerMovement2D))]
-[RequireComponent(typeof(SkillRelease))]
-[RequireComponent(typeof(CombatController))]
-[RequireComponent(typeof(PlayerAttack))]
-[RequireComponent(typeof(DefenseHandler))]
+[RequireComponent(typeof(AdvancedPlayerMovement2D))] //...etc
 public class PlayerController : MonoBehaviour
 {
     [Header("Referências de Movimento")] public SkillRelease skillRelease; public AdvancedPlayerMovement2D movementScript; public PlayerAnimatorController animatorController; public EnergyBarController energyBar; public GameObject powerModeIndicator;
@@ -14,11 +10,6 @@ public class PlayerController : MonoBehaviour
     private SkillSO activeJumpSkill; private SkillSO activeDashSkill; private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
-
-    [Header("Configurações de Input")]
-    public float wallInputBufferTime = 0.15f;
-    private float _lastWallJumpInputTime = -1f;
-    private float _lastWallDashInputTime = -1f;
 
     void Awake() { movementScript = GetComponent<AdvancedPlayerMovement2D>(); skillRelease = GetComponent<SkillRelease>(); combatController = GetComponent<CombatController>(); playerAttack = GetComponent<PlayerAttack>(); defenseHandler = GetComponent<DefenseHandler>(); if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>(); }
     void Start() { energyBar.SetMaxEnergy(100f); SetPowerMode(false); }
@@ -35,14 +26,11 @@ public class PlayerController : MonoBehaviour
         {
             if (movementScript.IsWallSliding())
             {
-                if (jumpInputDown) _lastWallJumpInputTime = Time.time;
-                if (dashInputDown) _lastWallDashInputTime = Time.time;
-
-                bool isCombo = (jumpInputDown && Time.time - _lastWallDashInputTime < wallInputBufferTime)
-                            || (dashInputDown && Time.time - _lastWallJumpInputTime < wallInputBufferTime);
-
-                if (isCombo) { TryActivateCombinedSkill(); return; }
-                if (dashInputDown) { TryActivateSkill(activeDashSkill); return; }
+                if ((jumpInputDown && Input.GetKey(activeDashSkill.activationKey)) || (dashInputDown && Input.GetKey(KeyCode.Space)))
+                {
+                    TryActivateCombinedSkill();
+                    return;
+                }
             }
 
             if (jumpInputDown) TryActivateSkill(activeJumpSkill);
@@ -57,8 +45,6 @@ public class PlayerController : MonoBehaviour
 
     private void TryActivateCombinedSkill()
     {
-        _lastWallJumpInputTime = -1f;
-        _lastWallDashInputTime = -1f;
         float combinedCost = activeJumpSkill.energyCost + activeDashSkill.energyCost;
         if (energyBar.HasEnoughEnergy(combinedCost))
         {
