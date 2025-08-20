@@ -21,6 +21,7 @@ MonoBehaviour:
   dashType: 0
   dashDistance: 5
   dashSpeed: 25
+  wallDashDistance: 3
   jumpHeightMultiplier: 1
   airJumps: 0
   wallJumpForce: {x: 0, y: 0}

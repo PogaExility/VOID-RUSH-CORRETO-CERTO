@@ -1,63 +1,91 @@
 using UnityEngine;
 
+
 [RequireComponent(typeof(AdvancedPlayerMovement2D))] //...etc
 public class PlayerController : MonoBehaviour
 {
+    [Header("Referências de UI")]
+    [Tooltip("Arraste o objeto do Canvas do seu inventário aqui.")]
+    public GameObject inventoryPanel;
+
     [Header("Referências de Movimento")] public SkillRelease skillRelease; public AdvancedPlayerMovement2D movementScript; public PlayerAnimatorController animatorController; public EnergyBarController energyBar; public GameObject powerModeIndicator;
     [Header("Referências de Combate")] public CombatController combatController; public PlayerAttack playerAttack; public DefenseHandler defenseHandler;
     [Header("Skills Básicas")] public SkillSO baseJumpSkill; public SkillSO baseDashSkill;
     [Header("Skills com Upgrades")] public SkillSO upgradedJumpSkill; public SkillSO upgradedDashSkill; public SkillSO skillSlot1; public SkillSO skillSlot2;
+    [Header("Skills de Parede")] public SkillSO wallJumpSkill; public SkillSO wallDashSkill;
 
-    // ===== INÍCIO DA ALTERAÇÃO 1: RESTAURANDO A JANELA DE TEMPO =====
     [Header("Configurações de Input")]
     [Tooltip("A janela de tempo em segundos para executar a combinação.")]
     public float wallInputBufferTime = 0.15f;
-
     private float _lastWallJumpInputTime = -10f;
     private float _lastWallDashInputTime = -10f;
-    // ===== FIM DA ALTERAÇÃO 1 =====
 
     private SkillSO activeJumpSkill; private SkillSO activeDashSkill; private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
+    private bool isInventoryOpen = false;
 
     void Awake() { movementScript = GetComponent<AdvancedPlayerMovement2D>(); skillRelease = GetComponent<SkillRelease>(); combatController = GetComponent<CombatController>(); playerAttack = GetComponent<PlayerAttack>(); defenseHandler = GetComponent<DefenseHandler>(); if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>(); }
-    void Start() { energyBar.SetMaxEnergy(100f); SetPowerMode(false); }
-    void Update() { HandleAllInput(); UpdateAnimations(); wasGroundedLastFrame = movementScript.IsGrounded(); }
+
+    void Start()
+    {
+        energyBar.SetMaxEnergy(100f);
+        SetPowerMode(false);
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(false);
+            isInventoryOpen = false;
+        }
+    }
+
+    void Update()
+    {
+        // ===== INÍCIO DA ALTERAÇÃO =====
+        if (Input.GetKeyDown(KeyCode.E)) // TROCADO DE 'I' PARA 'E'
+        {
+            ToggleInventory();
+        }
+        // ===== FIM DA ALTERAÇÃO =====
+
+        if (isInventoryOpen)
+        {
+            return;
+        }
+
+        HandleAllInput();
+        UpdateAnimations();
+        wasGroundedLastFrame = movementScript.IsGrounded();
+    }
+
+    private void ToggleInventory()
+    {
+        if (inventoryPanel == null) return;
+        isInventoryOpen = !isInventoryOpen;
+        inventoryPanel.SetActive(isInventoryOpen);
+        Time.timeScale = isInventoryOpen ? 0f : 1f;
+    }
 
     private void HandleAllInput()
     {
         if (isLanding) return;
 
         bool jumpInputDown = Input.GetKeyDown(KeyCode.Space);
-        bool dashInputDown = (activeDashSkill != null) && Input.GetKeyDown(activeDashSkill.activationKey);
+        bool dashInputDown = (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey)) ||
+                             (wallDashSkill != null && Input.GetKeyDown(wallDashSkill.activationKey));
 
         if (!playerAttack.IsAttacking() && !playerAttack.IsReloading())
         {
             if (movementScript.IsWallSliding())
             {
-                if (jumpInputDown)
-                {
-                    _lastWallJumpInputTime = Time.time;
-                    if (Time.time - _lastWallDashInputTime <= wallInputBufferTime)
-                    {
-                        TryActivateCombinedSkill();
-                        return;
-                    }
-                }
-                if (dashInputDown)
-                {
-                    _lastWallDashInputTime = Time.time;
-                    if (Time.time - _lastWallJumpInputTime <= wallInputBufferTime)
-                    {
-                        TryActivateCombinedSkill();
-                        return;
-                    }
-                }
+                if ((jumpInputDown && Input.GetKey(wallDashSkill.activationKey)) || (dashInputDown && Input.GetKey(KeyCode.Space))) { TryActivateCombinedSkill(); return; }
+                if (jumpInputDown) TryActivateSkill(wallJumpSkill);
+                if (dashInputDown) TryActivateSkill(wallDashSkill);
             }
-
-            if (jumpInputDown) TryActivateSkill(activeJumpSkill);
-            if (dashInputDown) TryActivateSkill(activeDashSkill);
+            else
+            {
+                if (jumpInputDown) TryActivateSkill(activeJumpSkill);
+                if (dashInputDown) TryActivateSkill(activeDashSkill);
+            }
             if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
         }
 
@@ -68,10 +96,11 @@ public class PlayerController : MonoBehaviour
 
     private void TryActivateCombinedSkill()
     {
-        float combinedCost = activeJumpSkill.energyCost + activeDashSkill.energyCost;
+        if (wallJumpSkill == null || wallDashSkill == null) return;
+        float combinedCost = wallJumpSkill.energyCost + wallDashSkill.energyCost;
         if (energyBar.HasEnoughEnergy(combinedCost))
         {
-            if (skillRelease.ActivateWallDashJump(activeJumpSkill, activeDashSkill, movementScript))
+            if (skillRelease.ActivateWallDashJump(wallJumpSkill, wallDashSkill, movementScript))
             {
                 energyBar.ConsumeEnergy(combinedCost);
             }

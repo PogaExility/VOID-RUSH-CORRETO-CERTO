@@ -1,72 +1,162 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System; // Necessário para Action (eventos)
 
 public class InventoryManager : MonoBehaviour
 {
+    // Eventos para comunicar com a UI
+    public event Action<ItemSO, int, int> OnItemAdded;
+    public event Action<ItemSO> OnItemRemoved;
+
     [Header("Referências de Equipamento")]
-    [Tooltip("Arma corpo a corpo equipada atualmente.")]
     public WeaponSO equippedMeleeWeapon;
-
-    [Tooltip("Arma de fogo equipada atualmente.")]
     public WeaponSO equippedFirearm;
-
-    [Tooltip("Buster equipado atualmente.")]
     public WeaponSO equippedBuster;
 
-    [Header("Inventário (Maleta)")]
-    [Tooltip("A lista de todos os itens que o jogador está carregando.")]
+    [Header("Configuração do Grid (Maleta)")]
+    public int gridWidth = 10;
+    public int gridHeight = 6;
+
+    private ItemSO[,] inventoryGrid;
     public List<ItemSO> inventoryItems = new List<ItemSO>();
 
-    // Futuramente, esta classe também terá a lógica para o sistema de grid.
-
-    // --- Funções de Gerenciamento ---
-
-    public void AddItem(ItemSO itemToAdd)
+    void Awake()
     {
-        // Por enquanto, apenas adiciona o item à lista.
-        // Futuramente, aqui entraria a lógica de verificar espaço no grid.
-        inventoryItems.Add(itemToAdd);
-        Debug.Log("Adicionado ao inventário: " + itemToAdd.itemName);
+        inventoryGrid = new ItemSO[gridWidth, gridHeight];
+    }
+
+    // A SEÇÃO DE TESTE QUE ESTAVA AQUI FOI REMOVIDA
+    // [Header("Itens de Teste")]
+    // public ItemSO itemDeTeste;
+    // void Start()
+    // {
+    //     if (itemDeTeste != null) AddItem(itemDeTeste);
+    // }
+
+    public bool AddItem(ItemSO itemToAdd)
+    {
+        for (int y = 0; y < gridHeight; y++)
+        {
+            for (int x = 0; x < gridWidth; x++)
+            {
+                if (CanPlaceItem(itemToAdd, x, y))
+                {
+                    PlaceItem(itemToAdd, x, y);
+                    return true;
+                }
+            }
+        }
+        Debug.Log("Não há espaço no inventário para: " + itemToAdd.itemName);
+        return false;
+    }
+
+    private void PlaceItem(ItemSO item, int startX, int startY)
+    {
+        for (int y = 0; y < item.height; y++)
+        {
+            for (int x = 0; x < item.width; x++)
+            {
+                inventoryGrid[startX + x, startY + y] = item;
+            }
+        }
+
+        if (!inventoryItems.Contains(item))
+        {
+            inventoryItems.Add(item);
+        }
+
+        // AVISA A UI que um item foi adicionado e onde
+        OnItemAdded?.Invoke(item, startX, startY);
     }
 
     public void RemoveItem(ItemSO itemToRemove)
     {
         if (inventoryItems.Contains(itemToRemove))
         {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                for (int x = 0; x < gridWidth; x++)
+                {
+                    if (inventoryGrid[x, y] == itemToRemove)
+                    {
+                        inventoryGrid[x, y] = null;
+                    }
+                }
+            }
             inventoryItems.Remove(itemToRemove);
-            Debug.Log("Removido do inventário: " + itemToRemove.itemName);
+            // AVISA A UI que um item foi removido
+            OnItemRemoved?.Invoke(itemToRemove);
         }
     }
 
-    // A UI do inventário vai chamar esta função quando o jogador clicar em "Equipar".
+    // Função para a UI pedir que todos os itens sejam redesenhados
+    public void RedrawAllItems()
+    {
+        foreach (var item in inventoryItems)
+        {
+            FindItemPosition(item, out int x, out int y);
+            OnItemAdded?.Invoke(item, x, y);
+        }
+    }
+
+    private bool FindItemPosition(ItemSO item, out int xPos, out int yPos)
+    {
+        for (int y = 0; y < gridHeight; y++)
+        {
+            for (int x = 0; x < gridWidth; x++)
+            {
+                if (inventoryGrid[x, y] == item)
+                {
+                    xPos = x;
+                    yPos = y;
+                    return true;
+                }
+            }
+        }
+        xPos = -1;
+        yPos = -1;
+        return false;
+    }
+
+    private bool CanPlaceItem(ItemSO item, int startX, int startY)
+    {
+        if (startX < 0 || startY < 0 || startX + item.width > gridWidth || startY + item.height > gridHeight)
+        {
+            return false;
+        }
+        for (int y = 0; y < item.height; y++)
+        {
+            for (int x = 0; x < item.width; x++)
+            {
+                if (inventoryGrid[startX + x, startY + y] != null)
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     public void EquipWeapon(WeaponSO weaponToEquip)
     {
-        // Verifica se o jogador realmente possui esta arma no inventário.
         if (!inventoryItems.Contains(weaponToEquip))
         {
-            Debug.LogWarning("Tentativa de equipar a arma '" + weaponToEquip.itemName + "' que não está no inventário.");
             return;
         }
-
-        // Coloca a arma no slot de equipamento correto com base no seu tipo.
         switch (weaponToEquip.weaponType)
         {
             case WeaponType.Melee:
                 equippedMeleeWeapon = weaponToEquip;
-                Debug.Log("Arma corpo a corpo equipada: " + weaponToEquip.itemName);
                 break;
             case WeaponType.Firearm:
                 equippedFirearm = weaponToEquip;
-                Debug.Log("Arma de fogo equipada: " + weaponToEquip.itemName);
                 break;
             case WeaponType.Buster:
                 equippedBuster = weaponToEquip;
-                Debug.Log("Buster equipado: " + weaponToEquip.itemName);
                 break;
         }
     }
 
-    // Função para desequipar uma arma, se necessário.
     public void UnequipWeapon(WeaponType weaponType)
     {
         switch (weaponType)

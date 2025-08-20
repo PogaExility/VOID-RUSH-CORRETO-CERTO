@@ -20,6 +20,11 @@ public class SkillSO : ScriptableObject
     public float dashDistance = 5f;
     public float dashSpeed = 25f;
 
+    // ===== INÍCIO DA ALTERAÇÃO =====
+    [Tooltip("A DISTÂNCIA em unidades que o Wall Dash horizontal percorre.")]
+    public float wallDashDistance = 7f; // TROCADO DE DURAÇÃO PARA DISTÂNCIA
+    // ===== FIM DA ALTERAÇÃO =====
+
     [Header("Configurações de Pulo")]
     public float jumpHeightMultiplier = 1f;
     public int airJumps = 0;
