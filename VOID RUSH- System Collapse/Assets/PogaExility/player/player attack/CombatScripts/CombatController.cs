@@ -11,7 +11,7 @@ public class CombatController : MonoBehaviour
     [Header("Configuração de Postura")]
     public WeaponType activeStance = WeaponType.Melee;
 
-    private WeaponSO _currentWeapon;
+    private ItemSO _currentWeapon;
 
     void Awake()
     {

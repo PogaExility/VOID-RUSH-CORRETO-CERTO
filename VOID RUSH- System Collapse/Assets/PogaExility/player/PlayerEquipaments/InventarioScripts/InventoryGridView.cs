@@ -5,41 +5,31 @@ using System.Collections.Generic;
 public class InventoryGridView : MonoBehaviour
 {
     [Header("Referências")]
-    [Tooltip("Arraste aqui o objeto que contém o InventoryManager (ex: o Jogador).")]
     public InventoryManager inventoryManager;
 
     [Header("Configuração Visual")]
-    [Tooltip("O prefab da CÉLULA/SLOT semi-transparente.")]
-    public GameObject slotPrefab;
-    [Tooltip("O prefab da IMAGEM do item que ficará sobre a grade.")]
+    public InventorySlotView slotPrefab; // MUDOU DE GameObject PARA InventorySlotView
     public InventoryItemView itemPrefab;
 
     [Header("Containers da UI")]
-    [Tooltip("O objeto que conterá o grid de células (deve ter um Grid Layout Group).")]
     public RectTransform slotContainer;
-    [Tooltip("O objeto que conterá as imagens dos itens (NÃO deve ter um Grid Layout Group).")]
     public RectTransform itemContainer;
 
+    // Lista para guardar as referências de todas as células visuais
+    private List<InventorySlotView> slotViews = new List<InventorySlotView>();
     private Dictionary<ItemSO, InventoryItemView> itemsInView = new Dictionary<ItemSO, InventoryItemView>();
-    private bool isGridGenerated = false; // Flag para garantir que o grid de fundo seja criado só uma vez
 
     void Awake()
     {
         if (inventoryManager != null)
         {
-            // Se inscreve nos eventos UMA ÚNICA VEZ
             inventoryManager.OnItemAdded += AddItemView;
             inventoryManager.OnItemRemoved += RemoveItemView;
-        }
-        else
-        {
-            Debug.LogError("Referência ao InventoryManager não foi definida no InventoryGridView!");
         }
     }
 
     void OnDestroy()
     {
-        // Cancela a inscrição ao ser destruído para evitar erros
         if (inventoryManager != null)
         {
             inventoryManager.OnItemAdded -= AddItemView;
@@ -47,29 +37,23 @@ public class InventoryGridView : MonoBehaviour
         }
     }
 
-    // Chamado quando o objeto do inventário é ativado
     void OnEnable()
     {
-        // A grade de fundo é gerada apenas na primeira vez que o inventário abre
         if (!isGridGenerated)
         {
             GenerateSlotGrid();
-            isGridGenerated = true;
         }
-
-        // Os itens visuais são redesenhados toda vez que o inventário abre
         RedrawAllItems();
     }
 
+    // ===== LÓGICA DE GERAR O GRID E GUARDAR REFERÊNCIAS =====
+    private bool isGridGenerated = false;
     private void GenerateSlotGrid()
     {
         GridLayoutGroup gridLayout = slotContainer.GetComponent<GridLayoutGroup>();
-        if (gridLayout == null)
-        {
-            Debug.LogError("O Slot Container precisa de um componente Grid Layout Group!");
-            return;
-        }
+        if (gridLayout == null || slotPrefab == null) return;
 
+        slotViews.Clear(); // Limpa a lista antes de gerar
         foreach (Transform child in slotContainer)
         {
             Destroy(child.gameObject);
@@ -81,19 +65,23 @@ public class InventoryGridView : MonoBehaviour
         int totalCells = inventoryManager.gridWidth * inventoryManager.gridHeight;
         for (int i = 0; i < totalCells; i++)
         {
-            Instantiate(slotPrefab, slotContainer);
+            InventorySlotView newSlot = Instantiate(slotPrefab, slotContainer);
+            slotViews.Add(newSlot); // Adiciona a célula à nossa lista de controle
         }
+        isGridGenerated = true;
     }
 
+    // ===== LÓGICA DE ATUALIZAR AS CORES E DESENHAR OS ITENS =====
     private void RedrawAllItems()
     {
-        // Limpa apenas as imagens dos ITENS, não a grade de fundo
-        foreach (Transform child in itemContainer)
-        {
-            Destroy(child.gameObject);
-        }
+        // 1. Limpa todas as imagens de itens
+        foreach (Transform child in itemContainer) Destroy(child.gameObject);
         itemsInView.Clear();
 
+        // 2. Reseta a cor de todas as células para "vazio"
+        foreach (var slot in slotViews) slot.SetState(false);
+
+        // 3. Pede para o cérebro redesenhar cada item
         if (inventoryManager != null)
         {
             inventoryManager.RedrawAllItems();
@@ -102,25 +90,48 @@ public class InventoryGridView : MonoBehaviour
 
     public void AddItemView(ItemSO item, int x, int y)
     {
-        if (itemPrefab == null) return;
-
+        // Cria a imagem do item no ItemContainer
         float cellSize = slotContainer.GetComponent<GridLayoutGroup>().cellSize.x;
-
         InventoryItemView newItemView = Instantiate(itemPrefab, itemContainer);
         newItemView.Render(item, cellSize);
-
         RectTransform rt = newItemView.GetComponent<RectTransform>();
         rt.anchoredPosition = new Vector2(x * cellSize, -y * cellSize);
-
         itemsInView[item] = newItemView;
+
+        // Atualiza a cor das células ocupadas
+        UpdateSlotColors(x, y, item.width, item.height, true);
     }
 
     public void RemoveItemView(ItemSO item)
     {
+        // Encontra a posição do item para saber quais células limpar
+        if (inventoryManager.FindItemPosition(item, out int x, out int y))
+        {
+            // Reseta a cor das células para "vazio"
+            UpdateSlotColors(x, y, item.width, item.height, false);
+        }
+
+        // Remove a imagem do item
         if (itemsInView.ContainsKey(item))
         {
-            Destroy(itemsInView[item].gameObject);
+            if (itemsInView[item] != null) Destroy(itemsInView[item].gameObject);
             itemsInView.Remove(item);
+        }
+    }
+
+    // Função auxiliar para mudar a cor das células
+    private void UpdateSlotColors(int startX, int startY, int width, int height, bool isOccupied)
+    {
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int index = (startY + y) * inventoryManager.gridWidth + (startX + x);
+                if (index < slotViews.Count)
+                {
+                    slotViews[index].SetState(isOccupied);
+                }
+            }
         }
     }
 }

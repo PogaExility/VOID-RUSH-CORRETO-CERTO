@@ -1,39 +1,67 @@
 using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(WeaponSO))]
-public class WeaponSOEditor : Editor
+[CustomEditor(typeof(ItemSO))] // AGORA EDITA O ItemSO
+public class ItemSOEditor : Editor
 {
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
 
-        WeaponSO weapon = (WeaponSO)target;
+        ItemSO item = (ItemSO)target;
 
-        // --- Campos do ItemSO (Pai) ---
-        EditorGUILayout.LabelField("Informações Gerais do Item", EditorStyles.boldLabel);
+        // --- SEÇÃO 1: CAMPOS GERAIS (SEMPRE VISÍVEIS) ---
+        EditorGUILayout.LabelField("Informações Gerais", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemName"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemIcon"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("width"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("height"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemType"));
 
         EditorGUILayout.Space(10);
 
-        // --- Campos do WeaponSO (Filho) ---
+        EditorGUILayout.LabelField("Configuração do Inventário (Grid)", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("width"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("height"));
+
+        EditorGUILayout.Space(10);
+
+        // --- SEÇÃO 2: CAMPOS CONTEXTUAIS ---
+        // Mostra campos diferentes com base no ItemType selecionado
+        switch (item.itemType)
+        {
+            case ItemType.Weapon:
+                DrawWeaponFields();
+                break;
+
+            case ItemType.Consumable:
+                EditorGUILayout.LabelField("Configurações de Consumível", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("healthToRestore"));
+                // (Desenhe outros campos de consumível aqui)
+                break;
+
+            case ItemType.KeyItem:
+                // Itens chave podem não ter campos extras
+                EditorGUILayout.HelpBox("Este é um Item Chave.", MessageType.Info);
+                break;
+        }
+
+        serializedObject.ApplyModifiedProperties();
+    }
+
+    // Função auxiliar para desenhar todos os campos de arma
+    private void DrawWeaponFields()
+    {
+        ItemSO item = (ItemSO)target;
+
         EditorGUILayout.LabelField("Configuração de Combate", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("weaponType"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("damage"));
-
-        // ===== INÍCIO DA ALTERAÇÃO: EXIBINDO OS NOVOS CAMPOS GERAIS =====
         EditorGUILayout.PropertyField(serializedObject.FindProperty("attackRate"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("useAimMode"));
-        // ===== FIM DA ALTERAÇÃO =====
 
         EditorGUILayout.Space(5);
 
-        // --- Lógica para mostrar/esconder campos ---
-        switch (weapon.weaponType)
+        // Mostra campos exclusivos do WeaponType selecionado
+        switch (item.weaponType)
         {
             case WeaponType.Melee:
                 EditorGUILayout.LabelField("Exclusivo: Corpo a Corpo", EditorStyles.boldLabel);
@@ -60,7 +88,5 @@ public class WeaponSOEditor : Editor
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("chargedShotPrefab"));
                 break;
         }
-
-        serializedObject.ApplyModifiedProperties();
     }
 }
