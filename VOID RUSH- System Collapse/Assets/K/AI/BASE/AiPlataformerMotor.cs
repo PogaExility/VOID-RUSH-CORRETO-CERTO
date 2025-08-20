@@ -53,7 +53,17 @@ public class AIPlatformerMotor : MonoBehaviour
     public bool IsLedgeAhead()
     {
         if (ledgeCheck == null) return false;
-        return !Physics2D.Raycast(ledgeCheck.position, Vector2.down, 2f, groundLayer);
+
+        // --- LÓGICA REFINADA ---
+        // Começamos o raio um pouco acima da posição do sensor para garantir que ele não comece dentro do chão.
+        Vector2 rayOrigin = ledgeCheck.position + Vector3.up * 0.1f;
+        float rayDistance = 2f; // A distância do raio original.
+
+        // O Gizmo agora mostrará exatamente o mesmo raio que estamos usando na lógica.
+        Debug.DrawRay(rayOrigin, Vector2.down * rayDistance, Color.magenta);
+
+        // Se o raio NÃO atingir nada, significa que há um penhasco à frente.
+        return !Physics2D.Raycast(rayOrigin, Vector2.down, rayDistance, groundLayer);
     }
 
     void OnDrawGizmosSelected()
