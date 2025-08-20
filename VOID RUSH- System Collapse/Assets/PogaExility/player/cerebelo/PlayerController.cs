@@ -4,14 +4,18 @@ using System.Collections.Generic;
 [RequireComponent(typeof(AdvancedPlayerMovement2D))] //...etc
 public class PlayerController : MonoBehaviour
 {
+    // ===== NOVAS REFERÊNCIAS =====
+    [Header("Referências de Gerenciamento")]
+    [Tooltip("Arraste o objeto que contém o CursorManager.")]
+    public CursorManager cursorManager;
+    [Tooltip("Arraste o objeto que contém o InventoryManager (geralmente, este mesmo objeto Player).")]
+    public InventoryManager inventoryManager;
+
     [Header("Referências de UI")]
     [Tooltip("Arraste o objeto do Canvas do seu inventário aqui.")]
     public GameObject inventoryPanel;
 
-    [Header("Referências de Inventário")]
-    [Tooltip("Arraste o objeto que contém o InventoryManager (geralmente, este mesmo objeto Player).")]
-    public InventoryManager inventoryManager;
-
+    // ===== O RESTO DAS SUAS REFERÊNCIAS =====
     [Header("Referências de Movimento")] public SkillRelease skillRelease; public AdvancedPlayerMovement2D movementScript; public PlayerAnimatorController animatorController; public EnergyBarController energyBar; public GameObject powerModeIndicator;
     [Header("Referências de Combate")] public CombatController combatController; public PlayerAttack playerAttack; public DefenseHandler defenseHandler;
     [Header("Skills Básicas")] public SkillSO baseJumpSkill; public SkillSO baseDashSkill;
@@ -37,6 +41,7 @@ public class PlayerController : MonoBehaviour
         defenseHandler = GetComponent<DefenseHandler>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         if (inventoryManager == null) inventoryManager = GetComponent<InventoryManager>();
+        if (cursorManager == null) cursorManager = FindFirstObjectByType<CursorManager>(); // Procura automaticamente se não for arrastado
     }
 
     void Start()
@@ -48,23 +53,23 @@ public class PlayerController : MonoBehaviour
             inventoryPanel.SetActive(false);
             isInventoryOpen = false;
         }
+        if (cursorManager != null)
+        {
+            cursorManager.SetDefaultCursor(); // Garante que o cursor comece normal
+        }
     }
 
     void Update()
     {
-        // ===== INÍCIO DA ALTERAÇÃO =====
-        // TAB para abrir/fechar o inventário
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             ToggleInventory();
         }
 
-        // E para interagir com itens próximos
         if (Input.GetKeyDown(KeyCode.E) && canInteract && !isInventoryOpen)
         {
             Interact();
         }
-        // ===== FIM DA ALTERAÇÃO =====
 
         if (isInventoryOpen) return;
 
@@ -80,6 +85,18 @@ public class PlayerController : MonoBehaviour
         inventoryPanel.SetActive(isInventoryOpen);
         Time.timeScale = isInventoryOpen ? 0f : 1f;
 
+        if (cursorManager != null)
+        {
+            if (isInventoryOpen)
+            {
+                cursorManager.SetInventoryCursor();
+            }
+            else
+            {
+                cursorManager.SetDefaultCursor();
+            }
+        }
+
         if (!isInventoryOpen)
         {
             inventoryManager.DropHeldItem();
@@ -88,6 +105,8 @@ public class PlayerController : MonoBehaviour
 
     private void Interact()
     {
+        if (nearbyItems.Count == 0) return;
+
         ItemPickup itemToPickup = nearbyItems[0];
         if (itemToPickup != null)
         {

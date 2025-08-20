@@ -1,15 +1,19 @@
 using UnityEngine;
 
-[RequireComponent(typeof(Collider2D))]
+[RequireComponent(typeof(Collider2D), typeof(Rigidbody2D))]
 public class ItemPickup : MonoBehaviour
 {
     [Header("Item Data")]
-    [Tooltip("O ScriptableObject do item que este objeto representa.")]
     public ItemSO itemData;
 
-    // Garante que o Collider2D seja um Trigger para não bloquear o jogador
-    void Awake()
+    // Usamos Start para garantir que isso rode para itens colocados na cena
+    void Start()
     {
-        GetComponent<Collider2D>().isTrigger = true;
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        Collider2D col = GetComponent<Collider2D>();
+
+        // Desliga a física para que o item fique "estático"
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        col.isTrigger = true;
     }
 }

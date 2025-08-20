@@ -1,15 +1,18 @@
 fileFormatVersion: 2
-guid: 5919f5b9459751d4a87d64c54db99ec9
+guid: d6f1057fa3b399c47a0f74356e189e9a
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -1064705222026791727
-    second: "desgra\xE7a de arma_0"
+      213: -4914513220774144829
+    second: MOUSE_0
+  - first:
+      213: 5300314265525761595
+    second: MOUSE_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
     mipMapMode: 0
-    enableMipMap: 0
+    enableMipMap: 1
     sRGBTexture: 1
     linearTexture: 0
     fadeOut: 0
@@ -37,7 +40,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -51,13 +54,13 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 400
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
-  alphaIsTransparency: 1
+  alphaIsTransparency: 0
   spriteTessellationDetail: -1
-  textureType: 8
+  textureType: 0
   textureShape: 1
   singleChannelComponent: 0
   flipbookRows: 1
@@ -139,13 +142,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "desgra\xE7a de arma_0"
+      name: MOUSE_0
       rect:
         serializedVersion: 2
-        x: 49
-        y: 64
-        width: 317
-        height: 227
+        x: 2
+        y: 19
+        width: 144
+        height: 105
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +157,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 1d4f69add386931f0800000000000000
-      internalID: -1064705222026791727
+      spriteID: 3c4dbcf83442ccbb0800000000000000
+      internalID: -4914513220774144829
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MOUSE_1
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 22
+        width: 9
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b3639920ebf7e8940800000000000000
+      internalID: 5300314265525761595
       vertices: []
       indices: 
       edges: []
@@ -174,7 +199,8 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      "desgra\xE7a de arma_0": -1064705222026791727
+      MOUSE_0: -4914513220774144829
+      MOUSE_1: 5300314265525761595
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
