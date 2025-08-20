@@ -1,59 +1,91 @@
 using UnityEngine;
 
+
 [RequireComponent(typeof(AdvancedPlayerMovement2D))] //...etc
 public class PlayerController : MonoBehaviour
 {
+    [Header("Referências de UI")]
+    [Tooltip("Arraste o objeto do Canvas do seu inventário aqui.")]
+    public GameObject inventoryPanel;
+
     [Header("Referências de Movimento")] public SkillRelease skillRelease; public AdvancedPlayerMovement2D movementScript; public PlayerAnimatorController animatorController; public EnergyBarController energyBar; public GameObject powerModeIndicator;
     [Header("Referências de Combate")] public CombatController combatController; public PlayerAttack playerAttack; public DefenseHandler defenseHandler;
     [Header("Skills Básicas")] public SkillSO baseJumpSkill; public SkillSO baseDashSkill;
     [Header("Skills com Upgrades")] public SkillSO upgradedJumpSkill; public SkillSO upgradedDashSkill; public SkillSO skillSlot1; public SkillSO skillSlot2;
+    [Header("Skills de Parede")] public SkillSO wallJumpSkill; public SkillSO wallDashSkill;
 
-    // ===== INÍCIO DA ALTERAÇÃO 1: ADICIONANDO SLOTS PARA SKILLS DE PAREDE =====
-    [Header("Skills de Parede")]
-    public SkillSO wallJumpSkill;
-    public SkillSO wallDashSkill;
-    // ===== FIM DA ALTERAÇÃO 1 =====
+    [Header("Configurações de Input")]
+    [Tooltip("A janela de tempo em segundos para executar a combinação.")]
+    public float wallInputBufferTime = 0.15f;
+    private float _lastWallJumpInputTime = -10f;
+    private float _lastWallDashInputTime = -10f;
 
     private SkillSO activeJumpSkill; private SkillSO activeDashSkill; private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
+    private bool isInventoryOpen = false;
 
     void Awake() { movementScript = GetComponent<AdvancedPlayerMovement2D>(); skillRelease = GetComponent<SkillRelease>(); combatController = GetComponent<CombatController>(); playerAttack = GetComponent<PlayerAttack>(); defenseHandler = GetComponent<DefenseHandler>(); if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>(); }
-    void Start() { energyBar.SetMaxEnergy(100f); SetPowerMode(false); }
-    void Update() { HandleAllInput(); UpdateAnimations(); wasGroundedLastFrame = movementScript.IsGrounded(); }
+
+    void Start()
+    {
+        energyBar.SetMaxEnergy(100f);
+        SetPowerMode(false);
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(false);
+            isInventoryOpen = false;
+        }
+    }
+
+    void Update()
+    {
+        // ===== INÍCIO DA ALTERAÇÃO =====
+        if (Input.GetKeyDown(KeyCode.E)) // TROCADO DE 'I' PARA 'E'
+        {
+            ToggleInventory();
+        }
+        // ===== FIM DA ALTERAÇÃO =====
+
+        if (isInventoryOpen)
+        {
+            return;
+        }
+
+        HandleAllInput();
+        UpdateAnimations();
+        wasGroundedLastFrame = movementScript.IsGrounded();
+    }
+
+    private void ToggleInventory()
+    {
+        if (inventoryPanel == null) return;
+        isInventoryOpen = !isInventoryOpen;
+        inventoryPanel.SetActive(isInventoryOpen);
+        Time.timeScale = isInventoryOpen ? 0f : 1f;
+    }
 
     private void HandleAllInput()
     {
         if (isLanding) return;
 
         bool jumpInputDown = Input.GetKeyDown(KeyCode.Space);
-        // A checagem do input de dash agora deve considerar o wallDashSkill também
         bool dashInputDown = (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey)) ||
                              (wallDashSkill != null && Input.GetKeyDown(wallDashSkill.activationKey));
 
         if (!playerAttack.IsAttacking() && !playerAttack.IsReloading())
         {
-            // ===== INÍCIO DA ALTERAÇÃO 2: USANDO AS SKILLS DE PAREDE DEDICADAS =====
             if (movementScript.IsWallSliding())
             {
-                // A combinação agora usa as skills de parede dedicadas
-                if ((jumpInputDown && Input.GetKey(wallDashSkill.activationKey)) || (dashInputDown && Input.GetKey(KeyCode.Space)))
-                {
-                    TryActivateCombinedSkill();
-                    return;
-                }
-
-                // Chamadas para as skills isoladas de parede
+                if ((jumpInputDown && Input.GetKey(wallDashSkill.activationKey)) || (dashInputDown && Input.GetKey(KeyCode.Space))) { TryActivateCombinedSkill(); return; }
                 if (jumpInputDown) TryActivateSkill(wallJumpSkill);
                 if (dashInputDown) TryActivateSkill(wallDashSkill);
             }
-            else // Se NÃO estiver em WallSlide, usa as skills normais
+            else
             {
                 if (jumpInputDown) TryActivateSkill(activeJumpSkill);
                 if (dashInputDown) TryActivateSkill(activeDashSkill);
             }
-            // ===== FIM DA ALTERAÇÃO 2 =====
-
             if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
         }
 
@@ -64,9 +96,7 @@ public class PlayerController : MonoBehaviour
 
     private void TryActivateCombinedSkill()
     {
-        // Garante que as skills de parede estão atribuídas
         if (wallJumpSkill == null || wallDashSkill == null) return;
-
         float combinedCost = wallJumpSkill.energyCost + wallDashSkill.energyCost;
         if (energyBar.HasEnoughEnergy(combinedCost))
         {

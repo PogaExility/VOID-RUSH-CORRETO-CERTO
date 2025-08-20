@@ -33,4 +33,5 @@ public class ItemSO : ScriptableObject
     [Header("Categoria do Item")]
     [Tooltip("Define o tipo geral do item para organização.")]
     public ItemType itemType;
+
 }
