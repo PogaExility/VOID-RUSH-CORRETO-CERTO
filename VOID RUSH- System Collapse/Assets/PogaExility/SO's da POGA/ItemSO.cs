@@ -1,37 +1,49 @@
 using UnityEngine;
 
-// Este enum define as categorias gerais de itens.
-// Podemos adicionar mais no futuro (ex: 'Recurso', 'Tesouro').
-public enum ItemType
-{
-    Weapon,
-    Consumable,
-    KeyItem
-}
+// Definições de tipos (Enums)
+public enum ItemType { Consumable, KeyItem, Weapon }
+public enum WeaponType { Melee, Firearm, Buster }
 
-// O [CreateAssetMenu] nos permite criar "instâncias" deste item no menu da Unity.
-// Vamos usar isso para os itens filhos, como as armas.
-[CreateAssetMenu(fileName = "NewItem", menuName = "NEXUS/Itens/Item Base", order = 0)]
+[CreateAssetMenu(fileName = "NewItem", menuName = "NEXUS/Itens/Novo Item", order = 0)]
 public class ItemSO : ScriptableObject
 {
-    [Header("Informações Gerais do Item")]
-    [Tooltip("O nome do item que aparecerá na UI.")]
+    [Tooltip("O prefab do objeto que representa este item no mundo do jogo (para ser coletado ou jogado fora).")]
+    public GameObject itemPrefab;
+    [Header("Informações Gerais")]
     public string itemName;
-
-    [Tooltip("O ícone que será mostrado no inventário.")]
     public Sprite itemIcon;
-
-    [Header("Configuração do Inventário (Grid)")]
-    [Tooltip("Quantos 'quadrados' o item ocupa na horizontal.")]
-    [Range(1, 5)] // Limita o valor no Inspector para evitar erros
-    public int width = 1;
-
-    [Tooltip("Quantos 'quadrados' o item ocupa na vertical.")]
-    [Range(1, 5)]
-    public int height = 1;
-
-    [Header("Categoria do Item")]
-    [Tooltip("Define o tipo geral do item para organização.")]
     public ItemType itemType;
 
+    [Header("Configuração do Inventário (Grid)")]
+    [Range(1, 6)] public int width = 1;
+    [Range(1, 6)] public int height = 1;
+
+    // --- CAMPOS DE ARMA (WEAPON) ---
+    [Header("Configurações de Combate (se for Arma)")]
+    public WeaponType weaponType;
+    public float damage;
+    public float attackRate = 0.5f;
+    public bool useAimMode = false;
+    public GameObject slashEffectPrefab;
+    public GameObject bulletPrefab;
+    public GameObject busterShotPrefab;
+    public GameObject chargedShotPrefab;
+
+    [Header("Melee")]
+    public AnimationClip[] comboAnimations;
+
+    [Header("Firearm")]
+    public int magazineSize;
+    public float reloadTime;
+
+    [Header("Buster")]
+    public float chargeTime;
+    public float energyCostPerChargeSecond;
+    public float baseEnergyCost;
+    public float chargedShotDamage;
+
+    // --- CAMPOS DE CONSUMÍVEL (CONSUMABLE) ---
+    [Header("Configurações de Consumível")]
+    public float healthToRestore;
+    // (Adicione outros efeitos de consumíveis aqui no futuro)
 }

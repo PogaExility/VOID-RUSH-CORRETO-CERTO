@@ -27,7 +27,7 @@ public class PlayerAttack : MonoBehaviour
         // _animatorController = GetComponent<PlayerAnimatorController>();
     }
 
-    public void PerformAttack(WeaponSO weapon)
+    public void PerformAttack(ItemSO weapon)
     {
         if (_isReloading || _isAttacking) return;
 
@@ -45,7 +45,7 @@ public class PlayerAttack : MonoBehaviour
         }
     }
 
-    private IEnumerator MeleeAttackCoroutine(WeaponSO weapon)
+    private IEnumerator MeleeAttackCoroutine(ItemSO weapon)
     {
         _isAttacking = true;
         if (Time.time - _lastAttackTime > comboResetTime) { _comboCounter = 0; }
@@ -58,14 +58,14 @@ public class PlayerAttack : MonoBehaviour
         _isAttacking = false;
     }
 
-    private void HandleFirearmAttack(WeaponSO weapon)
+    private void HandleFirearmAttack(ItemSO weapon)
     {
         if (_currentAmmo <= 0) { Debug.Log("Sem munição!"); return; }
         _currentAmmo--;
         Debug.Log("Tiro! Munição restante: " + _currentAmmo + "/" + weapon.magazineSize);
     }
 
-    private void HandleBusterAttack(WeaponSO weapon)
+    private void HandleBusterAttack(ItemSO weapon)
     {
         if (_energyBar.HasEnoughEnergy(weapon.baseEnergyCost))
         {
@@ -75,7 +75,7 @@ public class PlayerAttack : MonoBehaviour
         else { Debug.Log("Energia insuficiente!"); }
     }
 
-    public void Reload(WeaponSO weapon)
+    public void Reload(ItemSO weapon)
     {
         if (weapon == null || weapon.weaponType != WeaponType.Firearm || _isReloading) return;
         StartCoroutine(ReloadCoroutine(weapon.reloadTime, weapon.magazineSize));
@@ -91,7 +91,7 @@ public class PlayerAttack : MonoBehaviour
         Debug.Log("Recarga completa!");
     }
 
-    public void OnWeaponEquipped(WeaponSO weapon)
+    public void OnWeaponEquipped(ItemSO weapon)
     {
         if (weapon != null && weapon.weaponType == WeaponType.Firearm)
         {

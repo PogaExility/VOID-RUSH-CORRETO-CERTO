@@ -5,7 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Chao
-  - Parede
+  - Item
   layers:
   - Default
   - TransparentFX
@@ -14,7 +14,7 @@ TagManager:
   - Water
   - UI
   - Chao
-  - Parede
+  - Item
   - EnemyBodyPart
   - 
   - 
