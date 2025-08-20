@@ -46,7 +46,7 @@ GameObject:
   - component: {fileID: 5658211616576219956}
   - component: {fileID: 44233821262392013}
   m_Layer: 0
-  m_Name: EnemyFeral
+  m_Name: EnemyTest
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -115,8 +115,8 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
-  groundCheckRadius: 0.2
-  wallCheckDistance: 0.5
+  groundCheckRadius: 0.5
+  wallCheckDistance: 1
   currentFacingDirection: 1
 --- !u!114 &4590336284299838918
 MonoBehaviour:
@@ -131,19 +131,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   eyes: {fileID: 1821488007309959327}
-  visionRange: 15
-  visionAngle: 90
+  visionRange: 10
+  visionAngle: 20
   visionBlockers:
     serializedVersion: 2
     m_Bits: 192
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
+  lookSpeed: 4
+  upwardLookAngle: 45
+  downwardLookAngle: 45
+  platformCheckHeight: 5
   searchTime: 4.93
-  idealCombatDistance: 8
-  repositionDistanceThreshold: 2
-  rangedAttackCooldown: 3
-  jumpOverObstacleVelocity: {x: 4, y: 12}
+  attackRange: 1.5
+  attackCooldown: 1.5
+  jumpForce: 14
+  airControlForce: 5
   maxJumpDistance: 5
 --- !u!212 &5658211616576219956
 SpriteRenderer:

@@ -29,7 +29,14 @@ public class AIPlatformerMotor : MonoBehaviour
 
     public void Move(float direction) { rb.linearVelocity = new Vector2(direction * moveSpeed, rb.linearVelocity.y); }
     public void Stop() { rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); }
-    public void SetVelocity(float x, float y) { rb.linearVelocity = new Vector2(x, y); }
+    public void AddJumpForce(Vector2 force)
+    {
+        if (IsGrounded())
+        {
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x * 0.5f, 0); // Mantém um pouco do momento, zera o Y
+            rb.AddForce(force, ForceMode2D.Impulse);
+        }
+    }
 
     public bool IsGrounded()
     {
