@@ -6127,11 +6127,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4708386788519731153, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 105.35
+      value: -1
       objectReference: {fileID: 0}
     - target: {fileID: 4708386788519731153, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 45.13
+      value: -3
       objectReference: {fileID: 0}
     - target: {fileID: 4708386788519731153, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.z
@@ -6185,6 +6185,14 @@ PrefabInstance:
       propertyPath: energyBar
       value: 
       objectReference: {fileID: 1381522239}
+    - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: wallDashSkill
+      value: 
+      objectReference: {fileID: 11400000, guid: 4b89ac77f7e847f4685e312bc7eed78d, type: 2}
+    - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: wallJumpSkill
+      value: 
+      objectReference: {fileID: 11400000, guid: ebe4f492f4225a244819f893403ad033, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
