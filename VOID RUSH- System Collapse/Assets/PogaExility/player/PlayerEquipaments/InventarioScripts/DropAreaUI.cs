@@ -1,13 +1,14 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
+[RequireComponent(typeof(CanvasGroup))]
 public class DropAreaUI : MonoBehaviour, IDropHandler
 {
     [Header("Referências")]
     [Tooltip("Arraste aqui o objeto que contém o InventoryManager (ex: o Jogador).")]
     public InventoryManager inventoryManager;
 
-    private CanvasGroup canvasGroup; // Usado para controlar a visibilidade e interação
+    private CanvasGroup canvasGroup;
 
     void Awake()
     {
@@ -16,34 +17,32 @@ public class DropAreaUI : MonoBehaviour, IDropHandler
         {
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
-
-        // Começa invisível e não interativo
         Hide();
     }
 
-    // Função pública para ser chamada quando o arrasto de um item COMEÇA
     public void Show()
     {
-        canvasGroup.alpha = 1f; // Torna visível
-        canvasGroup.blocksRaycasts = true; // Permite que detecte o "soltar" do mouse
+        canvasGroup.alpha = 1f;
+        canvasGroup.blocksRaycasts = true;
     }
 
-    // Função pública para ser chamada quando o arrasto de um item TERMINA
     public void Hide()
     {
-        canvasGroup.alpha = 0f; // Torna invisível
-        canvasGroup.blocksRaycasts = false; // Impede que detecte cliques quando invisível
+        canvasGroup.alpha = 0f;
+        canvasGroup.blocksRaycasts = false;
     }
 
     // Chamada automaticamente quando um item é solto sobre esta área
     public void OnDrop(PointerEventData eventData)
     {
         InventoryItemView itemView = eventData.pointerDrag.GetComponent<InventoryItemView>();
-
         if (itemView != null)
         {
-            // Avisa ao cérebro para "dropar" este item
-            inventoryManager.DropItemFromUI(itemView.GetItemData());
+            // Pega o item que está sendo segurado pelo cérebro e o joga fora
+            if (inventoryManager.heldItem != null)
+            {
+                inventoryManager.DropHeldItem();
+            }
         }
     }
 }

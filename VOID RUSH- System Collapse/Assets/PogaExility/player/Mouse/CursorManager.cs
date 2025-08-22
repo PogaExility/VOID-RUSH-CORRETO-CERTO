@@ -2,30 +2,32 @@ using UnityEngine;
 
 public class CursorManager : MonoBehaviour
 {
-    [Header("Sprites do Cursor")]
-    [Tooltip("O sprite para o cursor quando o inventário está aberto.")]
+    [Header("Textura do cursor (Texture Type = Default ou Cursor)")]
     public Texture2D inventoryCursor;
 
-    [Tooltip("O ponto do sprite que deve alinhar com a ponta do mouse (geralmente o canto superior esquerdo).")]
-    public Vector2 cursorHotspot = Vector2.zero;
+    [Header("Hotspot (px) a partir do canto SUPERIOR ESQUERDO da textura")]
+    public Vector2Int hotspot = Vector2Int.zero;
 
-    // Função pública para definir o cursor para o modo "Inventário"
+    [Header("Modo do cursor")]
+    public CursorMode cursorMode = CursorMode.Auto;
+
     public void SetInventoryCursor()
     {
-        // Esconde o cursor padrão do sistema operacional
         Cursor.visible = true;
 
-        // Define o sprite e o ponto de clique do novo cursor
-        Cursor.SetCursor(inventoryCursor, cursorHotspot, CursorMode.Auto);
+        if (inventoryCursor == null)
+        {
+            Debug.LogWarning("[CursorManager] inventoryCursor não atribuído.");
+            Cursor.SetCursor(null, Vector2.zero, cursorMode);
+            return;
+        }
+
+        Cursor.SetCursor(inventoryCursor, new Vector2(hotspot.x, hotspot.y), cursorMode);
     }
 
-    // Função pública para definir o cursor para o modo "Gameplay" (padrão)
     public void SetDefaultCursor()
     {
-        // Mostra o cursor padrão do sistema operacional
         Cursor.visible = true;
-
-        // Remove qualquer cursor customizado
-        Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+        Cursor.SetCursor(null, Vector2.zero, cursorMode);
     }
 }

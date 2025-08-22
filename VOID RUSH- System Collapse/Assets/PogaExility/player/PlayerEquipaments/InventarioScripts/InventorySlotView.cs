@@ -7,21 +7,32 @@ public class InventorySlotView : MonoBehaviour
     private Image slotImage;
 
     [Header("Cores do Slot")]
-    public Color emptyColor = new Color(0.8f, 0.8f, 0.8f, 0.5f); // Cinza semi-transparente
-    public Color occupiedColor = new Color(0.5f, 0.5f, 0.5f, 0.5f); // Cinza mais escuro
+    public Color emptyColor = new Color(0.2f, 0.2f, 0.2f, 0.5f);
+    public Color occupiedColor = new Color(0.1f, 0.1f, 0.1f, 0.5f);
+    public Color previewValidColor = new Color(0f, 1f, 0f, 0.3f);
+    public Color previewInvalidColor = new Color(1f, 0f, 0f, 0.3f);
+
+    public bool isOccupied = false;
 
     void Awake()
     {
         slotImage = GetComponent<Image>();
-        SetState(false); // Garante que o slot comece com a cor de "vazio"
+        ResetColor();
     }
 
-    // Define se o slot está ocupado ou vazio e muda a cor de acordo
-    public void SetState(bool isOccupied)
+    public void SetState(bool occupied)
     {
-        if (slotImage != null)
-        {
-            slotImage.color = isOccupied ? occupiedColor : emptyColor;
-        }
+        isOccupied = occupied;
+        ResetColor();
+    }
+
+    public void SetPreviewColor(bool isValid)
+    {
+        slotImage.color = isValid ? previewValidColor : previewInvalidColor;
+    }
+
+    public void ResetColor()
+    {
+        slotImage.color = isOccupied ? occupiedColor : emptyColor;
     }
 }

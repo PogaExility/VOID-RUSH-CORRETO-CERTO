@@ -149,7 +149,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inventoryCursor: {fileID: 2800000, guid: d6f1057fa3b399c47a0f74356e189e9a, type: 3}
-  cursorHotspot: {x: 0, y: 0}
+  hotspot: {x: 0, y: 0}
+  cursorMode: 0
 --- !u!4 &117632237
 Transform:
   m_ObjectHideFlags: 0
@@ -158,7 +159,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 117632235}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 358.27786, y: 186.1107, z: -1.7180569}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -201,11 +202,11 @@ RectTransform:
   - {fileID: 666263006}
   m_Father: {fileID: 2013095702}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.03834029, y: 0.045154013}
-  m_AnchorMax: {x: 0.44341496, y: 0.510846}
-  m_AnchoredPosition: {x: 2.2000122, y: 0.80000305}
-  m_SizeDelta: {x: -0.8287964, y: 4.155304}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0.045154013}
+  m_AnchorMax: {x: 0, y: 0.510846}
+  m_AnchoredPosition: {x: 0, y: 0.8000183}
+  m_SizeDelta: {x: 321.17114, y: 4.155304}
+  m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &283112331
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -221,7 +222,7 @@ MonoBehaviour:
   inventoryManager: {fileID: 1030804738}
   slotContainer: {fileID: 496263307}
   itemContainer: {fileID: 700010749}
-  slotPrefab: {fileID: 8020957571105844617, guid: 1ed262fa342d3534e9a871af8522b172, type: 3}
+  slotPrefab: {fileID: 5743375804362801090, guid: 1ed262fa342d3534e9a871af8522b172, type: 3}
   itemPrefab: {fileID: 4384578192148671141, guid: e5a53f99141e1d545874ba109217c8f1, type: 3}
 --- !u!114 &283112332
 MonoBehaviour:
@@ -431,7 +432,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.74918365, y: 0}
+  m_AnchoredPosition: {x: -0.7491913, y: 0}
   m_SizeDelta: {x: -7.3163, y: -3.9569}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &326105790
@@ -505,11 +506,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 283112330}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 285, y: 220}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: -22.420273, y: -0.36065674}
+  m_SizeDelta: {x: 320.29, y: -0.6}
+  m_Pivot: {x: -0.07, y: 1.1}
 --- !u!114 &496263308
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -803,6 +804,7 @@ GameObject:
   - component: {fileID: 666263009}
   - component: {fileID: 666263008}
   - component: {fileID: 666263007}
+  - component: {fileID: 666263010}
   m_Layer: 5
   m_Name: Lixeira
   m_TagString: Untagged
@@ -880,6 +882,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 666263005}
   m_CullTransparentMesh: 1
+--- !u!225 &666263010
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 666263005}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 1
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1001 &673376319
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -974,10 +988,10 @@ RectTransform:
   m_Father: {fileID: 283112330}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 22.420242, y: -0.240448}
+  m_SizeDelta: {x: 320.29, y: -0.6}
+  m_Pivot: {x: 0.07, y: 0.9}
 --- !u!114 &700010750
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1713,7 +1727,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.84614855}
   m_AnchorMax: {x: 0.50586724, y: 1}
-  m_AnchoredPosition: {x: -1.2156067, y: 2.9772034}
+  m_AnchoredPosition: {x: -1.2155762, y: 2.9772034}
   m_SizeDelta: {x: 3.9647827, y: -0.6243286}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2032793478
@@ -1770,6 +1784,10 @@ PrefabInstance:
       propertyPath: equippedMeleeWeapon
       value: 
       objectReference: {fileID: 11400000, guid: ff5113d830aa9254fafd20489f137970, type: 2}
+    - target: {fileID: 1496959078863461395, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: inventoryItems.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3345193402010468786, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_Name
       value: Player

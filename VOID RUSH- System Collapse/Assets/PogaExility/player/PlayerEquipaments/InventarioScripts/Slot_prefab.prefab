@@ -33,11 +33,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -271, y: -130.5}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0.059133656, y: 0.07077043}
+  m_AnchorMax: {x: 0.19135484, y: 0.3}
+  m_AnchoredPosition: {x: -1.28, y: 3.5}
+  m_SizeDelta: {x: 4, y: 4}
+  m_Pivot: {x: -0.07, y: 1}
 --- !u!222 &492931742822713784
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -90,3 +90,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   emptyColor: {r: 0.8, g: 0.8, b: 0.8, a: 0.5}
   occupiedColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
+  previewValidColor: {r: 0, g: 1, b: 0, a: 0.3}
+  previewInvalidColor: {r: 1, g: 0, b: 0, a: 0.3}
+  isOccupied: 0

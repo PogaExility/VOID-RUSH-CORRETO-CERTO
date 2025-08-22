@@ -1,93 +1,111 @@
-using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class InventoryManager : MonoBehaviour
 {
     // --- Eventos para comunicar com outros sistemas ---
-    public event Action<ItemSO, int, int> OnItemAdded; // Avisa a UI para desenhar um item
-    public event Action<ItemSO> OnItemRemoved;           // Avisa a UI para apagar um item
-    public event Action<ItemSO> OnItemHeld;              // Avisa a UI para "colar" um item no mouse
-    public event Action<ItemSO> OnItemDropped;           // Avisa o ItemSpawner para criar um item no mundo
+    public event Action<ItemSO, int, int, bool> OnItemAdded; // bool para 'isRotated'
+    public event Action<ItemSO> OnItemRemoved;
+    public event Action<ItemSO, bool> OnItemHeld; // bool para 'isRotated'
+    public event Action<ItemSO> OnItemDropped;
+
+    [Header("Configuração do Grid")]
+    public int gridWidth = 10;
+    public int gridHeight = 6;
 
     [Header("Referências de Equipamento")]
     public ItemSO equippedMeleeWeapon;
     public ItemSO equippedFirearm;
     public ItemSO equippedBuster;
 
-    [Header("Configuração do Grid (Maleta)")]
-    public int gridWidth = 10;
-    public int gridHeight = 6;
-
-    public ItemSO heldItem { get; private set; } // O item que está "na mão" do jogador
+    // --- Estado do Inventário ---
+    public ItemSO heldItem { get; private set; }
+    public bool isHeldItemRotated { get; private set; }
 
     private ItemSO[,] inventoryGrid;
     public List<ItemSO> inventoryItems = new List<ItemSO>();
+    private Dictionary<ItemSO, bool> itemRotations = new Dictionary<ItemSO, bool>();
 
     void Awake()
     {
-        inventoryGrid = new ItemSO[gridWidth, gridHeight];
+        // Awake agora só garante que a inicialização aconteça.
+        EnsureGridExists();
+    }
+
+    // --- CORREÇÃO DEFINITIVA DO CRASH: Esta função garante que o 'inventoryGrid' nunca seja nulo. ---
+    private void EnsureGridExists()
+    {
+        if (inventoryGrid == null)
+        {
+            inventoryGrid = new ItemSO[gridWidth, gridHeight];
+        }
     }
 
     // --- Funções Principais de Interação ---
 
-    // Chamado pelo PlayerController quando o jogador pega um item
     public void StartHoldingItem(ItemSO item)
     {
         if (heldItem != null) return;
         heldItem = item;
-        OnItemHeld?.Invoke(heldItem);
+        isHeldItemRotated = false;
+        OnItemHeld?.Invoke(heldItem, isHeldItemRotated);
     }
 
-    // Chamado pela UI quando o jogador clica para colocar o item
-    public bool PlaceHeldItem(int x, int y)
+    public void PickUpItemFromGrid(ItemSO itemToPickUp)
     {
-        if (heldItem == null) return false;
-
-        if (CanPlaceItem(heldItem, x, y))
-        {
-            PlaceItem(heldItem, x, y);
-            heldItem = null;
-            return true;
-        }
-        return false;
+        if (heldItem != null) return;
+        bool wasRotated = itemRotations.ContainsKey(itemToPickUp) && itemRotations[itemToPickUp];
+        RemoveItem(itemToPickUp);
+        heldItem = itemToPickUp;
+        isHeldItemRotated = wasRotated;
+        OnItemHeld?.Invoke(heldItem, isHeldItemRotated);
     }
 
-    // Chamado pela UI da "lixeira"
-    public void DropItemFromUI(ItemSO itemToDrop)
+    public void RotateHeldItem()
     {
-        if (inventoryItems.Contains(itemToDrop))
+        if (heldItem != null)
         {
-            // 1. Remove o item da lógica do inventário
-            RemoveItem(itemToDrop);
-
-            // 2. Dispara o evento para o ItemSpawner criar o objeto no mundo
-            OnItemDropped?.Invoke(itemToDrop);
+            isHeldItemRotated = !isHeldItemRotated;
+            OnItemHeld?.Invoke(heldItem, isHeldItemRotated);
         }
     }
 
-    // Chamado quando o inventário é fechado com um item na mão
     public void DropHeldItem()
     {
         if (heldItem != null)
         {
-            // Dispara o evento para o ItemSpawner criar o objeto no mundo
-            OnItemDropped?.Invoke(heldItem);
-            heldItem = null;
+            OnItemDropped?.Invoke(heldItem); // Avisa o spawner
+            heldItem = null; // LIMPA A MÃO
         }
+    }
+
+    public bool PlaceHeldItem(int x, int y)
+    {
+        if (heldItem == null) return false;
+
+        int width = isHeldItemRotated ? heldItem.height : heldItem.width;
+        int height = isHeldItemRotated ? heldItem.width : heldItem.height;
+
+        if (!CanPlaceItem(x, y, width, height)) return false;
+
+        PlaceItem(heldItem, x, y, isHeldItemRotated);
+        heldItem = null;
+        return true;
     }
 
     // --- Funções de Gerenciamento do Grid ---
 
     public bool AddItem(ItemSO itemToAdd)
     {
+        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
         for (int y = 0; y < gridHeight; y++)
         {
             for (int x = 0; x < gridWidth; x++)
             {
-                if (CanPlaceItem(itemToAdd, x, y))
+                if (CanPlaceItem(x, y, itemToAdd.width, itemToAdd.height))
                 {
-                    PlaceItem(itemToAdd, x, y);
+                    PlaceItem(itemToAdd, x, y, false); // Itens sempre são adicionados sem rotação
                     return true;
                 }
             }
@@ -96,13 +114,17 @@ public class InventoryManager : MonoBehaviour
         return false;
     }
 
-    private void PlaceItem(ItemSO item, int startX, int startY)
+    private void PlaceItem(ItemSO item, int startX, int startY, bool isRotated)
     {
-        for (int y = 0; y < item.height; y++)
+        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        int width = isRotated ? item.height : item.width;
+        int height = isRotated ? item.width : item.height;
+
+        for (int j = 0; j < height; j++)
         {
-            for (int x = 0; x < item.width; x++)
+            for (int i = 0; i < width; i++)
             {
-                inventoryGrid[startX + x, startY + y] = item;
+                inventoryGrid[startX + i, startY + j] = item;
             }
         }
 
@@ -110,41 +132,62 @@ public class InventoryManager : MonoBehaviour
         {
             inventoryItems.Add(item);
         }
-        OnItemAdded?.Invoke(item, startX, startY);
+        itemRotations[item] = isRotated;
+        OnItemAdded?.Invoke(item, startX, startY, isRotated);
     }
 
     public void RemoveItem(ItemSO itemToRemove)
     {
-        if (inventoryItems.Contains(itemToRemove))
+        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        if (!inventoryItems.Contains(itemToRemove)) return;
+
+        if (FindItemPosition(itemToRemove, out int itemX, out int itemY))
         {
-            for (int y = 0; y < gridHeight; y++)
+            bool wasRotated = itemRotations.ContainsKey(itemToRemove) && itemRotations[itemToRemove];
+            int width = wasRotated ? itemToRemove.height : itemToRemove.width;
+            int height = wasRotated ? itemToRemove.width : itemToRemove.height;
+
+            for (int j = 0; j < height; j++)
             {
-                for (int x = 0; x < gridWidth; x++)
+                for (int i = 0; i < width; i++)
                 {
-                    if (inventoryGrid[x, y] == itemToRemove)
-                    {
-                        inventoryGrid[x, y] = null;
-                    }
+                    inventoryGrid[itemX + i, itemY + j] = null;
                 }
             }
-            inventoryItems.Remove(itemToRemove);
-            OnItemRemoved?.Invoke(itemToRemove);
+        }
+
+        inventoryItems.Remove(itemToRemove);
+        itemRotations.Remove(itemToRemove);
+        OnItemRemoved?.Invoke(itemToRemove);
+    }
+
+    public void DropItemFromUI(ItemSO itemToDrop)
+    {
+        if (inventoryItems.Contains(itemToDrop))
+        {
+            RemoveItem(itemToDrop);
+            OnItemDropped?.Invoke(itemToDrop);
         }
     }
 
-    public void RedrawAllItems()
+    public bool CanPlaceItem(int startX, int startY, int width, int height)
     {
-        foreach (var item in inventoryItems)
+        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        if (startX < 0 || startY < 0 || startX + width > gridWidth || startY + height > gridHeight) return false;
+
+        for (int j = 0; j < height; j++)
         {
-            if (FindItemPosition(item, out int x, out int y))
+            for (int i = 0; i < width; i++)
             {
-                OnItemAdded?.Invoke(item, x, y);
+                if (inventoryGrid[startX + i, startY + j] != null) return false;
             }
         }
+        return true;
     }
 
     public bool FindItemPosition(ItemSO item, out int xPos, out int yPos)
     {
+        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
         for (int y = 0; y < gridHeight; y++)
         {
             for (int x = 0; x < gridWidth; x++)
@@ -162,31 +205,23 @@ public class InventoryManager : MonoBehaviour
         return false;
     }
 
-    private bool CanPlaceItem(ItemSO item, int startX, int startY)
+    public void RedrawAllItems()
     {
-        if (startX < 0 || startY < 0 || startX + item.width > gridWidth || startY + item.height > gridHeight)
+        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        foreach (var item in new List<ItemSO>(inventoryItems)) // Itera sobre uma cópia para segurança
         {
-            return false;
-        }
-        for (int y = 0; y < item.height; y++)
-        {
-            for (int x = 0; x < item.width; x++)
+            if (FindItemPosition(item, out int x, out int y))
             {
-                if (inventoryGrid[startX + x, startY + y] != null)
-                {
-                    return false;
-                }
+                bool isRotated = itemRotations.ContainsKey(item) && itemRotations[item];
+                OnItemAdded?.Invoke(item, x, y, isRotated);
             }
         }
-        return true;
     }
 
-    // ===== CORREÇÃO DE TIPO: USA 'ItemSO' e depois checa o 'weaponType' =====
+    // --- Funções de Equipamento (Sem Mudanças) ---
     public void EquipWeapon(ItemSO weaponToEquip)
     {
-        if (weaponToEquip.itemType != ItemType.Weapon) return;
-        if (!inventoryItems.Contains(weaponToEquip)) return;
-
+        if (weaponToEquip.itemType != ItemType.Weapon || !inventoryItems.Contains(weaponToEquip)) return;
         switch (weaponToEquip.weaponType)
         {
             case WeaponType.Melee: equippedMeleeWeapon = weaponToEquip; break;
