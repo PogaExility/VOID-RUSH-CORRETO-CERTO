@@ -149,7 +149,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inventoryCursor: {fileID: 2800000, guid: d6f1057fa3b399c47a0f74356e189e9a, type: 3}
-  hotspot: {x: 0, y: 0}
+  hotspotBaixo: {x: 115, y: 55}
+  hotspotMeio: {x: 115, y: 45}
+  hotspotAlto: {x: 115, y: 35}
+  hotspotAtivo: 1
   cursorMode: 0
 --- !u!4 &117632237
 Transform:
@@ -200,6 +203,7 @@ RectTransform:
   - {fileID: 496263307}
   - {fileID: 700010749}
   - {fileID: 666263006}
+  - {fileID: 422506933}
   m_Father: {fileID: 2013095702}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.045154013}
@@ -473,6 +477,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 326105788}
   m_CullTransparentMesh: 1
+--- !u!1 &422506932
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 422506933}
+  - component: {fileID: 422506935}
+  - component: {fileID: 422506934}
+  m_Layer: 5
+  m_Name: Bgl onde vai por a arma
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &422506933
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 422506932}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 283112330}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.57116693, y: 0.018775934}
+  m_AnchorMax: {x: 0.9906675, y: 0.5851494}
+  m_AnchoredPosition: {x: 416.73758, y: 139.06004}
+  m_SizeDelta: {x: 228.18123, y: 327.67917}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &422506934
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 422506932}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.3301887, g: 0.3301887, b: 0.3301887, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 4381285811141030871, guid: 335563633120b364984c5cd03b60cee7, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &422506935
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 422506932}
+  m_CullTransparentMesh: 1
 --- !u!1 &496263306
 GameObject:
   m_ObjectHideFlags: 0
@@ -508,9 +587,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: -22.420273, y: -0.36065674}
+  m_AnchoredPosition: {x: -22.420288, y: -0.37869263}
   m_SizeDelta: {x: 320.29, y: -0.6}
-  m_Pivot: {x: -0.07, y: 1.1}
+  m_Pivot: {x: -0.07, y: 1.13}
 --- !u!114 &496263308
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -989,9 +1068,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 22.420242, y: -0.240448}
+  m_AnchoredPosition: {x: 22.420227, y: -0.37072754}
   m_SizeDelta: {x: 320.29, y: -0.6}
-  m_Pivot: {x: 0.07, y: 0.9}
+  m_Pivot: {x: 0.07, y: 1.13}
 --- !u!114 &700010750
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1836,6 +1915,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6241163325587582767, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 6200000, guid: 36ef7b4c82ec71a408c1aa88a6039f5f, type: 2}
     - target: {fileID: 6754565164538936117, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: mainCamera
       value: 
