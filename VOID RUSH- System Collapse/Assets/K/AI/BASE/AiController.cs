@@ -6,6 +6,7 @@ using System.Collections;
 [RequireComponent(typeof(AIPlatformerMotor))]
 public class AIController : MonoBehaviour
 {
+    private enum PossibleLedgeAction { None, Descend, Jump, Retreat }
     #region State Machine and References
     private enum State { Patrolling, Hunting, Attacking, Searching, Analyzing }
     private State currentState;
@@ -22,6 +23,8 @@ public class AIController : MonoBehaviour
     public LayerMask playerLayer;
     private Vector2 lookDirection;
     public float lookSpeed = 4f;
+    [Range(0f, 1f)]
+    private float retreatProbability = 0.5f; // Começa em 50%
 
     [Header("Consciência Situacional")]
     [Range(0, 90)] public float upwardLookAngle = 45f;
@@ -38,6 +41,15 @@ public class AIController : MonoBehaviour
     public float ledgeAnalysisTime = 1.5f;
     // ------------------------------------
 
+    [Header("Personalidade Ocular")]
+    [Tooltip("A velocidade geral com que a cabeça/olhos se movem para um novo alvo.")]
+    public float eyeSpeed = 6f;
+    [Tooltip("A velocidade da oscilação dos olhos no modo de patrulha.")]
+    public float patrolTwitchSpeed = 0.7f;
+    [Tooltip("A amplitude (quão longe) da oscilação dos olhos no modo de patrulha.")]
+    public float patrolTwitchAmplitude = 0.15f;
+    [Tooltip("A intensidade do tremor dos olhos ao analisar um alvo.")]
+    public float analysisTwitchIntensity = 0.1f;
     #endregion
 
     #region Combat Parameters
@@ -56,6 +68,8 @@ public class AIController : MonoBehaviour
     private bool isExecutingAction = false;
     [Tooltip("A altura máxima que a IA considera segura para descer de uma plataforma.")]
     public float maxSafeDropHeight = 4f;
+    [Tooltip("A altura vertical máxima que a IA consegue alcançar com um pulo.")]
+    public float maxJumpHeight = 3f;
     #endregion
 
     #region Unity Lifecycle Methods
@@ -153,7 +167,7 @@ public class AIController : MonoBehaviour
     {
         if (motor.IsLedgeAhead())
         {
-            StartCoroutine(AnalyzeLedgeRoutine(false)); // Analisa e vira se não achar nada
+            StartCoroutine(ExecuteLedgeAnalysis(false)); // Chama a nova rotina
         }
         else if (motor.IsObstacleAhead())
         {
@@ -164,55 +178,7 @@ public class AIController : MonoBehaviour
             motor.Move(isFacingRight ? 1 : -1);
         }
     }
-    private IEnumerator AnalyzeAndDropRoutine()
-    {
-        // ETAPA 2: PARAR
-        ChangeState(State.Analyzing);
-        isExecutingAction = true;
-        lastSeenSafePlatform = null; // Reseta a memória
 
-        // ETAPA 3: OLHAR PARA BAIXO
-        Vector2 forward = isFacingRight ? Vector2.right : Vector2.left;
-        Vector2 targetLook = (forward + Vector2.down * 2f).normalized; // Força o olhar bem para baixo
-        float lookTime = 0f;
-        while (lookTime < 0.75f) // Gasta um tempo olhando
-        {
-            lookDirection = Vector2.Lerp(lookDirection, targetLook, Time.deltaTime * lookSpeed);
-            lookTime += Time.deltaTime;
-            yield return null;
-        }
-
-        // ETAPA 4 & 5: ANALISAR E SALVAR NA MEMÓRIA
-        Debug.Log("Analisando se a queda é segura...");
-        RaycastHit2D hit = Physics2D.Raycast(motor.ledgeCheck.position, Vector2.down, maxSafeDropHeight, motor.groundLayer);
-
-        if (hit.collider != null)
-        {
-            // A queda é segura!
-            lastSeenSafePlatform = hit.point;
-            Debug.Log($"Queda segura detectada. Chão encontrado em {hit.point}");
-
-            // ETAPA 6: DESCER
-            // A IA vai dar um pequeno passo para fora da borda para começar a cair.
-            float stepOffTimer = 0.5f; // Tempo máximo para sair da plataforma
-            while (motor.IsGrounded() && stepOffTimer > 0)
-            {
-                motor.Move((isFacingRight ? 1 : -1) * 0.5f); // Move-se lentamente para fora da borda
-                stepOffTimer -= Time.deltaTime;
-                yield return null;
-            }
-        }
-        else
-        {
-            // A queda é perigosa ou não há chão visível.
-            Debug.Log("Queda perigosa. Abortando e virando.");
-            Flip();
-            yield return new WaitForSeconds(1f); // Pausa para "repensar" a estratégia
-        }
-
-        isExecutingAction = false;
-        ChangeState(State.Hunting); // Sempre volta a caçar após a ação
-    }
     private void HandleHuntingMovement()
     {
         FaceTarget(playerTarget.position);
@@ -220,20 +186,7 @@ public class AIController : MonoBehaviour
 
         if (motor.IsLedgeAhead())
         {
-            // --- NOVA LÓGICA DE DECISÃO ---
-            bool isPlayerBelow = playerTarget.position.y < eyes.position.y;
-            bool isPlayerCloseHorizontally = Mathf.Abs(playerTarget.position.x - transform.position.x) < 2.5f;
-
-            if (isPlayerBelow && isPlayerCloseHorizontally)
-            {
-                // O jogador está abaixo e perto. A IA deve considerar descer.
-                StartCoroutine(AnalyzeAndDropRoutine());
-            }
-            else
-            {
-                // O jogador está longe ou em outra plataforma. A IA deve considerar pular.
-                StartCoroutine(AnalyzeLedgeRoutine(true));
-            }
+            StartCoroutine(ExecuteLedgeAnalysis(true)); // Chama a nova rotina
         }
         else if (motor.IsObstacleAhead())
         {
@@ -247,7 +200,131 @@ public class AIController : MonoBehaviour
             motor.Move(direction);
         }
     }
+    private IEnumerator ExecuteLedgeAnalysis(bool isAggressive)
+    {
+        ChangeState(State.Analyzing);
+        isExecutingAction = true;
 
+        // --- FASE 1: COLETA DE INTELIGÊNCIA ---
+        // A IA primeiro reúne todos os fatos antes de tomar qualquer decisão.
+
+        // 1.1: Existe um caminho para baixo?
+        yield return StartCoroutine(LookDownAndMeasureDepth());
+        bool canSafelyDrop = lastSeenSafePlatform.HasValue;
+        Vector3? dropTarget = lastSeenSafePlatform; // Salva o alvo de descida
+
+        // 1.2: Existe um caminho para frente/cima?
+        yield return StartCoroutine(LookForwardAndFindJumpTarget());
+        bool canSafelyJump = lastSeenSafePlatform.HasValue;
+        Vector3? jumpTarget = lastSeenSafePlatform; // Salva o alvo de pulo
+
+        // --- FASE 2: DELIBERAÇÃO E DECISÃO ---
+        // Com todos os fatos, a IA agora pondera suas opções.
+
+        PossibleLedgeAction chosenAction = PossibleLedgeAction.None;
+
+        // Constrói a lista de opções táticas
+        var availableActions = new System.Collections.Generic.List<PossibleLedgeAction>();
+        if (canSafelyDrop) availableActions.Add(PossibleLedgeAction.Descend);
+        if (canSafelyJump) availableActions.Add(PossibleLedgeAction.Jump);
+
+        // Se não houver opções agressivas, a única escolha é recuar.
+        if (availableActions.Count == 0 || !isAggressive)
+        {
+            chosenAction = PossibleLedgeAction.Retreat;
+        }
+        else // Se houver opções, use a probabilidade para decidir.
+        {
+            if (Random.value < retreatProbability)
+            {
+                chosenAction = PossibleLedgeAction.Retreat;
+            }
+            else // Se não for recuar, escolha a melhor opção agressiva (prioriza descer)
+            {
+                chosenAction = availableActions.Contains(PossibleLedgeAction.Descend)
+                    ? PossibleLedgeAction.Descend
+                    : PossibleLedgeAction.Jump;
+            }
+        }
+
+        // --- FASE 3: EXECUÇÃO DA AÇÃO ESCOLHIDA ---
+
+        switch (chosenAction)
+        {
+            case PossibleLedgeAction.Descend:
+                Debug.Log($"Análise: DECIDIU DESCER. (Chance de recuo era {retreatProbability * 100}%)");
+                retreatProbability += 0.05f; // Aumenta a chance de recuar da próxima vez
+                float stepOffTimer = 0.5f;
+                while (motor.IsGrounded() && stepOffTimer > 0)
+                {
+                    motor.Move((isFacingRight ? 1 : -1) * 0.5f);
+                    stepOffTimer -= Time.deltaTime;
+                    yield return null;
+                }
+                break;
+
+            case PossibleLedgeAction.Jump:
+                Debug.Log($"Análise: DECIDIU PULAR. (Chance de recuo era {retreatProbability * 100}%)");
+                retreatProbability += 0.05f; // Aumenta a chance de recuar da próxima vez
+                yield return StartCoroutine(PonderTargetWithTwitchingEyes(jumpTarget.Value));
+                yield return StartCoroutine(JumpRoutine(isFacingRight ? 1 : -1));
+                break;
+
+            case PossibleLedgeAction.Retreat:
+                Debug.Log($"Análise: DECIDIU RECUAR. (Chance de recuo era {retreatProbability * 100}%)");
+                retreatProbability -= 0.05f; // Diminui a chance de recuar da próxima vez
+                yield return StartCoroutine(LookAnRetreatRoutine());
+                break;
+        }
+
+        retreatProbability = Mathf.Clamp(retreatProbability, 0.05f, 0.95f);
+        isExecutingAction = false;
+        ChangeState(isAggressive ? State.Hunting : State.Patrolling);
+    }
+
+    // NOVO MÉTODO HELPER PARA VALIDAR O PULO
+    private bool IsJumpTargetValid(Vector3 target)
+    {
+        // O alvo é muito alto para pular?
+        if (target.y - transform.position.y > maxJumpHeight) return false;
+
+        // O alvo é abaixo de nós? (Não queremos pular para baixo)
+        if (target.y < motor.groundCheck_A.position.y) return false;
+
+        // O alvo tem uma superfície plana para pousar?
+        // (Verifica se há espaço para os pés)
+        RaycastHit2D surfaceCheck = Physics2D.Raycast(target + Vector3.up * 0.1f, Vector2.down, 0.5f, motor.groundLayer);
+        if (surfaceCheck.collider == null) return false;
+
+        // Se passou em todos os testes, o alvo é válido.
+        return true;
+    }
+
+    private IEnumerator LookAnRetreatRoutine()
+    {
+        isExecutingAction = true;
+
+        // ETAPA 1: Olhar para frente primeiro.
+        Vector2 forward = isFacingRight ? Vector2.right : Vector2.left;
+        float timer = 0f;
+        while (timer < 0.3f) // Gasta um tempo virando a cabeça
+        {
+            lookDirection = Vector2.Lerp(lookDirection, forward, Time.deltaTime * lookSpeed * 2);
+            timer += Time.deltaTime;
+            yield return null;
+        }
+        lookDirection = forward; // Garante que olhou para frente
+
+        yield return new WaitForSeconds(0.2f); // Pausa para "pensar"
+
+        // ETAPA 2: Virar o corpo.
+        Flip();
+
+        yield return new WaitForSeconds(0.5f); // Pausa após virar antes de se mover.
+
+        isExecutingAction = false; // Libera o controle para o ExecuteBrain
+    }
+   
     private void HandleSearchingMovement()
     {
         FaceTarget(lastKnownPlayerPosition);
@@ -273,73 +350,36 @@ public class AIController : MonoBehaviour
         isFacingRight = !isFacingRight;
         transform.localScale = new Vector3(transform.localScale.x * -1, 1, 1);
         motor.currentFacingDirection = isFacingRight ? 1 : -1;
+
+        // --- CORREÇÃO FUNDAMENTAL ---
+        // Inverte a direção do olhar INSTANTANEAMENTE junto com o corpo.
+        lookDirection.x *= -1;
     }
+
+    // SUBSTITUA O MÉTODO FaceTarget() INTEIRO POR ESTE:
 
     private void FaceTarget(Vector3 targetPosition)
     {
         if (isExecutingAction) return;
-        if (targetPosition.x > transform.position.x && !isFacingRight) Flip();
-        else if (targetPosition.x < transform.position.x && isFacingRight) Flip();
+        if (targetPosition.x > transform.position.x && !isFacingRight)
+        {
+            Flip();
+        }
+        else if (targetPosition.x < transform.position.x && isFacingRight)
+        {
+            Flip();
+        }
     }
     #endregion
 
     #region Perception Helpers (Vision, etc.)
-
-    private IEnumerator AnalyzeLedgeRoutine(bool isAggressive)
-    {
-        ChangeState(State.Analyzing);
-        isExecutingAction = true;
-        lastSeenSafePlatform = null; // Reseta a memória
-
-        float timeSpent = 0f;
-        while (timeSpent < ledgeAnalysisTime)
-        {
-            // Movimento de varredura da cabeça
-            float scanProgress = timeSpent / ledgeAnalysisTime;
-            float currentAngle = Mathf.Lerp(0, -downwardLookAngle, scanProgress);
-            Vector2 forward = isFacingRight ? Vector2.right : Vector2.left;
-            lookDirection = Quaternion.Euler(0, 0, currentAngle * (isFacingRight ? 1 : -1)) * forward;
-
-            // Lança um raio para procurar chão
-            RaycastHit2D hit = Physics2D.Raycast(eyes.position, lookDirection, maxJumpDistance, motor.groundLayer);
-            if (hit.collider != null)
-            {
-                lastSeenSafePlatform = hit.point;
-                // Se estiver caçando e vir o jogador perto da plataforma, confirma o pulo
-                if (isAggressive && Vector2.Distance(lastSeenSafePlatform.Value, playerTarget.position) < 3f)
-                {
-                    break; // Encontrou um bom alvo, para de analisar
-                }
-            }
-
-            timeSpent += Time.deltaTime;
-            yield return null;
-        }
-
-        // Fim da análise, hora de decidir
-        if (lastSeenSafePlatform.HasValue)
-        {
-            Debug.Log("Análise concluída: Ponto seguro encontrado. Pulando.");
-            StartCoroutine(JumpRoutine(isFacingRight ? 1 : -1));
-        }
-        else
-        {
-            Debug.Log("Análise concluída: Nenhum ponto seguro. Virando.");
-            Flip();
-            yield return new WaitForSeconds(0.5f); // Pausa após virar
-        }
-
-        isExecutingAction = false;
-        // Volta para o estado anterior (ou um estado padrão)
-        ChangeState(isAggressive ? State.Hunting : State.Patrolling);
-    }
     void HandleHeadLook()
     {
+        // Se estamos analisando, a rotina de análise tem controle total sobre a cabeça.
+        if (currentState == State.Analyzing) return;
+
         Vector2 forward = isFacingRight ? Vector2.right : Vector2.left;
         Vector2 targetLookDirection = forward;
-
-        // Durante a análise, a corrotina tem controle total sobre a cabeça.
-        if (currentState == State.Analyzing) return;
 
         if (currentState == State.Hunting || currentState == State.Attacking)
         {
@@ -349,27 +389,22 @@ public class AIController : MonoBehaviour
         {
             targetLookDirection = (lastKnownPlayerPosition - eyes.position).normalized;
         }
-        else if (currentState == State.Patrolling)
+        else
         {
-            // --- CORREÇÃO "Olhar para dentro da parede" ---
-            if (motor.IsObstacleAhead() && motor.IsGrounded())
-            {
-                // Força um olhar para cima de forma mais direta
-                targetLookDirection = (forward + Vector2.up).normalized;
-            }
-            else if (motor.IsLedgeAhead() && motor.IsGrounded())
-            {
-                // A análise cuidará do olhar detalhado, aqui apenas uma olhadinha
-                targetLookDirection = (forward + Vector2.down).normalized;
-            }
-            else
-            {
-                targetLookDirection = forward;
-            }
+            // --- NOVO: COMPORTAMENTO OCULAR NATURAL ---
+            // Adiciona uma oscilação vertical sutil e lenta à direção do olhar.
+            float verticalOscillation = Mathf.Sin(Time.time * patrolTwitchSpeed) * patrolTwitchAmplitude;
+            targetLookDirection = (forward + new Vector2(0, verticalOscillation)).normalized;
         }
 
-        if (Vector2.Dot(targetLookDirection, forward) < 0) { targetLookDirection = forward; }
-        lookDirection = Vector2.Lerp(lookDirection, targetLookDirection, Time.deltaTime * lookSpeed);
+        // Garante que a cabeça não vire para trás
+        if (Vector2.Dot(targetLookDirection, forward) < 0)
+        {
+            targetLookDirection = forward;
+        }
+
+        // Interpola suavemente a direção do olhar
+        lookDirection = Vector2.Lerp(lookDirection, targetLookDirection, Time.deltaTime * eyeSpeed);
     }
 
     private bool CanSeePlayer()
@@ -382,6 +417,77 @@ public class AIController : MonoBehaviour
         if (Vector2.Angle(lookDirection, directionToPlayer) > visionAngle / 2f) return false;
         RaycastHit2D hit = Physics2D.Raycast(eyes.position, directionToPlayer, distanceToPlayer, visionBlockers);
         return hit.collider == null || hit.transform == playerTarget;
+    }
+    private IEnumerator LookDownAndMeasureDepth()
+    {
+        lastSeenSafePlatform = null; // Reseta a memória para esta verificação
+
+        // Animação de olhar para baixo
+        float lookTimer = 0f;
+        Vector2 startLookDir = lookDirection;
+        Vector2 targetLookDir = ((isFacingRight ? Vector2.right : Vector2.left) + Vector2.down).normalized;
+        while (lookTimer < 0.5f)
+        {
+            lookDirection = Vector2.Lerp(startLookDir, targetLookDir, lookTimer / 0.5f);
+            lookTimer += Time.deltaTime;
+            yield return null;
+        }
+
+        // Pausa com "twitching"
+        float twitchTimer = 0f;
+        while (twitchTimer < 0.7f)
+        {
+            Vector2 twitchOffset = Random.insideUnitCircle * analysisTwitchIntensity;
+            lookDirection = Vector2.Lerp(lookDirection, targetLookDir + twitchOffset, Time.deltaTime * eyeSpeed);
+            twitchTimer += Time.deltaTime;
+            yield return null;
+        }
+
+        // A medição real
+        RaycastHit2D hit = Physics2D.Raycast(motor.ledgeCheck.position, Vector2.down, maxSafeDropHeight, motor.groundLayer);
+        if (hit.collider != null)
+        {
+            lastSeenSafePlatform = hit.point;
+        }
+    }
+
+    private IEnumerator LookForwardAndFindJumpTarget()
+    {
+        lastSeenSafePlatform = null; // Reseta a memória para esta verificação
+
+        // Animação de olhar de baixo para cima
+        float lookTimer = 0f;
+        Vector2 startLookDir = lookDirection;
+        while (lookTimer < 0.8f)
+        {
+            float scanProgress = lookTimer / 0.8f;
+            float currentAngle = Mathf.Lerp(-45, upwardLookAngle, scanProgress); // Começa olhando um pouco pra baixo
+            Vector2 forward = isFacingRight ? Vector2.right : Vector2.left;
+            Vector2 scanDirection = Quaternion.Euler(0, 0, currentAngle * (isFacingRight ? 1 : -1)) * forward;
+            lookDirection = Vector2.Lerp(startLookDir, scanDirection, scanProgress);
+
+            RaycastHit2D hit = Physics2D.Raycast(eyes.position, scanDirection, maxJumpDistance, motor.groundLayer);
+            if (hit.collider != null && IsJumpTargetValid(hit.point))
+            {
+                lastSeenSafePlatform = hit.point;
+            }
+            lookTimer += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    private IEnumerator PonderTargetWithTwitchingEyes(Vector3 target)
+    {
+        float ponderTimer = 0f;
+        Vector2 directionToTarget = (target - eyes.position).normalized;
+
+        while (ponderTimer < 1.0f) // Tempo total de ponderação
+        {
+            Vector2 twitchOffset = Random.insideUnitCircle * (analysisTwitchIntensity * 1.5f); // A intensidade do twitch
+            lookDirection = Vector2.Lerp(lookDirection, directionToTarget + twitchOffset, Time.deltaTime * eyeSpeed * 2f);
+            ponderTimer += Time.deltaTime;
+            yield return null;
+        }
     }
 
     private bool CanJumpOverWall() { return !Physics2D.Raycast(eyes.position, Vector2.up, 3f, motor.groundLayer); }

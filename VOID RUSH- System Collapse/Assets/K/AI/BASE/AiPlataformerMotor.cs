@@ -11,13 +11,13 @@ public class AIPlatformerMotor : MonoBehaviour
     public float moveSpeed = 4f;
 
     [Header("Verificação de Ambiente")]
-    public Transform groundCheck;
+    public Transform groundCheck_A; // Renomeie o antigo para A
+    public Transform groundCheck_B; // Adicione este novo
     public Transform wallCheck;
     public Transform ledgeCheck;
     public LayerMask groundLayer;
-
     public float groundCheckRadius = 0.2f;
-    public float wallCheckDistance = 0.5f;
+    public float wallCheckDistance = 1.0f;
 
     [HideInInspector]
     public float currentFacingDirection = 1f;
@@ -40,8 +40,10 @@ public class AIPlatformerMotor : MonoBehaviour
 
     public bool IsGrounded()
     {
-        if (groundCheck == null) return false;
-        return Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+        if (groundCheck_A == null || groundCheck_B == null) return false;
+        // A IA está no chão se o PÉ A OU o PÉ B estiverem tocando o chão.
+        return Physics2D.OverlapCircle(groundCheck_A.position, groundCheckRadius, groundLayer) ||
+               Physics2D.OverlapCircle(groundCheck_B.position, groundCheckRadius, groundLayer);
     }
 
     public bool IsObstacleAhead()
@@ -49,30 +51,47 @@ public class AIPlatformerMotor : MonoBehaviour
         if (wallCheck == null) return false;
         return Physics2D.Raycast(wallCheck.position, Vector2.right * currentFacingDirection, wallCheckDistance, groundLayer);
     }
-
+    public void Nudge(Vector2 force)
+    {
+        rb.AddForce(force, ForceMode2D.Impulse);
+    }
     public bool IsLedgeAhead()
     {
-        if (ledgeCheck == null) return false;
+        if (ledgeCheck == null)
+        {
+            Debug.LogError("Referência do LedgeCheck NÃO FOI ATRIBUÍDA no Inspector!");
+            return false;
+        }
 
-        // --- LÓGICA REFINADA ---
-        // Começamos o raio um pouco acima da posição do sensor para garantir que ele não comece dentro do chão.
-        Vector2 rayOrigin = ledgeCheck.position + Vector3.up * 0.1f;
-        float rayDistance = 2f; // A distância do raio original.
+        Vector2 rayOrigin = ledgeCheck.position;
 
-        // O Gizmo agora mostrará exatamente o mesmo raio que estamos usando na lógica.
-        Debug.DrawRay(rayOrigin, Vector2.down * rayDistance, Color.magenta);
+        // --- CORREÇÃO DA MIOPIA ---
+        // Aumentamos a distância para dar uma margem de segurança maior.
+        // 1.5f é uma distância boa para não detectar o chão de um abismo,
+        // mas longa o suficiente para nunca falhar na beirada.
+        float rayDistance = 1.5f; // <--- VALOR AUMENTADO
 
-        // Se o raio NÃO atingir nada, significa que há um penhasco à frente.
-        return !Physics2D.Raycast(rayOrigin, Vector2.down, rayDistance, groundLayer);
+        RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, rayDistance, groundLayer);
+
+        if (hit.collider != null)
+        {
+            Debug.DrawRay(rayOrigin, Vector2.down * rayDistance, Color.green);
+            return false;
+        }
+        else
+        {
+            Debug.DrawRay(rayOrigin, Vector2.down * rayDistance, Color.red);
+            // Descomente a linha abaixo se quiser spam no console para depuração
+            // Debug.Log($"FRAME {Time.frameCount}: BEIRADA DETECTADA!");
+            return true;
+        }
     }
 
     void OnDrawGizmosSelected()
     {
-        if (groundCheck != null)
-        {
-            Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
-        }
+        Gizmos.color = Color.green;
+        if (groundCheck_A != null) { Gizmos.DrawWireSphere(groundCheck_A.position, groundCheckRadius); }
+        if (groundCheck_B != null) { Gizmos.DrawWireSphere(groundCheck_B.position, groundCheckRadius); }
         if (wallCheck != null)
         {
             Vector3 wallCheckDirection = Vector3.right * currentFacingDirection;
