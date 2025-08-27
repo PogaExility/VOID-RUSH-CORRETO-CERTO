@@ -23,8 +23,52 @@ public class PlayerController : MonoBehaviour
     [Header("Skills de Parede")] public SkillSO wallJumpSkill; public SkillSO wallDashSkill;
 
     private bool isInventoryOpen = false;
-    private List<ItemPickup> nearbyItems = new List<ItemPickup>();
-    private bool canInteract => nearbyItems.Count > 0;
+    // ***** ESTA É A FUNÇÃO QUE DEVE PERMANECER *****
+    // Dentro do seu PlayerController.cs
+
+    private void Interact()
+    {
+        if (nearbyInteractables.Count == 0) return;
+        GameObject objectToInteract = nearbyInteractables[0];
+        if (objectToInteract == null) { nearbyInteractables.RemoveAt(0); return; }
+
+        // A lógica agora verifica todos os tipos de interagíveis
+        if (objectToInteract.TryGetComponent<QuestGiver>(out var questGiver))
+        {
+            questGiver.Interact();
+            nearbyInteractables.Remove(objectToInteract);
+        }
+        else if (objectToInteract.TryGetComponent<Checkpoint>(out var checkpoint))
+        {
+            checkpoint.Interact();
+            nearbyInteractables.Remove(objectToInteract);
+        }
+        // --- NOVOS INTERAGÍVEIS ---
+        else if (objectToInteract.TryGetComponent<MissionBoard>(out var missionBoard))
+        {
+            missionBoard.Interact();
+            // Não removemos o quadro da lista, pois podemos querer fechar a UI
+        }
+        else if (objectToInteract.TryGetComponent<TravelPoint>(out var travelPoint))
+        {
+            travelPoint.Interact();
+            // Também não removemos, pois o painel pode ser fechado
+        }
+        // --- FIM DOS NOVOS INTERAGÍVEIS ---
+        else if (objectToInteract.TryGetComponent<ItemPickup>(out var itemToPickup))
+        {
+            inventoryManager.StartHoldingItem(itemToPickup.itemData);
+            nearbyInteractables.Remove(itemToPickup.gameObject);
+            Destroy(itemToPickup.gameObject);
+
+            if (!isInventoryOpen)
+            {
+                ToggleInventory();
+            }
+        }
+    }
+
+    
 
     private SkillSO activeJumpSkill;
     private SkillSO activeDashSkill;
@@ -32,6 +76,7 @@ public class PlayerController : MonoBehaviour
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
     private List<GameObject> nearbyInteractables = new List<GameObject>();
+    private bool canInteract => nearbyInteractables.Count > 0;
     void Awake()
     {
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
@@ -102,36 +147,16 @@ public class PlayerController : MonoBehaviour
             inventoryManager.DropHeldItem();
         }
     }
-    private void Interact()
-    {
-        if (nearbyInteractables.Count == 0) return;
 
-        GameObject objectToInteract = nearbyInteractables[0];
-        if (objectToInteract == null) return;
-
-        // Tenta interagir com um ItemPickup
-        if (objectToInteract.TryGetComponent<ItemPickup>(out var itemToPickup))
-        {
-            // --- MUDANÇA IMPORTANTE: Usamos a nova função do InventoryManager ---
-            if (inventoryManager.PickupItem(itemToPickup.itemData))
-            {
-                nearbyInteractables.Remove(objectToInteract);
-                Destroy(objectToInteract);
-            }
-            // Não abre mais o inventário automaticamente, pois PickupItem não "segura" o item.
-        }
-        // Tenta interagir com um QuestGiver
-        else if (objectToInteract.TryGetComponent<QuestGiver>(out var questGiver))
-        {
-            questGiver.Interact();
-            nearbyInteractables.Remove(objectToInteract);
-        }
-    }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // Adiciona qualquer objeto com ItemPickup OU QuestGiver à lista
-        if (other.GetComponent<ItemPickup>() != null || other.GetComponent<QuestGiver>() != null)
+        // A lista agora detecta os novos objetos
+        if (other.GetComponent<ItemPickup>() != null ||
+            other.GetComponent<QuestGiver>() != null ||
+            other.GetComponent<Checkpoint>() != null ||
+            other.GetComponent<MissionBoard>() != null || // <-- ADICIONADO
+            other.GetComponent<TravelPoint>() != null)    // <-- ADICIONADO
         {
             if (!nearbyInteractables.Contains(other.gameObject))
             {
@@ -140,6 +165,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+
     private void OnTriggerExit2D(Collider2D other)
     {
         if (nearbyInteractables.Contains(other.gameObject))
@@ -147,7 +173,6 @@ public class PlayerController : MonoBehaviour
             nearbyInteractables.Remove(other.gameObject);
         }
     }
-
     // --- Funções de movimento e combate (sem alterações) ---
     private void HandleAllInput()
     {

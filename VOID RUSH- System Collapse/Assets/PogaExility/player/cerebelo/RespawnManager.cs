@@ -1,119 +1,117 @@
 using UnityEngine;
-using UnityEngine.SceneManagement; // Necessário para gerenciar cenas
-using TMPro; // Necessário para o TextMeshPro
+using UnityEngine.SceneManagement;
+using TMPro;
 
 public class RespawnManager : MonoBehaviour
 {
     public static RespawnManager Instance { get; private set; }
 
     [Header("Configurações de Penalidade")]
-    [Tooltip("A quantidade de dinheiro que o jogador perde ao morrer em uma missão.")]
     public int moneyPenalty = 50;
-
     [Header("Referências de UI (Opcional)")]
-    [Tooltip("Arraste o TextMeshPro que mostrará a mensagem de perda de dinheiro.")]
     public TextMeshProUGUI penaltyText;
 
-    // --- Variáveis de Estado ---
-    private Vector3 currentCheckpointPosition;
-    private string currentCheckpointSceneName; // Guardamos o NOME da cena do checkpoint
+    // --- MUDANÇA IMPORTANTE: Guardamos o SCRIPT do checkpoint, não só a posição ---
+    private Checkpoint activeCheckpoint;
 
-    // Referência para os outros sistemas
+    private Vector3 initialSpawnPosition;
+    private string initialSpawnSceneName;
+
     private InventoryManager inventoryManager;
-    // private MoneySystem moneySystem; // (Quando você tiver um, vamos conectar aqui)
+    public void SetReturnPoint(Vector3 returnPosition, string returnSceneName)
+    {
+        // Desativa o checkpoint ativo para que o ponto de retorno tenha prioridade
+        if (activeCheckpoint != null)
+        {
+            activeCheckpoint.Deactivate();
+            activeCheckpoint = null; // Limpa a referência
+        }
+
+        // Define a posição e a cena para onde o jogador deve voltar se morrer na missão
+        initialSpawnPosition = returnPosition;
+        initialSpawnSceneName = returnSceneName;
+
+        // Garante que os itens atuais sejam salvos
+        inventoryManager?.CommitTemporaryItems();
+
+        Debug.Log($"Ponto de retorno definido para a cena '{returnSceneName}'.");
+    }
 
     void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
+        if (Instance != null && Instance != this) Destroy(gameObject);
+        else Instance = this;
+        DontDestroyOnLoad(gameObject);
 
         if (penaltyText != null) penaltyText.gameObject.SetActive(false);
     }
 
     void Start()
     {
-        // Encontra o jogador e define o checkpoint inicial
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
-            currentCheckpointPosition = player.transform.position;
-            currentCheckpointSceneName = SceneManager.GetActiveScene().name;
-
-            // Pega a referência do InventoryManager do jogador
+            initialSpawnPosition = player.transform.position;
+            initialSpawnSceneName = SceneManager.GetActiveScene().name;
             inventoryManager = player.GetComponent<InventoryManager>();
         }
     }
 
-    // Chamado pelo script Checkpoint.cs
-    public void SetNewCheckpoint(Vector3 newPosition, string sceneName)
+    // --- A FUNÇÃO MAIS IMPORTANTE E CORRIGIDA ---
+    public void SetNewCheckpoint(Checkpoint newCheckpoint)
     {
-        currentCheckpointPosition = newPosition;
-        currentCheckpointSceneName = sceneName;
+        // Se o checkpoint clicado já for o ativo, não faz nada.
+        if (newCheckpoint == activeCheckpoint) return;
 
-        // Avisa o InventoryManager para tornar todos os itens temporários em permanentes
-        if (inventoryManager != null)
+        // 1. DESATIVA O ANTIGO: Se já existia um checkpoint ativo, manda ele se desativar.
+        if (activeCheckpoint != null)
         {
-            inventoryManager.CommitTemporaryItems();
+            activeCheckpoint.Deactivate();
         }
 
-        // Salva o jogo aqui, se você tiver um sistema de save
-        Debug.Log($"Novo checkpoint ativado na cena '{sceneName}'");
+        // 2. ATUALIZA PARA O NOVO: Guarda a referência do novo checkpoint como o ativo.
+        activeCheckpoint = newCheckpoint;
+
+        // 3. ATIVA O NOVO: Manda o novo checkpoint se ativar.
+        if (activeCheckpoint != null)
+        {
+            activeCheckpoint.Activate();
+        }
+
+        // Avisa o InventoryManager para tornar os itens temporários em permanentes
+        inventoryManager?.CommitTemporaryItems();
+
+        Debug.Log($"Novo checkpoint ativado na cena '{SceneManager.GetActiveScene().name}'");
     }
 
     public void RespawnPlayer(Transform playerTransform)
     {
+        // Pega a posição e cena do checkpoint ativo, ou a inicial se nenhum foi ativado
+        Vector3 respawnPosition = activeCheckpoint != null ? activeCheckpoint.transform.position : initialSpawnPosition;
+        string checkpointSceneName = activeCheckpoint != null ? activeCheckpoint.gameObject.scene.name : initialSpawnSceneName;
+
         string currentSceneName = SceneManager.GetActiveScene().name;
 
-        // Verifica se o jogador morreu em uma cena "de missão" (diferente da do checkpoint)
-        if (currentSceneName != currentCheckpointSceneName)
+        if (currentSceneName != checkpointSceneName)
         {
-            // --- APLICA AS PENALIDADES ---
-
-            // 1. Perde itens temporários
-            if (inventoryManager != null)
-            {
-                inventoryManager.ClearTemporaryItems();
-            }
-
-            // 2. Perde dinheiro
-            // if (moneySystem != null) { moneySystem.LoseMoney(moneyPenalty); }
+            // --- APLICA PENALIDADES ---
+            inventoryManager?.ClearTemporaryItems();
             Debug.Log($"Jogador perdeu {moneyPenalty} de dinheiro.");
+            if (penaltyText != null) StartCoroutine(ShowPenaltyMessage());
 
-            // Mostra a mensagem na UI (opcional)
-            if (penaltyText != null)
-            {
-                penaltyText.text = $"-{moneyPenalty} Dinheiro";
-                StartCoroutine(ShowPenaltyMessage());
-            }
-
-            // AQUI VOCÊ DEVE RECARREGAR A CENA DO CHECKPOINT
-            // SceneManager.LoadScene(currentCheckpointSceneName);
-            // NOTA: A lógica de carregar a cena pode ser mais complexa,
-            // pode ser necessário esperar o fade terminar.
+            // AQUI A LÓGICA DE RECARREGAR A CENA
         }
 
-        // Move o jogador para a posição do checkpoint
-        playerTransform.position = currentCheckpointPosition;
-
-        // Reseta a velocidade
+        playerTransform.position = respawnPosition;
         Rigidbody2D rb = playerTransform.GetComponent<Rigidbody2D>();
-        if (rb != null)
-        {
-            rb.linearVelocity = Vector2.zero;
-        }
+        if (rb != null) rb.linearVelocity = Vector2.zero;
     }
 
     private System.Collections.IEnumerator ShowPenaltyMessage()
     {
+        penaltyText.text = $"-{moneyPenalty} Dinheiro";
         penaltyText.gameObject.SetActive(true);
-        yield return new WaitForSeconds(3f); // Mostra por 3 segundos
+        yield return new WaitForSeconds(3f);
         penaltyText.gameObject.SetActive(false);
     }
 }
