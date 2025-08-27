@@ -18,7 +18,7 @@ public class InventoryManager : MonoBehaviour
     public ItemSO equippedMeleeWeapon;
     public ItemSO equippedFirearm;
     public ItemSO equippedBuster;
-
+  
     // --- Estado do Inventário ---
     public ItemSO heldItem { get; private set; }
     public bool isHeldItemRotated { get; private set; }
@@ -26,6 +26,8 @@ public class InventoryManager : MonoBehaviour
     private ItemSO[,] inventoryGrid;
     public List<ItemSO> inventoryItems = new List<ItemSO>();
     private Dictionary<ItemSO, bool> itemRotations = new Dictionary<ItemSO, bool>();
+    private List<ItemSO> temporaryItems = new List<ItemSO>();
+   
 
     void Awake()
     {
@@ -237,6 +239,62 @@ public class InventoryManager : MonoBehaviour
             case WeaponType.Melee: equippedMeleeWeapon = null; break;
             case WeaponType.Firearm: equippedFirearm = null; break;
             case WeaponType.Buster: equippedBuster = null; break;
+        }
+    }
+    // --- NOVA FUNÇÃO DE COLETA ---
+    public bool PickupItem(ItemSO itemToAdd)
+    {
+        if (AddItem(itemToAdd)) // Usa sua função AddItem existente para encontrar um espaço e colocar no grid
+        {
+            // Se foi adicionado com sucesso, verificamos o estado da quest
+            if (QuestManager.Instance != null && QuestManager.Instance.IsQuestActive)
+            {
+                // Se a quest estiver ativa E o item estiver marcado no SO como "perdível",
+                // nós o adicionamos à lista de itens temporários.
+                if (itemToAdd.isLostOnDeathDuringQuest && !temporaryItems.Contains(itemToAdd))
+                {
+                    temporaryItems.Add(itemToAdd);
+                    Debug.Log($"{itemToAdd.itemName} foi adicionado como item temporário de quest.");
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+    // --- NOVAS FUNÇÕES DE GERENCIAMENTO DE QUEST ---
+
+    /// <summary>
+    /// Chamado quando uma quest é completada ou um checkpoint é salvo.
+    /// Torna todos os itens temporários em permanentes, simplesmente limpando a lista de rastreamento.
+    /// </summary>
+    public void CommitTemporaryItems()
+    {
+        if (temporaryItems.Count > 0)
+        {
+            Debug.Log($"{temporaryItems.Count} item(ns) temporário(s) foram salvos permanentemente no inventário.");
+            temporaryItems.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Chamado pelo RespawnManager quando o jogador morre com uma quest ativa.
+    /// Remove do inventário principal apenas os itens que estavam na lista de temporários.
+    /// </summary>
+    public void ClearTemporaryItems()
+    {
+        if (temporaryItems.Count > 0)
+        {
+            Debug.Log($"Removendo {temporaryItems.Count} item(ns) temporário(s) por morte em quest.");
+
+            // Usamos 'new List<ItemSO>(temporaryItems)' para criar uma cópia, 
+            // pois não se pode modificar uma lista enquanto se itera sobre ela.
+            foreach (ItemSO itemToRemove in new List<ItemSO>(temporaryItems))
+            {
+                // Usa a sua função RemoveItem já existente para limpar tudo (grid, lista, eventos).
+                RemoveItem(itemToRemove);
+            }
+
+            temporaryItems.Clear();
         }
     }
 }

@@ -12,7 +12,10 @@ public class ItemSO : ScriptableObject
     [Header("Informações Gerais")]
     public string itemName;
     public Sprite itemIcon;
+    [Tooltip("Define o tipo principal do item.")]
     public ItemType itemType;
+    [Tooltip("Se marcado, este item será removido do inventário se o jogador morrer durante uma quest ativa.")]
+    public bool isLostOnDeathDuringQuest = false;
 
     [Header("Configuração do Inventário (Grid)")]
     [Range(1, 6)] public int width = 1;

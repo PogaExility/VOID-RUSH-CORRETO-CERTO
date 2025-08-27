@@ -21,6 +21,8 @@ public class ItemSOEditor : Editor
         EditorGUILayout.LabelField("Configuração do Inventário (Grid)", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("width"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("height"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("isLostOnDeathDuringQuest"));
+
 
         EditorGUILayout.Space(10);
 

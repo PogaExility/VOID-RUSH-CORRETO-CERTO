@@ -31,7 +31,7 @@ public class PlayerController : MonoBehaviour
     private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
-
+    private List<GameObject> nearbyInteractables = new List<GameObject>();
     void Awake()
     {
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
@@ -102,40 +102,49 @@ public class PlayerController : MonoBehaviour
             inventoryManager.DropHeldItem();
         }
     }
-
     private void Interact()
     {
-        if (nearbyItems.Count == 0) return;
+        if (nearbyInteractables.Count == 0) return;
 
-        ItemPickup itemToPickup = nearbyItems[0];
-        if (itemToPickup != null)
+        GameObject objectToInteract = nearbyInteractables[0];
+        if (objectToInteract == null) return;
+
+        // Tenta interagir com um ItemPickup
+        if (objectToInteract.TryGetComponent<ItemPickup>(out var itemToPickup))
         {
-            inventoryManager.StartHoldingItem(itemToPickup.itemData);
-            nearbyItems.Remove(itemToPickup);
-            Destroy(itemToPickup.gameObject);
-
-            if (!isInventoryOpen)
+            // --- MUDANÇA IMPORTANTE: Usamos a nova função do InventoryManager ---
+            if (inventoryManager.PickupItem(itemToPickup.itemData))
             {
-                ToggleInventory();
+                nearbyInteractables.Remove(objectToInteract);
+                Destroy(objectToInteract);
             }
+            // Não abre mais o inventário automaticamente, pois PickupItem não "segura" o item.
+        }
+        // Tenta interagir com um QuestGiver
+        else if (objectToInteract.TryGetComponent<QuestGiver>(out var questGiver))
+        {
+            questGiver.Interact();
+            nearbyInteractables.Remove(objectToInteract);
         }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        ItemPickup item = other.GetComponent<ItemPickup>();
-        if (item != null && !nearbyItems.Contains(item))
+        // Adiciona qualquer objeto com ItemPickup OU QuestGiver à lista
+        if (other.GetComponent<ItemPickup>() != null || other.GetComponent<QuestGiver>() != null)
         {
-            nearbyItems.Add(item);
+            if (!nearbyInteractables.Contains(other.gameObject))
+            {
+                nearbyInteractables.Add(other.gameObject);
+            }
         }
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        ItemPickup item = other.GetComponent<ItemPickup>();
-        if (item != null && nearbyItems.Contains(item))
+        if (nearbyInteractables.Contains(other.gameObject))
         {
-            nearbyItems.Remove(item);
+            nearbyInteractables.Remove(other.gameObject);
         }
     }
 
