@@ -1,5 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+<<<<<<< HEAD
 --- !u!1 &519958264229290063
 GameObject:
   m_ObjectHideFlags: 0
@@ -1019,6 +1020,8 @@ MonoBehaviour:
   itemContainer: {fileID: 4865043882089253536}
   slotPrefab: {fileID: 5743375804362801090, guid: 1ed262fa342d3534e9a871af8522b172, type: 3}
   itemPrefab: {fileID: 4384578192148671141, guid: e5a53f99141e1d545874ba109217c8f1, type: 3}
+=======
+>>>>>>> parent of 880d514 (coisa pra krl)
 --- !u!1 &3345193402010468786
 GameObject:
   m_ObjectHideFlags: 0
@@ -1063,9 +1066,12 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4495213526833551057}
+<<<<<<< HEAD
   - {fileID: 3901705503933003718}
   - {fileID: 7952627578460200178}
   - {fileID: 4527261857627828816}
+=======
+>>>>>>> parent of 880d514 (coisa pra krl)
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &4676949479588431994
@@ -1111,7 +1117,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 100
+  m_SortingOrder: 0
   m_Sprite: {fileID: 21300000, guid: 1cfe6afb1bf23044287e11771469403d, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -1139,7 +1145,7 @@ Rigidbody2D:
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_GravityScale: 1
-  m_Material: {fileID: 6200000, guid: 36ef7b4c82ec71a408c1aa88a6039f5f, type: 2}
+  m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1199,6 +1205,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33da5420c5c97044e8f4dfefe29b4ff3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+<<<<<<< HEAD
+=======
+  animatorController: {fileID: 4961355594823665309}
+  mainCamera: {fileID: 0}
+  groundCheckStatusText: {fileID: 0}
+  collisionLayer:
+    serializedVersion: 2
+    m_Bits: 64
+>>>>>>> parent of 880d514 (coisa pra krl)
   moveSpeed: 8
   acceleration: 50
   deceleration: 60
@@ -1208,6 +1223,13 @@ MonoBehaviour:
     m_Bits: 64
   groundCheckDistance: 0.1
   wallCheckDistance: 0.1
+<<<<<<< HEAD
+=======
+  comboAirMaxSpeed: 9
+  comboAirAccel: 50
+  comboAirDrag: 14
+  maxComboTime: 2
+>>>>>>> parent of 880d514 (coisa pra krl)
 --- !u!95 &6689212545231447408
 Animator:
   serializedVersion: 7
@@ -1258,18 +1280,28 @@ MonoBehaviour:
   skillRelease: {fileID: 5749790382507345129}
   movementScript: {fileID: 6754565164538936117}
   animatorController: {fileID: 4961355594823665309}
+<<<<<<< HEAD
   inventoryManager: {fileID: 1496959078863461395}
   cursorManager: {fileID: 4388000895272638312}
   inventoryPanel: {fileID: 1077342786167609837}
+=======
+  energyBar: {fileID: 0}
+>>>>>>> parent of 880d514 (coisa pra krl)
   powerModeIndicator: {fileID: 6820764418786989435}
   baseJumpSkill: {fileID: 11400000, guid: 33bdc072d22c0d948a8b4fda27d947a0, type: 2}
   baseDashSkill: {fileID: 11400000, guid: b39e077050357654ab0fdaaf2cd24349, type: 2}
   upgradedJumpSkill: {fileID: 11400000, guid: 611ca41d6bd97ac4f8f8881d21225fb9, type: 2}
   upgradedDashSkill: {fileID: 11400000, guid: 1e71423f8a0f7c54dadb9cedbf71d7fe, type: 2}
+<<<<<<< HEAD
   wallSlideSkill: {fileID: 11400000, guid: 839002855fc4a6946be28b34380ad356, type: 2}
   wallJumpSkill: {fileID: 11400000, guid: ebe4f492f4225a244819f893403ad033, type: 2}
   wallDashSkill: {fileID: 11400000, guid: 4b89ac77f7e847f4685e312bc7eed78d, type: 2}
   wallDashJumpSkill: {fileID: 11400000, guid: 36704b31bbc9d9943ac64e5a550749a4, type: 2}
+=======
+  skillSlot1: {fileID: 0}
+  skillSlot2: {fileID: 0}
+  wallInputBufferTime: 0.1
+>>>>>>> parent of 880d514 (coisa pra krl)
 --- !u!114 &5749790382507345129
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1282,7 +1314,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e69a52f39a95884a8ec7453243faa6c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+<<<<<<< HEAD
   currentAirJumps: 0
+=======
+  comboHMultiplier: 1
+  comboVMultiplier: 1
+>>>>>>> parent of 880d514 (coisa pra krl)
 --- !u!114 &1496959078863461395
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1295,9 +1332,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4cc6410a85b0ec04ca345913b2eb1045, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gridWidth: 10
-  gridHeight: 6
-  equippedMeleeWeapon: {fileID: 11400000, guid: ff5113d830aa9254fafd20489f137970, type: 2}
+  equippedMeleeWeapon: {fileID: 0}
   equippedFirearm: {fileID: 0}
   equippedBuster: {fileID: 0}
   inventoryItems: []
@@ -1327,7 +1362,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 798374e8f604cca489c7575d397035fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fillImage: {fileID: 989145321946754259}
+  fillImage: {fileID: 0}
   maxEnergy: 100
   energyRegenPerSecond: 20
   regenDelay: 1.5
@@ -1373,6 +1408,7 @@ MonoBehaviour:
   playerAttack: {fileID: 2518731559796220278}
   defenseHandler: {fileID: 1720038249475775308}
   activeStance: 0
+<<<<<<< HEAD
 --- !u!1 &3469707029913071334
 GameObject:
   m_ObjectHideFlags: 0
@@ -2027,6 +2063,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraPrefab: {fileID: 7122779754724595169, guid: e26864b585cd7684887925962b8b20ea, type: 3}
+=======
+>>>>>>> parent of 880d514 (coisa pra krl)
 --- !u!1 &6820764418786989435
 GameObject:
   m_ObjectHideFlags: 0
@@ -6860,6 +6898,7 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
+<<<<<<< HEAD
 --- !u!1 &6858920017388907614
 GameObject:
   m_ObjectHideFlags: 0
@@ -7392,3 +7431,5 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+=======
+>>>>>>> parent of 880d514 (coisa pra krl)
