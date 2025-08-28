@@ -1,98 +1,62 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(AdvancedPlayerMovement2D))] //...etc
+[RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(SkillRelease))]
 public class PlayerController : MonoBehaviour
 {
-    // ===== NOVAS REFERÊNCIAS =====
-    [Header("Referências de Gerenciamento")]
-    [Tooltip("Arraste o objeto que contém o CursorManager.")]
-    public CursorManager cursorManager;
-    [Tooltip("Arraste o objeto que contém o InventoryManager (geralmente, este mesmo objeto Player).")]
+    // --- REFERÊNCIAS ESSENCIAIS ---
+    [Header("Referências de Componentes")]
+    public SkillRelease skillRelease;
+    public AdvancedPlayerMovement2D movementScript;
+    public PlayerAnimatorController animatorController;
     public InventoryManager inventoryManager;
+    public CursorManager cursorManager;
 
-    [Header("Referências de UI")]
-    [Tooltip("Arraste o objeto do Canvas do seu inventário aqui.")]
+    [Header("Referências de UI e Efeitos")]
     public GameObject inventoryPanel;
+    public GameObject powerModeIndicator; // Indicador visual do Glow Mode
 
-    // ===== O RESTO DAS SUAS REFERÊNCIAS =====
-    [Header("Referências de Movimento")] public SkillRelease skillRelease; public AdvancedPlayerMovement2D movementScript; public PlayerAnimatorController animatorController; public EnergyBarController energyBar; public GameObject powerModeIndicator;
-    [Header("Referências de Combate")] public CombatController combatController; public PlayerAttack playerAttack; public DefenseHandler defenseHandler;
-    [Header("Skills Básicas")] public SkillSO baseJumpSkill; public SkillSO baseDashSkill;
-    [Header("Skills com Upgrades")] public SkillSO upgradedJumpSkill; public SkillSO upgradedDashSkill; public SkillSO skillSlot1; public SkillSO skillSlot2;
-    [Header("Skills de Parede")] public SkillSO wallJumpSkill; public SkillSO wallDashSkill;
+    // --- ESTRUTURA DE SKILLS ---
+    [Header("Skills Base")]
+    public SkillSO baseJumpSkill;
+    public SkillSO baseDashSkill;
 
+    [Header("Skills de Power-Up (Glow)")]
+    public SkillSO upgradedJumpSkill;
+    public SkillSO upgradedDashSkill;
+
+    [Header("Skills de Parede (Sempre Ativas)")]
+    public SkillSO wallSlideSkill;
+    public SkillSO wallJumpSkill;
+    public SkillSO wallDashSkill;
+    public SkillSO wallDashJumpSkill;
+
+    // --- Variáveis de Estado Interno ---
     private bool isInventoryOpen = false;
-    // ***** ESTA É A FUNÇÃO QUE DEVE PERMANECER *****
-    // Dentro do seu PlayerController.cs
-
-    private void Interact()
-    {
-        if (nearbyInteractables.Count == 0) return;
-        GameObject objectToInteract = nearbyInteractables[0];
-        if (objectToInteract == null) { nearbyInteractables.RemoveAt(0); return; }
-
-        // A lógica agora verifica todos os tipos de interagíveis
-        if (objectToInteract.TryGetComponent<QuestGiver>(out var questGiver))
-        {
-            questGiver.Interact();
-            nearbyInteractables.Remove(objectToInteract);
-        }
-        else if (objectToInteract.TryGetComponent<Checkpoint>(out var checkpoint))
-        {
-            checkpoint.Interact();
-            nearbyInteractables.Remove(objectToInteract);
-        }
-        // --- NOVOS INTERAGÍVEIS ---
-        else if (objectToInteract.TryGetComponent<MissionBoard>(out var missionBoard))
-        {
-            missionBoard.Interact();
-            // Não removemos o quadro da lista, pois podemos querer fechar a UI
-        }
-        else if (objectToInteract.TryGetComponent<TravelPoint>(out var travelPoint))
-        {
-            travelPoint.Interact();
-            // Também não removemos, pois o painel pode ser fechado
-        }
-        // --- FIM DOS NOVOS INTERAGÍVEIS ---
-        else if (objectToInteract.TryGetComponent<ItemPickup>(out var itemToPickup))
-        {
-            inventoryManager.StartHoldingItem(itemToPickup.itemData);
-            nearbyInteractables.Remove(itemToPickup.gameObject);
-            Destroy(itemToPickup.gameObject);
-
-            if (!isInventoryOpen)
-            {
-                ToggleInventory();
-            }
-        }
-    }
-
-    
-
-    private SkillSO activeJumpSkill;
-    private SkillSO activeDashSkill;
-    private bool isPowerModeActive = false;
-    private bool wasGroundedLastFrame = true;
-    private bool isLanding = false;
     private List<GameObject> nearbyInteractables = new List<GameObject>();
     private bool canInteract => nearbyInteractables.Count > 0;
+    private bool wasGroundedLastFrame = true;
+
+    // --- LÓGICA DO GLOW MODE ---
+    private bool isPowerModeActive = false;
+    private SkillSO activeJumpSkill;
+    private SkillSO activeDashSkill;
+
     void Awake()
     {
-        movementScript = GetComponent<AdvancedPlayerMovement2D>();
-        skillRelease = GetComponent<SkillRelease>();
-        combatController = GetComponent<CombatController>();
-        playerAttack = GetComponent<PlayerAttack>();
-        defenseHandler = GetComponent<DefenseHandler>();
+        // Pega as referências automaticamente se não forem arrastadas no Inspector.
+        if (skillRelease == null) skillRelease = GetComponent<SkillRelease>();
+        if (movementScript == null) movementScript = GetComponent<AdvancedPlayerMovement2D>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         if (inventoryManager == null) inventoryManager = GetComponent<InventoryManager>();
-        if (cursorManager == null) cursorManager = FindFirstObjectByType<CursorManager>(); // Procura automaticamente se não for arrastado
+        if (cursorManager == null) cursorManager = FindAnyObjectByType<CursorManager>();
     }
 
     void Start()
     {
-        energyBar.SetMaxEnergy(100f);
+        // Garante que o jogo comece no modo normal
         SetPowerMode(false);
+
         if (inventoryPanel != null)
         {
             inventoryPanel.SetActive(false);
@@ -100,7 +64,7 @@ public class PlayerController : MonoBehaviour
         }
         if (cursorManager != null)
         {
-            cursorManager.SetDefaultCursor(); // Garante que o cursor comece normal
+            cursorManager.SetDefaultCursor();
         }
     }
 
@@ -111,16 +75,109 @@ public class PlayerController : MonoBehaviour
             ToggleInventory();
         }
 
-        if (Input.GetKeyDown(KeyCode.E) && canInteract && !isInventoryOpen)
+        if (isInventoryOpen) return;
+
+        if (Input.GetKeyDown(KeyCode.E) && canInteract)
         {
             Interact();
         }
 
-        if (isInventoryOpen) return;
+        // A lógica do Modo Glow é checada a cada frame
+        HandlePowerModeToggle();
 
-        HandleAllInput();
+        HandleSkillInput();
         UpdateAnimations();
-        wasGroundedLastFrame = movementScript.IsGrounded();
+
+        wasGroundedLastFrame = movementScript.IsGrounded;
+    }
+
+    private void HandleSkillInput()
+    {
+        // Tenta ativar as skills que dependem do Modo Glow (pulo e dash)
+        skillRelease.TryActivateSkill(activeJumpSkill);
+        skillRelease.TryActivateSkill(activeDashSkill);
+
+        // Tenta ativar as skills de parede, que estão sempre disponíveis
+        skillRelease.TryActivateSkill(wallSlideSkill);
+        skillRelease.TryActivateSkill(wallJumpSkill);
+        skillRelease.TryActivateSkill(wallDashSkill);
+        skillRelease.TryActivateSkill(wallDashJumpSkill);
+    }
+
+    // --- LÓGICA DO MODO GLOW (RESTAURADA E COMPLETA) ---
+    private void HandlePowerModeToggle()
+    {
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            SetPowerMode(!isPowerModeActive);
+        }
+        // Desativa o Power Mode se a energia acabar (lógica futura com EnergyBar)
+        // if (isPowerModeActive && energyBar != null && energyBar.GetCurrentEnergy() <= 0) SetPowerMode(false);
+    }
+
+    private void SetPowerMode(bool isActive)
+    {
+        // Lógica para impedir ativação sem energia
+        // if (isActive && energyBar != null && energyBar.GetCurrentEnergy() <= 0) isActive = false;
+
+        isPowerModeActive = isActive;
+
+        // Atualiza as skills ativas com base no modo
+        activeJumpSkill = isPowerModeActive ? upgradedJumpSkill : baseJumpSkill;
+        activeDashSkill = isPowerModeActive ? upgradedDashSkill : baseDashSkill;
+
+        // Atualiza o indicador visual na UI
+        if (powerModeIndicator != null)
+        {
+            powerModeIndicator.SetActive(isPowerModeActive);
+        }
+        Debug.Log("Power Mode Ativo: " + isPowerModeActive);
+    }
+
+    // Função pública para que outros scripts (como SkillRelease) saibam qual a skill de pulo atual
+    public SkillSO GetActiveJumpSkill()
+    {
+        return activeJumpSkill;
+    }
+
+    private void UpdateAnimations()
+    {
+        if (!wasGroundedLastFrame && movementScript.IsGrounded)
+        {
+            animatorController.PlayState(PlayerAnimState.pousando);
+            return;
+        }
+
+        if (movementScript.IsWallSliding)
+        {
+            animatorController.PlayState(PlayerAnimState.derrapagem);
+        }
+        else if (movementScript.IsDashing)
+        {
+            animatorController.PlayState(movementScript.IsGrounded ? PlayerAnimState.dash : PlayerAnimState.dashAereo);
+        }
+        else if (!movementScript.IsGrounded)
+        {
+            if (movementScript.GetVerticalVelocity() > 0.1f)
+            {
+                animatorController.PlayState(PlayerAnimState.pulando);
+            }
+            else
+            {
+                animatorController.PlayState(PlayerAnimState.falling);
+            }
+        }
+        else
+        {
+            if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f)
+            {
+                animatorController.PlayState(PlayerAnimState.andando);
+            }
+            else
+            {
+                animatorController.PlayState(PlayerAnimState.parado);
+            }
+        }
     }
 
     private void ToggleInventory()
@@ -132,31 +189,36 @@ public class PlayerController : MonoBehaviour
 
         if (cursorManager != null)
         {
-            if (isInventoryOpen)
-            {
-                cursorManager.SetInventoryCursor();
-            }
-            else
-            {
-                cursorManager.SetDefaultCursor();
-            }
+            if (isInventoryOpen) cursorManager.SetInventoryCursor();
+            else cursorManager.SetDefaultCursor();
         }
 
-        if (!isInventoryOpen)
+        if (!isInventoryOpen && inventoryManager.heldItem != null)
         {
             inventoryManager.DropHeldItem();
         }
     }
 
+    private void Interact()
+    {
+        if (nearbyInteractables.Count == 0) return;
+        GameObject objectToInteract = nearbyInteractables[0];
+        if (objectToInteract == null) { nearbyInteractables.RemoveAt(0); return; }
+
+        if (objectToInteract.TryGetComponent<QuestGiver>(out var questGiver)) { questGiver.Interact(); nearbyInteractables.Remove(objectToInteract); }
+        else if (objectToInteract.TryGetComponent<Checkpoint>(out var checkpoint)) { checkpoint.Interact(); nearbyInteractables.Remove(objectToInteract); }
+        else if (objectToInteract.TryGetComponent<ItemPickup>(out var itemToPickup))
+        {
+            inventoryManager.StartHoldingItem(itemToPickup.itemData);
+            nearbyInteractables.Remove(itemToPickup.gameObject);
+            Destroy(itemToPickup.gameObject);
+            if (!isInventoryOpen) { ToggleInventory(); }
+        }
+    }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // A lista agora detecta os novos objetos
-        if (other.GetComponent<ItemPickup>() != null ||
-            other.GetComponent<QuestGiver>() != null ||
-            other.GetComponent<Checkpoint>() != null ||
-            other.GetComponent<MissionBoard>() != null || // <-- ADICIONADO
-            other.GetComponent<TravelPoint>() != null)    // <-- ADICIONADO
+        if (other.GetComponent<ItemPickup>() != null || other.GetComponent<QuestGiver>() != null || other.GetComponent<Checkpoint>() != null)
         {
             if (!nearbyInteractables.Contains(other.gameObject))
             {
@@ -165,7 +227,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
     private void OnTriggerExit2D(Collider2D other)
     {
         if (nearbyInteractables.Contains(other.gameObject))
@@ -173,49 +234,4 @@ public class PlayerController : MonoBehaviour
             nearbyInteractables.Remove(other.gameObject);
         }
     }
-    // --- Funções de movimento e combate (sem alterações) ---
-    private void HandleAllInput()
-    {
-        if (isLanding) return;
-        bool jumpInputDown = Input.GetKeyDown(KeyCode.Space);
-        bool dashInputDown = (activeDashSkill != null && Input.GetKeyDown(activeDashSkill.activationKey)) ||
-                             (wallDashSkill != null && Input.GetKeyDown(wallDashSkill.activationKey));
-
-        if (!playerAttack.IsAttacking() && !playerAttack.IsReloading())
-        {
-            if (movementScript.IsWallSliding())
-            {
-                if ((jumpInputDown && Input.GetKey(wallDashSkill.activationKey)) || (dashInputDown && Input.GetKey(KeyCode.Space))) { TryActivateCombinedSkill(); return; }
-                if (jumpInputDown) TryActivateSkill(wallJumpSkill);
-                if (dashInputDown) TryActivateSkill(wallDashSkill);
-            }
-            else
-            {
-                if (jumpInputDown) TryActivateSkill(activeJumpSkill);
-                if (dashInputDown) TryActivateSkill(activeDashSkill);
-            }
-            if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
-        }
-
-        if (!movementScript.IsDashing()) combatController.ProcessCombatInput();
-        if (!playerAttack.IsAttacking() && !playerAttack.IsReloading() && !defenseHandler.IsBlocking()) { if (isPowerModeActive) { if (skillSlot1 != null && Input.GetKeyDown(skillSlot1.activationKey)) TryActivateSkill(skillSlot1); if (skillSlot2 != null && Input.GetKeyDown(skillSlot2.activationKey)) TryActivateSkill(skillSlot2); } }
-        HandlePowerModeToggle();
-    }
-    private void TryActivateCombinedSkill()
-    {
-        if (wallJumpSkill == null || wallDashSkill == null) return;
-        float combinedCost = wallJumpSkill.energyCost + wallDashSkill.energyCost;
-        if (energyBar.HasEnoughEnergy(combinedCost))
-        {
-            if (skillRelease.ActivateWallDashJump(wallJumpSkill, wallDashSkill, movementScript))
-            {
-                energyBar.ConsumeEnergy(combinedCost);
-            }
-        }
-    }
-    private void UpdateAnimations() { if (isLanding) { return; } if (!wasGroundedLastFrame && movementScript.IsGrounded()) { isLanding = true; movementScript.OnLandingStart(); animatorController.PlayState(PlayerAnimState.pousando); return; } if (defenseHandler.IsBlocking()) { if (defenseHandler.IsInParryWindow()) animatorController.PlayState(PlayerAnimState.parry); else animatorController.PlayState(PlayerAnimState.block); } else if (!movementScript.IsGrounded()) { if (movementScript.IsWallSliding()) animatorController.PlayState(PlayerAnimState.derrapagem); else if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dashAereo); else if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando); else animatorController.PlayState(PlayerAnimState.falling); } else { if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dash); else if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando); else animatorController.PlayState(PlayerAnimState.parado); } }
-    public void OnLandingComplete() { isLanding = false; movementScript.OnLandingComplete(); }
-    private void TryActivateSkill(SkillSO skillToUse) { if (skillToUse == null) return; if (energyBar.HasEnoughEnergy(skillToUse.energyCost)) { if (skillRelease.ActivateSkill(skillToUse, movementScript, animatorController)) { energyBar.ConsumeEnergy(skillToUse.energyCost); } } }
-    private void HandlePowerModeToggle() { if (Input.GetKeyDown(KeyCode.G)) SetPowerMode(!isPowerModeActive); if (isPowerModeActive && energyBar.GetCurrentEnergy() <= 0) SetPowerMode(false); }
-    private void SetPowerMode(bool isActive) { if (isActive && energyBar.GetCurrentEnergy() <= 0) isActive = false; isPowerModeActive = isActive; activeJumpSkill = isActive ? upgradedJumpSkill : baseJumpSkill; activeDashSkill = isActive ? upgradedDashSkill : baseDashSkill; if (powerModeIndicator != null) powerModeIndicator.SetActive(isActive); }
 }

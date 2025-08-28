@@ -1,103 +1,176 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Linq;
 
+[RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(PlayerController))]
 public class SkillRelease : MonoBehaviour
 {
-    private int currentAirJumps;
-    private Coroutine currentDashCoroutine;
+    [Header("Debug")]
+    [SerializeField] private int currentAirJumps;
+    private Coroutine currentSkillCoroutine;
 
-    public bool ActivateWallDashJump(SkillSO jumpSkill, SkillSO dashSkill, AdvancedPlayerMovement2D movement)
+    private AdvancedPlayerMovement2D movement;
+    private PlayerController playerController;
+
+    void Awake()
     {
-        if (!movement.IsWallSliding()) return false;
-        float horizontalForce = dashSkill.dashSpeed * 1.5f;
-        float verticalForce = movement.wallJumpForce.y * jumpSkill.jumpHeightMultiplier;
-        movement.DoWallDashJump(horizontalForce, verticalForce);
+        movement = GetComponent<AdvancedPlayerMovement2D>();
+        playerController = GetComponent<PlayerController>();
+    }
+
+    void Update()
+    {
+        SkillSO baseJumpSkill = playerController.baseJumpSkill;
+        if (baseJumpSkill == null) return;
+
+        // --- CORREÇÃO CS1955: Usamos a propriedade IsGrounded, sem parênteses () ---
+        if (movement.IsGrounded)
+        {
+            currentAirJumps = baseJumpSkill.airJumps;
+        }
+
+        // A lógica do Wall Slide foi movida para uma skill ativa, conforme sua definição.
+    }
+
+    public bool TryActivateSkill(SkillSO skill)
+    {
+        if (skill == null || !CheckKeyPress(skill) || (currentSkillCoroutine != null && !skill.canInterrupt))
+        {
+            return false;
+        }
+
+        bool success = false;
+        switch (skill.movementSkillType)
+        {
+            case MovementSkillType.SuperJump:
+                success = HandleSuperJump(skill);
+                break;
+            case MovementSkillType.Dash:
+                success = HandleDash(skill);
+                break;
+            case MovementSkillType.WallJump:
+                success = HandleWallJump(skill);
+                break;
+            case MovementSkillType.WallDash:
+                success = HandleWallDash(skill);
+                break;
+            case MovementSkillType.WallDashJump:
+                success = HandleWallDashJump(skill);
+                break;
+            case MovementSkillType.WallSlide:
+                success = HandleWallSlide(skill);
+                break;
+        }
+
+        return success;
+    }
+
+    private bool CheckKeyPress(SkillSO skill)
+    {
+        bool triggerPressed = skill.triggerKeys.Any(key => Input.GetKeyDown(key));
+        if (!triggerPressed) return false;
+        return skill.requiredKeys.All(key => Input.GetKey(key));
+    }
+
+    // --- Funções de Lógica Específicas (Corrigidas) ---
+
+    private bool HandleSuperJump(SkillSO skill)
+    {
+        // --- CORREÇÃO CS1955: IsWallSliding ---
+        if (movement.IsWallSliding) return false;
+
+        // --- CORREÇÃO CS1061: CanJumpFromGround ---
+        if (movement.CanJumpFromGround() || currentAirJumps > 0)
+        {
+            if (!movement.CanJumpFromGround())
+            {
+                currentAirJumps--;
+            }
+            // --- CORREÇÃO CS1061: DoJump ---
+            movement.DoJump(skill.jumpForce);
+            return true;
+        }
+        return false;
+    }
+
+    private bool HandleDash(SkillSO skill)
+    {
+        // --- CORREÇÃO CS1955: IsGrounded ---
+        if (skill.dashType == DashType.Normal && !movement.IsGrounded) return false;
+
+        currentSkillCoroutine = StartCoroutine(ExecuteDashCoroutine(skill));
         return true;
     }
 
-    private IEnumerator WallJumpEndDelay(AdvancedPlayerMovement2D movement) { yield return new WaitForSeconds(0.2f); movement.OnWallJumpEnd(); }
-
-    public bool ActivateSkill(SkillSO skill, AdvancedPlayerMovement2D movement, PlayerAnimatorController animator)
+    private bool HandleWallJump(SkillSO skill)
     {
-        if (skill == null) return false;
-        if (skill.skillClass == SkillClass.Movimento) return HandleMovementSkill(skill, movement);
-        return false;
+        // --- CORREÇÃO CS1955: IsWallSliding ---
+        if (!movement.IsWallSliding) return false;
+
+        // --- CORREÇÃO CS1503 e CS1061: Passando o Vector2 correto para DoWallJump ---
+        movement.DoWallJump(skill.wallJumpForce);
+        return true;
     }
 
-    // ===== INÍCIO DA ALTERAÇÃO: SEPARANDO A LÓGICA DE CADA SKILL =====
-    private bool HandleMovementSkill(SkillSO skill, AdvancedPlayerMovement2D movement)
+    private bool HandleWallDash(SkillSO skill)
     {
-        switch (skill.movementSkillType)
-        {
-            // Lógica para Dash de Chão/Aéreo
-            case MovementSkillType.Dash:
-                if (skill.dashType == DashType.Normal && !movement.IsGrounded()) return false; // Dash Normal só no chão
-                if (movement.IsDashing()) return false;
-                if (currentDashCoroutine != null) StopCoroutine(currentDashCoroutine);
-                currentDashCoroutine = StartCoroutine(ExecuteDashCoroutine(skill, movement));
-                return true;
+        // --- CORREÇÃO CS1955: IsWallSliding ---
+        if (!movement.IsWallSliding) return false;
 
-            // Lógica para Pulo Normal e Pulo Aéreo
-            case MovementSkillType.SuperJump:
-                if (movement.IsWallJumping() || movement.IsWallSliding()) return false; // SuperJump não funciona na parede
-                if (movement.IsGrounded()) { currentAirJumps = skill.airJumps; }
-                if (movement.CanJumpFromGround() || currentAirJumps > 0)
-                {
-                    if (!movement.CanJumpFromGround()) currentAirJumps--;
-                    movement.DoJump(skill.jumpHeightMultiplier);
-                    return true;
-                }
-                break;
-
-            // Lógica EXCLUSIVA para Wall Jump
-            case MovementSkillType.WallJump:
-                if (!movement.IsWallSliding()) return false;
-                StartCoroutine(ExecuteWallJumpCoroutine(skill, movement));
-                return true;
-
-            // Lógica EXCLUSIVA para Wall Dash
-            case MovementSkillType.WallDash:
-                if (!movement.IsWallSliding()) return false;
-                if (movement.IsDashing()) return false;
-                if (currentDashCoroutine != null) StopCoroutine(currentDashCoroutine);
-                currentDashCoroutine = StartCoroutine(ExecuteDashCoroutine(skill, movement));
-                return true;
-        }
-
-        // Lógica para iniciar o Wall Slide (ainda parte do pulo geral)
-        if (!movement.IsGrounded() && movement.IsTouchingWall() && !movement.IsWallSliding())
-        {
-            movement.StartWallSlide();
-            return true;
-        }
-
-        return false;
+        currentSkillCoroutine = StartCoroutine(ExecuteDashCoroutine(skill));
+        return true;
     }
-    // ===== FIM DA ALTERAÇÃO =====
 
-    private IEnumerator ExecuteWallJumpCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement) { movement.DoWallJump(skill.jumpHeightMultiplier); yield return new WaitForSeconds(0.2f); movement.OnWallJumpEnd(); }
+    private bool HandleWallDashJump(SkillSO skill)
+    {
+        // --- CORREÇÃO CS1955: IsWallSliding ---
+        if (!movement.IsWallSliding) return false;
 
-    private IEnumerator ExecuteDashCoroutine(SkillSO skill, AdvancedPlayerMovement2D movement)
+        // --- CORREÇÃO CS7036: Passando todos os parâmetros necessários ---
+        movement.DoWallDashJump(skill.launchForceX, skill.launchForceY, skill.parabolaLinearDamping);
+        currentSkillCoroutine = StartCoroutine(WaitForParabolaEnd());
+        return true;
+    }
+
+    private bool HandleWallSlide(SkillSO skill)
+    {
+        // --- CORREÇÃO CS1955: IsGrounded, IsTouchingWall, IsWallSliding ---
+        if (movement.IsGrounded || !movement.IsTouchingWall || movement.IsWallSliding) return false;
+
+        // --- CORREÇÃO CS7036: Passando o parâmetro slideSpeed ---
+        movement.StartWallSlide(skill.wallSlideSpeed);
+        return true;
+    }
+
+    // --- Corotinas que Executam as Ações Físicas (Corrigidas) ---
+
+    private IEnumerator ExecuteDashCoroutine(SkillSO skill)
     {
         movement.OnDashStart();
-        if (movement.IsWallSliding())
+        movement.SetGravityScale(0f);
+
+        Vector2 direction = movement.GetFacingDirection();
+
+        float timer = 0f;
+        while (timer < skill.dashDuration)
         {
-            movement.StopWallSlide();
-            float dashDuration = 0.2f;
-            float timer = 0;
-            movement.SetGravityScale(0f);
-            Vector2 direction = movement.GetWallEjectDirection();
-            if ((direction.x > 0 && !movement.IsFacingRight()) || (direction.x < 0 && movement.IsFacingRight())) { movement.Flip(); }
-            while (timer < dashDuration) { movement.SetVelocity(direction.x * skill.dashSpeed, 0); timer += Time.deltaTime; yield return null; }
-            movement.SetGravityScale(movement.baseGravity);
+            // --- CORREÇÃO CS1955: IsTouchingWall ---
+            if (movement.IsTouchingWall) break;
+
+            movement.SetVelocity(direction.x * skill.dashSpeed, 0);
+            timer += Time.deltaTime;
+            yield return null;
         }
-        else // Dash normal (chão ou aéreo)
-        {
-            float dashStartTime = Time.time;
-            if (skill.dashType == DashType.Aereo) { float dashDuration = (skill.dashSpeed > 0) ? skill.dashDistance / skill.dashSpeed : 0.01f; float timer = 0; movement.SetGravityScale(0f); while (timer < dashDuration) { if (movement.IsTouchingWall()) break; Vector2 direction = movement.GetFacingDirection(); movement.SetVelocity(direction.x * skill.dashSpeed, 0); timer += Time.deltaTime; yield return null; } movement.SetGravityScale(movement.baseGravity); }
-            else { movement.SetGravityScale(movement.baseGravity); float minDashTime = 0.1f; while (true) { movement.SetVelocity(movement.GetFacingDirection().x * skill.dashSpeed, movement.GetRigidbody().linearVelocity.y); if (movement.IsTouchingWall()) break; if (Time.time > dashStartTime + minDashTime) { if (movement.IsGrounded()) { yield return new WaitForFixedUpdate(); if (movement.IsGrounded()) break; } } yield return null; } }
-        }
+
+        movement.SetGravityScale(movement.baseGravity);
         movement.OnDashEnd();
-        currentDashCoroutine = null;
+        currentSkillCoroutine = null;
+    }
+
+    private IEnumerator WaitForParabolaEnd()
+    {
+        // --- CORREÇÃO CS1955: IsInParabola ---
+        yield return new WaitUntil(() => !movement.IsInParabola);
+        currentSkillCoroutine = null;
     }
 }

@@ -13,15 +13,20 @@ MonoBehaviour:
   m_Name: WallDashJump
   m_EditorClassIdentifier: 
   skillName: WallDashJump
-  activationKey: 0
   energyCost: 0
   skillClass: 0
-  visualEffectPrefab: {fileID: 0}
-  movementSkillType: 5
-  dashType: 0
-  dashDistance: 5
-  dashSpeed: 25
-  wallDashDistance: 7
-  jumpHeightMultiplier: 1
+  requiredKeys: 
+  triggerKeys: 2000000071000000
+  movementSkillType: 6
+  jumpForce: 12
   airJumps: 0
+  gravityScaleOnFall: 1.6
+  coyoteTime: 0.1
   wallJumpForce: {x: 0, y: 0}
+  wallSlideSpeed: 2
+  dashType: 0
+  dashSpeed: 25
+  dashDuration: 0.2
+  launchForceX: 25
+  launchForceY: 15
+  parabolaLinearDamping: 0.3

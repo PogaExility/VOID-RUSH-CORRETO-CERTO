@@ -13,13 +13,20 @@ MonoBehaviour:
   m_Name: DashFoda
   m_EditorClassIdentifier: 
   skillName: DashFoda
-  activationKey: 113
   energyCost: 10
   skillClass: 0
-  visualEffectPrefab: {fileID: 0}
-  movementSkillType: 1
-  dashType: 1
-  dashDistance: 10
-  dashSpeed: 100
-  jumpHeightMultiplier: 1
+  requiredKeys: 
+  triggerKeys: 71000000
+  movementSkillType: 2
+  jumpForce: 12
   airJumps: 0
+  gravityScaleOnFall: 1.6
+  coyoteTime: 0.1
+  wallJumpForce: {x: 10, y: 12}
+  wallSlideSpeed: 2
+  dashType: 1
+  dashSpeed: 100
+  dashDuration: 0.2
+  launchForceX: 25
+  launchForceY: 15
+  parabolaLinearDamping: 0.3

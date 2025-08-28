@@ -1,109 +1,168 @@
 using UnityEngine;
-using TMPro;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(CapsuleCollider2D))]
 public class AdvancedPlayerMovement2D : MonoBehaviour
 {
-    [Header("Referências")] public PlayerAnimatorController animatorController; public Camera mainCamera; public TextMeshProUGUI groundCheckStatusText; public LayerMask collisionLayer;
-    [Header("Movimento")] public float moveSpeed = 8f; public float acceleration = 50f; public float deceleration = 60f;
-    [Header("Pulo")] public float jumpForce = 10f; public float gravityScaleOnFall = 2.5f; public float baseGravity = 1f; public float coyoteTime = 0.1f;
-    [Header("Parede")] public float wallSlideSpeed = 2f; public Vector2 wallJumpForce = new Vector2(10f, 12f); public float wallCheckDistance = 0.1f;
+    [Header("Movimento Base")]
+    public float moveSpeed = 8f;
+    public float acceleration = 50f;
+    public float deceleration = 60f;
+    public float baseGravity = 1f;
 
-    [Header("Física do WallDashJump")]
-    public float parabolaLinearDamping = 0.3f;
-    public float parabolaSteeringForce = 100f;
-    public float parabolaMaxAirSpeed = 20f;
+    [Header("Detecção de Colisão")]
+    public LayerMask collisionLayer;
+    public float groundCheckDistance = 0.1f;
+    public float wallCheckDistance = 0.1f;
 
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
     private float moveInput;
     private bool isFacingRight = true;
-    private bool isGrounded;
     private float coyoteTimeCounter;
-    private bool isTouchingWallRight;
-    private bool isTouchingWallLeft;
-    private bool isWallSliding;
-    private bool isDashing = false;
-    private bool isWallJumping = false;
-    private bool isInParabolaArc = false;
-    private bool isJumping = false;
-    private bool isLanding = false;
 
-    void Awake() { rb = GetComponent<Rigidbody2D>(); capsuleCollider = GetComponent<CapsuleCollider2D>(); if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>(); }
+    public bool IsGrounded { get; private set; }
+    public bool IsTouchingWall { get; private set; }
+    public bool IsWallSliding { get; private set; }
+    public bool IsDashing { get; private set; }
+    public bool IsInParabola { get; private set; }
+    public bool IsFacingRight => isFacingRight;
 
-    // ===== INÍCIO DA ALTERAÇÃO: CORRIGINDO O "NO FLIP" =====
-    void Update() { isJumping = rb.linearVelocity.y > 0.1f && !isGrounded; if (!isLanding) { moveInput = Input.GetAxisRaw("Horizontal"); } else { moveInput = 0; } if (!isWallSliding && !isWallJumping) { HandleFlipLogic(); } UpdateTimers(); UpdateDebugUI(); }
-
-    void FixedUpdate() { CheckCollisions(); if (isLanding) { rb.linearVelocity = Vector2.zero; return; } if (isDashing || isWallJumping) return; HandleWallSlideLogic(); HandleMovement(); HandleGravity(); }
-
-    public void OnLandingStart() { isLanding = true; }
-    public void OnLandingComplete() { isLanding = false; }
-    public void StopWallSlide() { isWallSliding = false; }
-
-    public void DoWallDashJump(float horizontalForce, float verticalForce)
+    void Awake()
     {
-        isWallSliding = false;
-        isInParabolaArc = true;
-        Vector2 ejectDirection = GetWallEjectDirection();
-        rb.linearVelocity = Vector2.zero;
-        rb.linearVelocity = new Vector2(ejectDirection.x * horizontalForce, verticalForce);
-        if ((ejectDirection.x > 0 && !isFacingRight) || (ejectDirection.x < 0 && isFacingRight)) { Flip(); }
-        rb.linearDamping = parabolaLinearDamping;
+        rb = GetComponent<Rigidbody2D>();
+        capsuleCollider = GetComponent<CapsuleCollider2D>();
     }
 
-    private void CheckCollisions() { Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset; Vector2 capsuleSize = capsuleCollider.size; RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, 0.1f, collisionLayer); isGrounded = hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) < 45f; if (isGrounded) { if (isInParabolaArc || isWallJumping) rb.linearDamping = 0f; isWallJumping = false; isInParabolaArc = false; coyoteTimeCounter = coyoteTime; isJumping = false; } float wallRayStartOffset = capsuleCollider.size.x * 0.5f; isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer); isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer); }
-    public void DoJump(float multiplier) { isJumping = true; rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier); }
-    public void DoWallJump(float multiplier) { isJumping = true; isWallSliding = false; isWallJumping = true; Vector2 ejectDirection = GetWallEjectDirection(); rb.linearVelocity = new Vector2(ejectDirection.x * wallJumpForce.x, wallJumpForce.y * multiplier); Flip(); }
-    public void Flip() { isFacingRight = !isFacingRight; transform.Rotate(0f, 180f, 0f); }
-    private void HandleFlipLogic() { if (moveInput > 0.01f && !isFacingRight) Flip(); else if (moveInput < -0.01f && isFacingRight) Flip(); }
-    public void StartWallSlide() { isWallSliding = true; if ((isFacingRight && isTouchingWallRight) || (!isFacingRight && isTouchingWallLeft)) { Flip(); } }
-
-    private void HandleMovement()
+    void Update()
     {
-        if (isInParabolaArc)
+        if (!IsDashing && !IsInParabola)
         {
-            if ((moveInput > 0 && rb.linearVelocity.x >= parabolaMaxAirSpeed) ||
-                (moveInput < 0 && rb.linearVelocity.x <= -parabolaMaxAirSpeed))
-            {
-                return;
-            }
-            rb.AddForce(Vector2.right * moveInput * parabolaSteeringForce);
+            moveInput = Input.GetAxisRaw("Horizontal");
+            HandleFlipLogic();
+        }
+
+        var jumpSkill = GetComponent<PlayerController>().baseJumpSkill;
+        if (IsGrounded)
+        {
+            if (jumpSkill != null) coyoteTimeCounter = jumpSkill.coyoteTime;
         }
         else
         {
-            if (isWallSliding) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed); return; }
-            bool isPushingAgainstWall = !isGrounded && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
-            if (isPushingAgainstWall) return;
-            float targetSpeed = moveInput * moveSpeed;
-            float speedDiff = targetSpeed - rb.linearVelocity.x;
-            float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
-            rb.AddForce(speedDiff * accelRate * Vector2.right);
+            coyoteTimeCounter -= Time.deltaTime;
         }
     }
 
-    private void HandleWallSlideLogic() { if (isWallSliding && (!IsTouchingWall() || isGrounded)) { isWallSliding = false; } }
-    private void HandleGravity() { rb.gravityScale = isWallSliding ? 0 : (rb.linearVelocity.y < 0 ? gravityScaleOnFall : baseGravity); }
-    private void UpdateTimers() { if (!isGrounded) coyoteTimeCounter -= Time.deltaTime; }
-    public void CutJump() { if (rb.linearVelocity.y > 0) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f); } }
-    public Vector2 GetWallEjectDirection() { return isTouchingWallLeft ? Vector2.right : Vector2.left; }
-    public bool IsGrounded() { return isGrounded; }
-    public bool IsWallSliding() { return isWallSliding; }
-    public bool IsInParabolaArc() { return isInParabolaArc; }
-    public float GetVerticalVelocity() { return rb.linearVelocity.y; }
-    public bool IsMoving() { return Mathf.Abs(moveInput) > 0.1f; }
-    public Vector2 GetDashDirection() { return Mathf.Abs(moveInput) > 0.01f ? (moveInput > 0 ? Vector2.right : Vector2.left) : GetFacingDirection(); }
-    public Vector2 GetFacingDirection() { return isFacingRight ? Vector2.right : Vector2.left; }
-    public void SetGravityScale(float scale) { rb.gravityScale = scale; }
+    void FixedUpdate()
+    {
+        CheckCollisions();
+        if (IsDashing || IsInParabola) return;
+        HandleHorizontalMovement();
+        HandleGravity();
+    }
+
+    public void DoJump(float force)
+    {
+        coyoteTimeCounter = 0f;
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0);
+        rb.AddForce(Vector2.up * force, ForceMode2D.Impulse);
+    }
+
+    public void DoWallJump(Vector2 force)
+    {
+        StopWallSlide();
+        Vector2 ejectDirection = GetWallEjectDirection();
+        rb.linearVelocity = new Vector2(ejectDirection.x * force.x, force.y);
+        Flip();
+    }
+
+    public void DoWallDashJump(float hForce, float vForce, float damping)
+    {
+        StopWallSlide();
+        OnParabolaStart(damping);
+        Vector2 ejectDirection = GetWallEjectDirection();
+        rb.linearVelocity = new Vector2(hForce * ejectDirection.x, vForce);
+        Flip();
+    }
+
+    public void StartWallSlide(float slideSpeed)
+    {
+        if (IsGrounded || IsDashing) return;
+        IsWallSliding = true;
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, -slideSpeed);
+    }
+
+    public void StopWallSlide() { IsWallSliding = false; }
+
+    public void OnDashStart() { IsDashing = true; }
+    public void OnDashEnd() { IsDashing = false; }
+    public void OnParabolaStart(float damping) { IsInParabola = true; rb.linearDamping = damping; }
+    public void OnParabolaEnd() { IsInParabola = false; rb.linearDamping = 0f; }
+
     public void SetVelocity(float x, float y) { rb.linearVelocity = new Vector2(x, y); }
+    public void SetGravityScale(float scale) { rb.gravityScale = scale; }
+
+    private void HandleHorizontalMovement()
+    {
+        if (IsWallSliding) return;
+        float targetSpeed = moveInput * moveSpeed;
+        float speedDiff = targetSpeed - rb.linearVelocity.x;
+        float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
+        rb.AddForce(speedDiff * accelRate * Vector2.right);
+    }
+
+    private void HandleGravity()
+    {
+        if (IsWallSliding) rb.gravityScale = 0;
+        else
+        {
+            var jumpSkill = GetComponent<PlayerController>().baseJumpSkill;
+            float fallMultiplier = (jumpSkill != null) ? jumpSkill.gravityScaleOnFall : 2.5f;
+            rb.gravityScale = rb.linearVelocity.y < 0 ? baseGravity * fallMultiplier : baseGravity;
+        }
+    }
+
+    private void HandleFlipLogic()
+    {
+        if (moveInput > 0.01f && !isFacingRight) Flip();
+        else if (moveInput < -0.01f && isFacingRight) Flip();
+    }
+
+    // --- AQUI ESTÁ A CORREÇÃO ---
+    // A função agora é 'public' para que o SkillRelease possa chamá-la.
+    public void Flip()
+    {
+        isFacingRight = !isFacingRight;
+        transform.Rotate(0f, 180f, 0f);
+    }
+
+    private void CheckCollisions()
+    {
+        Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset;
+        RaycastHit2D groundHit = Physics2D.BoxCast(capsuleCenter, capsuleCollider.size, 0, Vector2.down, groundCheckDistance, collisionLayer);
+        IsGrounded = groundHit.collider != null;
+
+        if (IsGrounded && (IsInParabola || IsDashing))
+        {
+            OnParabolaEnd();
+            OnDashEnd();
+        }
+
+        bool isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, capsuleCollider.size.x * 0.5f + wallCheckDistance, collisionLayer);
+        bool isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, capsuleCollider.size.x * 0.5f + wallCheckDistance, collisionLayer);
+        IsTouchingWall = isTouchingWallRight || isTouchingWallLeft;
+
+        if (IsWallSliding && !IsTouchingWall) StopWallSlide();
+    }
+
     public bool CanJumpFromGround() { return coyoteTimeCounter > 0f; }
-    public bool IsTouchingWall() { return isTouchingWallLeft || isTouchingWallRight; }
-    public void OnDashStart() { isDashing = true; }
-    public void OnDashEnd() { isDashing = false; }
-    public bool IsDashing() { return isDashing; }
-    public void OnWallJumpEnd() { isWallJumping = false; rb.linearDamping = 0f; }
-    public bool IsWallJumping() { return isWallJumping; }
-    public bool IsJumping() { return isJumping; }
-    public bool IsFacingRight() { return isFacingRight; }
+    public Vector2 GetFacingDirection() { return isFacingRight ? Vector2.right : Vector2.left; }
+    public Vector2 GetWallEjectDirection() { return IsTouchingWallOnLeft() ? Vector2.right : Vector2.left; }
+    public float GetVerticalVelocity() { return rb.linearVelocity.y; }
     public Rigidbody2D GetRigidbody() { return rb; }
-    private void UpdateDebugUI() { if (groundCheckStatusText != null) { groundCheckStatusText.text = $"Grounded: {isGrounded}\nWallSliding: {isWallSliding}\nIsJumping: {isJumping}\nDashing: {isDashing}"; } }
+
+    private bool IsTouchingWallOnLeft()
+    {
+        Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset;
+        return Physics2D.Raycast(capsuleCenter, Vector2.left, capsuleCollider.size.x * 0.5f + wallCheckDistance, collisionLayer);
+    }
 }
