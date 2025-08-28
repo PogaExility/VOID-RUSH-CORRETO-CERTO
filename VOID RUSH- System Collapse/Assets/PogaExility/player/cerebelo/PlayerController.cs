@@ -34,6 +34,7 @@ public class PlayerController : MonoBehaviour
     // --- Variáveis de Estado Interno ---
     private bool isInventoryOpen = false;
 <<<<<<< HEAD
+<<<<<<< HEAD
     private List<GameObject> nearbyInteractables = new List<GameObject>();
     private bool canInteract => nearbyInteractables.Count > 0;
     private bool wasGroundedLastFrame = true;
@@ -44,6 +45,8 @@ public class PlayerController : MonoBehaviour
     private SkillSO activeDashSkill;
 
 =======
+=======
+>>>>>>> parent of 880d514 (coisa pra krl)
     private List<ItemPickup> nearbyItems = new List<ItemPickup>();
     private bool canInteract => nearbyItems.Count > 0;
 
@@ -53,6 +56,9 @@ public class PlayerController : MonoBehaviour
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
     private List<GameObject> nearbyInteractables = new List<GameObject>();
+<<<<<<< HEAD
+>>>>>>> parent of 880d514 (coisa pra krl)
+=======
 >>>>>>> parent of 880d514 (coisa pra krl)
     void Awake()
     {
@@ -215,6 +221,7 @@ public class PlayerController : MonoBehaviour
         if (nearbyInteractables.Count == 0) return;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     private void Interact()
     {
         if (nearbyInteractables.Count == 0) return;
@@ -230,6 +237,8 @@ public class PlayerController : MonoBehaviour
             Destroy(itemToPickup.gameObject);
             if (!isInventoryOpen) { ToggleInventory(); }
 =======
+=======
+>>>>>>> parent of 880d514 (coisa pra krl)
         GameObject objectToInteract = nearbyInteractables[0];
         if (objectToInteract == null) return;
 
@@ -249,6 +258,9 @@ public class PlayerController : MonoBehaviour
         {
             questGiver.Interact();
             nearbyInteractables.Remove(objectToInteract);
+<<<<<<< HEAD
+>>>>>>> parent of 880d514 (coisa pra krl)
+=======
 >>>>>>> parent of 880d514 (coisa pra krl)
         }
     }
@@ -256,7 +268,12 @@ public class PlayerController : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other)
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (other.GetComponent<ItemPickup>() != null || other.GetComponent<QuestGiver>() != null || other.GetComponent<Checkpoint>() != null)
+=======
+        // Adiciona qualquer objeto com ItemPickup OU QuestGiver à lista
+        if (other.GetComponent<ItemPickup>() != null || other.GetComponent<QuestGiver>() != null)
+>>>>>>> parent of 880d514 (coisa pra krl)
 =======
         // Adiciona qualquer objeto com ItemPickup OU QuestGiver à lista
         if (other.GetComponent<ItemPickup>() != null || other.GetComponent<QuestGiver>() != null)
@@ -277,7 +294,10 @@ public class PlayerController : MonoBehaviour
         }
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> parent of 880d514 (coisa pra krl)
 
     // --- Funções de movimento e combate (sem alterações) ---
     private void HandleAllInput()
