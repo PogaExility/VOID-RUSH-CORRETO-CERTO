@@ -178,25 +178,61 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Em PlayerController.cs
+    // Em PlayerController.cs
+    // Em PlayerController.cs
+    // Em PlayerController.cs
     private void HandleSkillInput()
     {
         if (isLanding) return;
 
-        if (movementScript.IsTouchingWall() && !movementScript.IsGrounded())
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
-            if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
-            if (skillRelease.TryActivateSkill(wallDashSkill)) return;
-            if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
+            Debug.Log("--- INÍCIO DO FRAME DE DEBUG (Tecla Espaço Pressionada) ---");
+            Debug.Log($"<color=lightblue>PLAYER STATE:</color> IsTouchingWall={movementScript.IsTouchingWall()}, IsGrounded={movementScript.IsGrounded()}, IsWallSliding={movementScript.IsWallSliding()}");
         }
+
+        // LER AS TECLAS DE FORMA EXPLÍCITA
+        bool jumpKeyDown = Input.GetKeyDown(KeyCode.Space);
+        bool dashKeyDown = Input.GetKeyDown(KeyCode.Q);
+        bool dashKeyHeld = Input.GetKey(KeyCode.Q);
+        bool jumpKeyHeld = Input.GetKey(KeyCode.Space);
+        bool jumpKeyUp = Input.GetKeyUp(KeyCode.Space);
+
+        // --- LÓGICA DE INPUT SEM AMBIGUIDADE ---
+
+        // CONTEXTO DE PAREDE
+        if (movementScript.IsWallSliding())
+        {
+            // Prioridade 1: Skills combinadas
+            if ((jumpKeyDown && dashKeyHeld) || (dashKeyDown && jumpKeyHeld))
+            {
+                if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
+            }
+            // Prioridade 2: Skills de uma tecla
+            if (jumpKeyDown) { if (skillRelease.TryActivateSkill(wallJumpSkill)) return; }
+            if (dashKeyDown) { if (skillRelease.TryActivateSkill(wallDashSkill)) return; }
+        }
+        // CONTEXTO GERAL (CHÃO/AR)
         else
         {
-            if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
-            if (skillRelease.TryActivateSkill(activeJumpSkill)) return;
-            if (skillRelease.TryActivateSkill(activeDashSkill)) return;
+            // Prioridade 1: DashJump
+            if ((jumpKeyDown && dashKeyHeld) || (dashKeyDown && jumpKeyHeld))
+            {
+                if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
+            }
+
+            // Prioridade 2: Skills de uma tecla
+            if (jumpKeyDown) { if (skillRelease.TryActivateSkill(activeJumpSkill)) return; }
+            if (dashKeyDown) { if (skillRelease.TryActivateSkill(activeDashSkill)) return; }
+        }
+
+        // PULO VARIÁVEL: Esta lógica é independente e pode rodar no final
+        if (jumpKeyUp)
+        {
+            movementScript.CutJump();
         }
     }
-
     private void HandleCombatInput()
     {
         // --- CORREÇÃO CS1955: Usa o método com '()' ---

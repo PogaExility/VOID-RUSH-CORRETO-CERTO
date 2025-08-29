@@ -49,24 +49,79 @@ public class SkillRelease : MonoBehaviour
 
     // Dentro do SkillRelease.cs
 
+    // Em SkillRelease.cs
     public bool TryActivateSkill(SkillSO skill)
     {
-        // Se a skill não existe, ou as teclas não foram apertadas,
-        // ou as condições de estado não foram atendidas, ou outra skill está ativa, falha.
-        if (skill == null || !CheckKeyPress(skill) || !CheckStateConditions(skill) || currentActionCoroutine != null)
+        if (skill == null) return false;
+
+        // Log apenas para a skill que nos interessa
+        if (skill.skillName == "wallSliding")
+        {
+            Debug.Log($"<color=yellow>INTERROGATÓRIO:</color> Verificando a skill '{skill.skillName}'.");
+
+            bool keyCheck = CheckKeyPress(skill);
+            if (!keyCheck)
+            {
+                Debug.Log($"<color=red>FALHA NO INTERROGATÓRIO:</color> A checagem de TECLAS para '{skill.skillName}' falhou.");
+                return false;
+            }
+
+            bool stateCheck = CheckStateConditions(skill);
+            if (!stateCheck)
+            {
+                // VAMOS DESCOBRIR QUAL ESTADO ESPECÍFICO FALHOU
+                Debug.Log($"<color=red>FALHA NO INTERROGATÓRIO:</color> A checagem de ESTADOS para '{skill.skillName}' falhou. Detalhes:");
+                foreach (var group in skill.conditionGroups)
+                {
+                    foreach (var state in group.states)
+                    {
+                        Debug.Log($"- Condição '{state}' está: {movement.CheckState(state)}");
+                    }
+                }
+                return false;
+            }
+
+            if (currentActionCoroutine != null)
+            {
+                Debug.Log($"<color=red>FALHA NO INTERROGATÓRIO:</color> Outra skill já está ativa.");
+                return false;
+            }
+
+            Debug.Log($"<color=green>SUCESSO NO INTERROGATÓRIO:</color> '{skill.skillName}' passou em todos os testes. Executando.");
+            return ExecuteAction(skill);
+        }
+
+        // Para as outras skills, roda a lógica normal sem poluir o console
+        if (!CheckKeyPress(skill) || !CheckStateConditions(skill) || currentActionCoroutine != null)
         {
             return false;
         }
-
-        // Se passou por tudo, executa a ação.
         return ExecuteAction(skill);
     }
 
+    // Em SkillRelease.cs
+    // Em SkillRelease.cs
+    // Em SkillRelease.cs
     private bool CheckKeyPress(SkillSO skill)
     {
-        bool triggerPressed = skill.triggerKeys.Any(key => Input.GetKeyDown(key));
-        if (!triggerPressed) return false;
-        return skill.requiredKeys.All(key => Input.GetKey(key));
+        // Lógica para skills com GATILHO e REQUERIDAS (DashJump, WallDashJump)
+        if (skill.triggerKeys.Count > 0 && skill.requiredKeys.Count > 0)
+        {
+            // O gatilho foi pressionado E a requerida está sendo segurada?
+            bool triggerPressed = skill.triggerKeys.Any(key => Input.GetKeyDown(key));
+            bool requiredHeld = skill.requiredKeys.All(key => Input.GetKey(key));
+
+            return triggerPressed && requiredHeld;
+        }
+
+        // Lógica para skills SÓ com GATILHO (Pulo, Dash normal)
+        if (skill.triggerKeys.Count > 0)
+        {
+            return skill.triggerKeys.Any(key => Input.GetKeyDown(key));
+        }
+
+        // Se a skill não tem gatilho, a checagem de tecla não se aplica
+        return false;
     }
 
     // Dentro do seu SkillRelease.cs
@@ -130,15 +185,9 @@ public class SkillRelease : MonoBehaviour
         switch (skill.actionToPerform)
         {
             case MovementSkillType.SuperJump:
-                // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
-                // Adicionamos uma condição: se o jogador está tocando a parede,
-                // o pulo normal/aéreo é PROIBIDO de ser ativado.
-                if (movement.IsTouchingWall())
-                {
-                    return false; // Falha e permite que o PlayerController teste a próxima skill (Wall Slide).
-                }
-
-                // Se não está tocando a parede, a lógica de pulo normal funciona.
+                // --- VERSÃO SIMPLIFICADA E CORRETA ---
+                // A lógica de "pode pular?" é a única coisa que importa aqui.
+                // O PlayerController já garantiu que não estamos na parede.
                 if (movement.CanJumpFromGround() || currentAirJumps > 0)
                 {
                     if (!movement.IsGrounded())
@@ -148,7 +197,7 @@ public class SkillRelease : MonoBehaviour
                     movement.DoJump(skill.jumpForce);
                     return true;
                 }
-                break; // Se não puder pular, falha.
+                return false; // Falha se não puder pular
 
             // --- O RESTO DAS SUAS AÇÕES, INTACTAS ---
             case MovementSkillType.Dash:

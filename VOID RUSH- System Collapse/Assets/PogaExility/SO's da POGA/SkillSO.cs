@@ -39,6 +39,10 @@ public class SkillSO : ScriptableObject
     [Tooltip("QUALQUER uma destas teclas, quando pressionada, irá disparar a ação.")]
     public List<KeyCode> triggerKeys = new List<KeyCode>();
 
+    // --- ADICIONE ESTA NOVA LISTA AQUI ---
+    [Tooltip("Se QUALQUER uma destas teclas estiver sendo segurada, a ativação desta skill falha. Útil para evitar que Pulo e DashJump ativem juntos.")]
+    public List<KeyCode> cancelIfKeysHeld = new List<KeyCode>();
+
     [Header("Lógica da Ação")]
     [Tooltip("A ação principal que esta skill executa. Determina quais parâmetros abaixo são usados.")]
     public MovementSkillType actionToPerform;

@@ -17,11 +17,12 @@ MonoBehaviour:
   skillClass: 0
   requiredKeys: 
   triggerKeys: 20000000
+  cancelIfKeysHeld: 
   actionToPerform: 4
   conditionGroups:
   - logicType: 0
     states: 0300000007000000
-  forbiddenStates: 
+  forbiddenStates: 01000000
   jumpForce: 12
   airJumps: 1
   gravityScaleOnFall: 1.6

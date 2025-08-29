@@ -17,11 +17,12 @@ MonoBehaviour:
   skillClass: 0
   requiredKeys: 71000000
   triggerKeys: 20000000
+  cancelIfKeysHeld: 
   actionToPerform: 3
   conditionGroups:
   - logicType: 0
     states: 02000000
-  forbiddenStates: 07000000
+  forbiddenStates: 
   jumpForce: 12
   airJumps: 0
   gravityScaleOnFall: 1.6
@@ -32,8 +33,8 @@ MonoBehaviour:
   dashSpeed: 25
   dashDuration: 0.2
   dashJump_DashSpeed: 25
-  dashJump_DashDuration: 0.4
-  dashJump_JumpForce: 15
+  dashJump_DashDuration: 0.2
+  dashJump_JumpForce: 10
   wallDashJump_LaunchForceX: 25
   wallDashJump_LaunchForceY: 15
   wallDashJump_ParabolaDamping: 0.3

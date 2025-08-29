@@ -30,6 +30,7 @@ public class SkillSOEditor : Editor
         EditorGUILayout.LabelField("Sistema de Ativação", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("requiredKeys"), true);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("triggerKeys"), true);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("cancelIfKeysHeld"), true);
         EditorGUILayout.Space(10);
 
         // --- Bloco de Lógica da Ação ---
