@@ -17,10 +17,14 @@ MonoBehaviour:
   skillClass: 0
   requiredKeys: 
   triggerKeys: 20000000
-  movementSkillType: 1
-  jumpForce: 12
+  actionToPerform: 1
+  conditionGroups:
+  - logicType: 0
+    states: 01000000
+  forbiddenStates: 06000000
+  jumpForce: 0.7
   airJumps: 0
-  gravityScaleOnFall: 1.6
+  gravityScaleOnFall: 10
   coyoteTime: 0.1
   wallJumpForce: {x: 10, y: 12}
   wallSlideSpeed: 2

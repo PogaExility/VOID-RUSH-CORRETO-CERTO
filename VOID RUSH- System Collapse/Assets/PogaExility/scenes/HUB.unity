@@ -14284,6 +14284,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 117632236}
     - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: dashJumpSkill
+      value: 
+      objectReference: {fileID: 11400000, guid: 5f11cbffc7ca4804dadd1ed7b7727ed2, type: 2}
+    - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: inventoryPanel
       value: 
       objectReference: {fileID: 2013095701}
@@ -14298,7 +14302,7 @@ PrefabInstance:
     - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: 'wallSkills.Array.data[1]'
       value: 
-      objectReference: {fileID: 11400000, guid: ebe4f492f4225a244819f893403ad033, type: 2}
+      objectReference: {fileID: 11400000, guid: da8203bf8b24d2b439f873fe6858b65a, type: 2}
     - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: 'wallSkills.Array.data[2]'
       value: 

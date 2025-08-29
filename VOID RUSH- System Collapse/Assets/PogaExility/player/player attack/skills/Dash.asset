@@ -17,7 +17,11 @@ MonoBehaviour:
   skillClass: 0
   requiredKeys: 
   triggerKeys: 71000000
-  movementSkillType: 2
+  actionToPerform: 2
+  conditionGroups:
+  - logicType: 0
+    states: 01000000
+  forbiddenStates: 06000000
   jumpForce: 12
   airJumps: 0
   gravityScaleOnFall: 1.6

@@ -15,9 +15,13 @@ MonoBehaviour:
   skillName: DashJump
   energyCost: 0
   skillClass: 0
-  requiredKeys: 
-  triggerKeys: 2000000071000000
-  movementSkillType: 3
+  requiredKeys: 2000000071000000
+  triggerKeys: 
+  actionToPerform: 2
+  conditionGroups:
+  - logicType: 0
+    states: 01000000
+  forbiddenStates: 06000000
   jumpForce: 12
   airJumps: 0
   gravityScaleOnFall: 1.6

@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(AdvancedPlayerMovement2D))]
+[RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(SkillRelease))]
 public class PlayerController : MonoBehaviour
 {
     // --- SUAS REFERÊNCIAS ORIGINAIS ---
@@ -11,6 +11,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Referências de UI")]
     public GameObject inventoryPanel;
+
 
     [Header("Referências de Movimento")]
     public SkillRelease skillRelease;
@@ -28,18 +29,25 @@ public class PlayerController : MonoBehaviour
     [Header("Skills Básicas")]
     public SkillSO baseJumpSkill;
     public SkillSO baseDashSkill;
+    public SkillSO dashJumpSkill;
 
     [Header("Skills com Upgrades (Glow Mode)")]
     public SkillSO upgradedJumpSkill;
     public SkillSO upgradedDashSkill;
 
     [Header("Skills de Parede (Sempre Ativas)")]
-    public List<SkillSO> wallSkills = new List<SkillSO>();
+    public SkillSO wallSlideSkill;
+    public SkillSO wallJumpSkill;
+    public SkillSO wallDashSkill;
+    public SkillSO wallDashJumpSkill;
+
+
 
 
     // --- SUAS VARIÁVEIS DE ESTADO ORIGINAIS ---
     private bool isInventoryOpen = false;
     private List<GameObject> nearbyInteractables = new List<GameObject>();
+
     private bool canInteract => nearbyInteractables.Count > 0;
     private SkillSO activeJumpSkill;
     private SkillSO activeDashSkill;
@@ -88,15 +96,13 @@ public class PlayerController : MonoBehaviour
 
         if (isInventoryOpen) return;
 
-        // A chamada para a nova função de input de skills
+        HandlePowerModeToggle();
         HandleSkillInput();
-
-        // Suas lógicas de combate e power mode
-        HandleCombatAndPowerMode();
-
         UpdateAnimations();
+
         wasGroundedLastFrame = movementScript.IsGrounded();
     }
+
 
     private void ToggleInventory()
     {
@@ -162,36 +168,72 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // --- O NOVO SISTEMA DE INPUTS ---
-
     private void HandleSkillInput()
     {
-        if (isLanding || playerAttack.IsAttacking() || playerAttack.IsReloading()) return;
+        // Se o jogador estiver em uma animação de aterrissagem, bloqueia as skills.
+        if (isLanding) return;
 
-        // Tenta ativar as skills que mudam com o Power Mode
+        // Tenta ativar as skills que mudam com o Power Mode.
         skillRelease.TryActivateSkill(activeJumpSkill);
         skillRelease.TryActivateSkill(activeDashSkill);
 
-        // Tenta ativar todas as skills de parede
-        foreach (var skill in wallSkills)
-        {
-            skillRelease.TryActivateSkill(skill);
-        }
+        // Tenta ativar a skill de DashJump (que não muda com o Power Mode, por enquanto).
+        skillRelease.TryActivateSkill(dashJumpSkill);
+
+        // Tenta ativar todas as skills de parede, que estão sempre disponíveis.
+        skillRelease.TryActivateSkill(wallSlideSkill);
+        skillRelease.TryActivateSkill(wallJumpSkill);
+        skillRelease.TryActivateSkill(wallDashSkill);
+        skillRelease.TryActivateSkill(wallDashJumpSkill);
     }
 
-    private void HandleCombatAndPowerMode()
+    private void HandleCombatInput()
     {
+        // --- CORREÇÃO CS1955: Usa o método com '()' ---
         if (!movementScript.IsDashing()) combatController.ProcessCombatInput();
-        HandlePowerModeToggle();
     }
+
+    // Dentro do seu PlayerController.cs
 
     private void UpdateAnimations()
     {
         if (isLanding) return;
-        if (!wasGroundedLastFrame && movementScript.IsGrounded()) { isLanding = true; movementScript.OnLandingStart(); animatorController.PlayState(PlayerAnimState.pousando); return; }
-        if (defenseHandler.IsBlocking()) { if (defenseHandler.IsInParryWindow()) animatorController.PlayState(PlayerAnimState.parry); else animatorController.PlayState(PlayerAnimState.block); }
-        else if (!movementScript.IsGrounded()) { if (movementScript.IsWallSliding()) animatorController.PlayState(PlayerAnimState.derrapagem); else if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dashAereo); else if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando); else animatorController.PlayState(PlayerAnimState.falling); }
-        else { if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dash); else if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando); else animatorController.PlayState(PlayerAnimState.parado); }
+        if (!wasGroundedLastFrame && movementScript.IsGrounded())
+        {
+            isLanding = true;
+            movementScript.OnLandingStart();
+            animatorController.PlayState(PlayerAnimState.pousando);
+            return;
+        }
+
+        // --- AQUI ESTÁ A CORREÇÃO DA ANIMAÇÃO ---
+        // Adicionamos uma checagem no topo. Se estiver deslizando na parede,
+        // a animação de "derrapagem" tem prioridade sobre todas as outras.
+        if (movementScript.IsWallSliding())
+        {
+            animatorController.PlayState(PlayerAnimState.derrapagem);
+            return; // Retorna para não executar as outras checagens de animação
+        }
+        // --- FIM DA CORREÇÃO ---
+
+        if (defenseHandler.IsBlocking())
+        {
+            if (defenseHandler.IsInParryWindow()) animatorController.PlayState(PlayerAnimState.parry);
+            else animatorController.PlayState(PlayerAnimState.block);
+        }
+        else if (!movementScript.IsGrounded())
+        {
+            // A checagem de WallSliding acima garante que esta parte não seja executada incorretamente
+            if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dashAereo);
+            else if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando);
+            else animatorController.PlayState(PlayerAnimState.falling);
+        }
+        else
+        {
+            if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dash);
+            else if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando);
+            else animatorController.PlayState(PlayerAnimState.parado);
+        }
     }
 
     public void OnLandingComplete()
@@ -200,22 +242,37 @@ public class PlayerController : MonoBehaviour
         movementScript.OnLandingComplete();
     }
 
+    // Adicione estas duas funções inteiras em qualquer lugar dentro da classe PlayerController
+
     private void HandlePowerModeToggle()
     {
-        if (Input.GetKeyDown(KeyCode.G)) SetPowerMode(!isPowerModeActive);
-        if (isPowerModeActive && energyBar != null && energyBar.GetCurrentEnergy() <= 0) SetPowerMode(false);
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            SetPowerMode(!isPowerModeActive);
+        }
+        // Se você usa uma barra de energia, esta linha desativa o modo automaticamente
+        // if (isPowerModeActive && energyBar != null && energyBar.GetCurrentEnergy() <= 0) SetPowerMode(false);
     }
 
     private void SetPowerMode(bool isActive)
     {
-        if (isActive && energyBar != null && energyBar.GetCurrentEnergy() <= 0) isActive = false;
+        // if (isActive && energyBar != null && energyBar.GetCurrentEnergy() <= 0) isActive = false;
+
         isPowerModeActive = isActive;
-        activeJumpSkill = isActive ? upgradedJumpSkill : baseJumpSkill;
-        activeDashSkill = isActive ? upgradedDashSkill : baseDashSkill;
-        if (powerModeIndicator != null) powerModeIndicator.SetActive(isActive);
+
+        // Atualiza as skills que estão "equipadas"
+        activeJumpSkill = isPowerModeActive ? upgradedJumpSkill : baseJumpSkill;
+        activeDashSkill = isPowerModeActive ? upgradedDashSkill : baseDashSkill;
+
+        // Ativa/desativa o feedback visual na UI
+        if (powerModeIndicator != null)
+        {
+            powerModeIndicator.SetActive(isPowerModeActive);
+        }
+        Debug.Log("Power Mode Ativo: " + isPowerModeActive);
     }
 
-    // Função para o SkillRelease saber qual skill de pulo está ativa
+    // --- A FUNÇÃO QUE FALTAVA ---
     public SkillSO GetActiveJumpSkill()
     {
         return activeJumpSkill;

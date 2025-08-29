@@ -10,14 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dcd2bd671c9f9d74e8e050bd52ee256a, type: 3}
-  m_Name: Sliding
+  m_Name: WallJump
   m_EditorClassIdentifier: 
-  skillName: Sliding
+  skillName: WallJump
   energyCost: 0
   skillClass: 0
   requiredKeys: 
   triggerKeys: 20000000
-  movementSkillType: 5
+  actionToPerform: 5
+  conditionGroups:
+  - logicType: 0
+    states: 0200000003000000
+  forbiddenStates: 
   jumpForce: 12
   airJumps: 0
   gravityScaleOnFall: 1.6
