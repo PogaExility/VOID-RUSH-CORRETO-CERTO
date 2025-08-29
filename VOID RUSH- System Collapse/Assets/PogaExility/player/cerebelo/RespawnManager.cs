@@ -11,38 +11,20 @@ public class RespawnManager : MonoBehaviour
     [Header("Referências de UI (Opcional)")]
     public TextMeshProUGUI penaltyText;
 
-    // --- MUDANÇA IMPORTANTE: Guardamos o SCRIPT do checkpoint, não só a posição ---
+    // Guarda a referência do SCRIPT do checkpoint ativo, não apenas a posição
     private Checkpoint activeCheckpoint;
 
+    // Guarda a posição e cena iniciais como fallback
     private Vector3 initialSpawnPosition;
     private string initialSpawnSceneName;
 
     private InventoryManager inventoryManager;
-    public void SetReturnPoint(Vector3 returnPosition, string returnSceneName)
-    {
-        // Desativa o checkpoint ativo para que o ponto de retorno tenha prioridade
-        if (activeCheckpoint != null)
-        {
-            activeCheckpoint.Deactivate();
-            activeCheckpoint = null; // Limpa a referência
-        }
-
-        // Define a posição e a cena para onde o jogador deve voltar se morrer na missão
-        initialSpawnPosition = returnPosition;
-        initialSpawnSceneName = returnSceneName;
-
-        // Garante que os itens atuais sejam salvos
-        inventoryManager?.CommitTemporaryItems();
-
-        Debug.Log($"Ponto de retorno definido para a cena '{returnSceneName}'.");
-    }
 
     void Awake()
     {
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
         DontDestroyOnLoad(gameObject);
-
         if (penaltyText != null) penaltyText.gameObject.SetActive(false);
     }
 
@@ -57,54 +39,69 @@ public class RespawnManager : MonoBehaviour
         }
     }
 
-    // --- A FUNÇÃO MAIS IMPORTANTE E CORRIGIDA ---
+    // --- ESTA É A FUNÇÃO CORRETA ---
+    // Ela recebe o Checkpoint inteiro como argumento.
     public void SetNewCheckpoint(Checkpoint newCheckpoint)
     {
-        // Se o checkpoint clicado já for o ativo, não faz nada.
         if (newCheckpoint == activeCheckpoint) return;
 
-        // 1. DESATIVA O ANTIGO: Se já existia um checkpoint ativo, manda ele se desativar.
+        // Se já existia um checkpoint ativo, manda ele se desativar.
         if (activeCheckpoint != null)
         {
             activeCheckpoint.Deactivate();
         }
 
-        // 2. ATUALIZA PARA O NOVO: Guarda a referência do novo checkpoint como o ativo.
+        // Guarda e ativa o novo checkpoint.
         activeCheckpoint = newCheckpoint;
-
-        // 3. ATIVA O NOVO: Manda o novo checkpoint se ativar.
         if (activeCheckpoint != null)
         {
             activeCheckpoint.Activate();
         }
 
-        // Avisa o InventoryManager para tornar os itens temporários em permanentes
         inventoryManager?.CommitTemporaryItems();
-
         Debug.Log($"Novo checkpoint ativado na cena '{SceneManager.GetActiveScene().name}'");
     }
 
+    public void SetReturnPoint(Vector3 returnPosition, string returnSceneName)
+    {
+        if (activeCheckpoint != null)
+        {
+            activeCheckpoint.Deactivate();
+            activeCheckpoint = null;
+        }
+        initialSpawnPosition = returnPosition;
+        initialSpawnSceneName = returnSceneName;
+        inventoryManager?.CommitTemporaryItems();
+        Debug.Log($"Ponto de retorno salvo na cena '{returnSceneName}'.");
+    }
+
+    // Dentro do RespawnManager.cs
     public void RespawnPlayer(Transform playerTransform)
     {
-        // Pega a posição e cena do checkpoint ativo, ou a inicial se nenhum foi ativado
-        Vector3 respawnPosition = activeCheckpoint != null ? activeCheckpoint.transform.position : initialSpawnPosition;
+        string currentSceneName = SceneManager.GetActiveScene().name;
         string checkpointSceneName = activeCheckpoint != null ? activeCheckpoint.gameObject.scene.name : initialSpawnSceneName;
 
-        string currentSceneName = SceneManager.GetActiveScene().name;
-
-        if (currentSceneName != checkpointSceneName)
+        // --- A CONDIÇÃO CORRETA ---
+        // Aplica penalidades APENAS SE a quest estiver ativa.
+        if (QuestManager.Instance != null && QuestManager.Instance.IsQuestActive)
         {
-            // --- APLICA PENALIDADES ---
             inventoryManager?.ClearTemporaryItems();
+            QuestManager.Instance.EndQuest(false); // Avisa que a quest falhou
+
+            // Lógica de perder dinheiro...
             Debug.Log($"Jogador perdeu {moneyPenalty} de dinheiro.");
             if (penaltyText != null) StartCoroutine(ShowPenaltyMessage());
 
-            // AQUI A LÓGICA DE RECARREGAR A CENA
+            // Volta para a cena do último checkpoint salvo
+            SceneManager.LoadScene(checkpointSceneName);
         }
-
-        playerTransform.position = respawnPosition;
-        Rigidbody2D rb = playerTransform.GetComponent<Rigidbody2D>();
-        if (rb != null) rb.linearVelocity = Vector2.zero;
+        else // Se a quest NÃO está ativa...
+        {
+            // ...apenas reposiciona o jogador, sem penalidades.
+            playerTransform.position = activeCheckpoint != null ? activeCheckpoint.transform.position : initialSpawnPosition;
+            Rigidbody2D rb = playerTransform.GetComponent<Rigidbody2D>();
+            if (rb != null) rb.linearVelocity = Vector2.zero;
+        }
     }
 
     private System.Collections.IEnumerator ShowPenaltyMessage()

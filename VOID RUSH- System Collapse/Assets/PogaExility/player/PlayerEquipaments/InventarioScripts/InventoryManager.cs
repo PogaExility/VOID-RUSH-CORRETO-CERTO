@@ -5,9 +5,9 @@ using System.Collections.Generic;
 public class InventoryManager : MonoBehaviour
 {
     // --- Eventos para comunicar com outros sistemas ---
-    public event Action<ItemSO, int, int, bool> OnItemAdded; // bool para 'isRotated'
+    public event Action<ItemSO, int, int, bool> OnItemAdded;
     public event Action<ItemSO> OnItemRemoved;
-    public event Action<ItemSO, bool> OnItemHeld; // bool para 'isRotated'
+    public event Action<ItemSO, bool> OnItemHeld;
     public event Action<ItemSO> OnItemDropped;
 
     [Header("Configuração do Grid")]
@@ -18,24 +18,23 @@ public class InventoryManager : MonoBehaviour
     public ItemSO equippedMeleeWeapon;
     public ItemSO equippedFirearm;
     public ItemSO equippedBuster;
-  
+
     // --- Estado do Inventário ---
     public ItemSO heldItem { get; private set; }
     public bool isHeldItemRotated { get; private set; }
-
     private ItemSO[,] inventoryGrid;
     public List<ItemSO> inventoryItems = new List<ItemSO>();
     private Dictionary<ItemSO, bool> itemRotations = new Dictionary<ItemSO, bool>();
+
+    // --- A NOVA LÓGICA DE QUEST ---
     private List<ItemSO> temporaryItems = new List<ItemSO>();
-   
+    private ItemSO potentiallyTemporaryItem; // Guarda o item que acabamos de pegar do chão
 
     void Awake()
     {
-        // Awake agora só garante que a inicialização aconteça.
         EnsureGridExists();
     }
 
-    // --- CORREÇÃO DEFINITIVA DO CRASH: Esta função garante que o 'inventoryGrid' nunca seja nulo. ---
     private void EnsureGridExists()
     {
         if (inventoryGrid == null)
@@ -44,7 +43,49 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    // --- Funções Principais de Interação ---
+    // --- AS NOVAS FUNÇÕES PÚBLICAS DE QUEST ---
+
+    /// <summary>
+    /// Chamado pelo PlayerController ANTES de pegar um item.
+    /// Ele "avisa" ao manager que o próximo item a ser pego PODE ser temporário.
+    /// </summary>
+    public void FlagItemAsPotentiallyTemporary(ItemSO item)
+    {
+        if (QuestManager.Instance != null && QuestManager.Instance.IsQuestActive && item.isLostOnDeathDuringQuest)
+        {
+            potentiallyTemporaryItem = item;
+        }
+    }
+
+    /// <summary>
+    /// Transforma todos os itens temporários em permanentes.
+    /// </summary>
+    public void CommitTemporaryItems()
+    {
+        if (temporaryItems.Count > 0)
+        {
+            Debug.Log($"Itens de quest ({temporaryItems.Count}) foram salvos permanentemente.");
+            temporaryItems.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Remove apenas os itens de quest do inventário.
+    /// </summary>
+    public void ClearTemporaryItems()
+    {
+        if (temporaryItems.Count > 0)
+        {
+            Debug.Log($"Removendo {temporaryItems.Count} itens de quest por morte.");
+            foreach (ItemSO item in new List<ItemSO>(temporaryItems))
+            {
+                RemoveItem(item); // Usa sua função de remoção já existente
+            }
+            temporaryItems.Clear();
+        }
+    }
+
+    // --- SUAS FUNÇÕES ORIGINAIS (COM PEQUENAS MODIFICAÇÕES) ---
 
     public void StartHoldingItem(ItemSO item)
     {
@@ -77,37 +118,36 @@ public class InventoryManager : MonoBehaviour
     {
         if (heldItem != null)
         {
-            OnItemDropped?.Invoke(heldItem); // Avisa o spawner
-            heldItem = null; // LIMPA A MÃO
+            OnItemDropped?.Invoke(heldItem);
+            heldItem = null;
+
+            // --- MUDANÇA IMPORTANTE ---
+            // Se o item dropado era o que pegamos do chão, limpamos a flag.
+            potentiallyTemporaryItem = null;
         }
     }
 
     public bool PlaceHeldItem(int x, int y)
     {
         if (heldItem == null) return false;
-
         int width = isHeldItemRotated ? heldItem.height : heldItem.width;
         int height = isHeldItemRotated ? heldItem.width : heldItem.height;
-
         if (!CanPlaceItem(x, y, width, height)) return false;
-
         PlaceItem(heldItem, x, y, isHeldItemRotated);
         heldItem = null;
         return true;
     }
 
-    // --- Funções de Gerenciamento do Grid ---
-
     public bool AddItem(ItemSO itemToAdd)
     {
-        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        EnsureGridExists();
         for (int y = 0; y < gridHeight; y++)
         {
             for (int x = 0; x < gridWidth; x++)
             {
                 if (CanPlaceItem(x, y, itemToAdd.width, itemToAdd.height))
                 {
-                    PlaceItem(itemToAdd, x, y, false); // Itens sempre são adicionados sem rotação
+                    PlaceItem(itemToAdd, x, y, false);
                     return true;
                 }
             }
@@ -118,10 +158,9 @@ public class InventoryManager : MonoBehaviour
 
     private void PlaceItem(ItemSO item, int startX, int startY, bool isRotated)
     {
-        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        EnsureGridExists();
         int width = isRotated ? item.height : item.width;
         int height = isRotated ? item.width : item.height;
-
         for (int j = 0; j < height; j++)
         {
             for (int i = 0; i < width; i++)
@@ -129,35 +168,45 @@ public class InventoryManager : MonoBehaviour
                 inventoryGrid[startX + i, startY + j] = item;
             }
         }
-
         if (!inventoryItems.Contains(item))
         {
             inventoryItems.Add(item);
         }
         itemRotations[item] = isRotated;
         OnItemAdded?.Invoke(item, startX, startY, isRotated);
+
+        // --- MUDANÇA IMPORTANTE ---
+        // Se o item que acabamos de colocar no grid era o que pegamos do chão,
+        // agora o confirmamos como um item temporário.
+        if (item == potentiallyTemporaryItem)
+        {
+            if (!temporaryItems.Contains(item))
+            {
+                temporaryItems.Add(item);
+                Debug.Log($"'{item.itemName}' foi confirmado como item de quest temporário.");
+            }
+            potentiallyTemporaryItem = null; // Limpa a flag
+        }
     }
 
     public void RemoveItem(ItemSO itemToRemove)
     {
-        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        EnsureGridExists();
         if (!inventoryItems.Contains(itemToRemove)) return;
-
         if (FindItemPosition(itemToRemove, out int itemX, out int itemY))
         {
             bool wasRotated = itemRotations.ContainsKey(itemToRemove) && itemRotations[itemToRemove];
             int width = wasRotated ? itemToRemove.height : itemToRemove.width;
             int height = wasRotated ? itemToRemove.width : itemToRemove.height;
-
             for (int j = 0; j < height; j++)
             {
                 for (int i = 0; i < width; i++)
                 {
-                    inventoryGrid[itemX + i, itemY + j] = null;
+                    if (itemX + i < gridWidth && itemY + j < gridHeight)
+                        inventoryGrid[itemX + i, itemY + j] = null;
                 }
             }
         }
-
         inventoryItems.Remove(itemToRemove);
         itemRotations.Remove(itemToRemove);
         OnItemRemoved?.Invoke(itemToRemove);
@@ -174,9 +223,8 @@ public class InventoryManager : MonoBehaviour
 
     public bool CanPlaceItem(int startX, int startY, int width, int height)
     {
-        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        EnsureGridExists();
         if (startX < 0 || startY < 0 || startX + width > gridWidth || startY + height > gridHeight) return false;
-
         for (int j = 0; j < height; j++)
         {
             for (int i = 0; i < width; i++)
@@ -189,7 +237,7 @@ public class InventoryManager : MonoBehaviour
 
     public bool FindItemPosition(ItemSO item, out int xPos, out int yPos)
     {
-        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
+        EnsureGridExists();
         for (int y = 0; y < gridHeight; y++)
         {
             for (int x = 0; x < gridWidth; x++)
@@ -209,8 +257,8 @@ public class InventoryManager : MonoBehaviour
 
     public void RedrawAllItems()
     {
-        EnsureGridExists(); // GARANTE QUE NÃO VAI QUEBRAR
-        foreach (var item in new List<ItemSO>(inventoryItems)) // Itera sobre uma cópia para segurança
+        EnsureGridExists();
+        foreach (var item in new List<ItemSO>(inventoryItems))
         {
             if (FindItemPosition(item, out int x, out int y))
             {
@@ -220,7 +268,6 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    // --- Funções de Equipamento (Sem Mudanças) ---
     public void EquipWeapon(ItemSO weaponToEquip)
     {
         if (weaponToEquip.itemType != ItemType.Weapon || !inventoryItems.Contains(weaponToEquip)) return;
@@ -239,62 +286,6 @@ public class InventoryManager : MonoBehaviour
             case WeaponType.Melee: equippedMeleeWeapon = null; break;
             case WeaponType.Firearm: equippedFirearm = null; break;
             case WeaponType.Buster: equippedBuster = null; break;
-        }
-    }
-    // --- NOVA FUNÇÃO DE COLETA ---
-    public bool PickupItem(ItemSO itemToAdd)
-    {
-        if (AddItem(itemToAdd)) // Usa sua função AddItem existente para encontrar um espaço e colocar no grid
-        {
-            // Se foi adicionado com sucesso, verificamos o estado da quest
-            if (QuestManager.Instance != null && QuestManager.Instance.IsQuestActive)
-            {
-                // Se a quest estiver ativa E o item estiver marcado no SO como "perdível",
-                // nós o adicionamos à lista de itens temporários.
-                if (itemToAdd.isLostOnDeathDuringQuest && !temporaryItems.Contains(itemToAdd))
-                {
-                    temporaryItems.Add(itemToAdd);
-                    Debug.Log($"{itemToAdd.itemName} foi adicionado como item temporário de quest.");
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-    // --- NOVAS FUNÇÕES DE GERENCIAMENTO DE QUEST ---
-
-    /// <summary>
-    /// Chamado quando uma quest é completada ou um checkpoint é salvo.
-    /// Torna todos os itens temporários em permanentes, simplesmente limpando a lista de rastreamento.
-    /// </summary>
-    public void CommitTemporaryItems()
-    {
-        if (temporaryItems.Count > 0)
-        {
-            Debug.Log($"{temporaryItems.Count} item(ns) temporário(s) foram salvos permanentemente no inventário.");
-            temporaryItems.Clear();
-        }
-    }
-
-    /// <summary>
-    /// Chamado pelo RespawnManager quando o jogador morre com uma quest ativa.
-    /// Remove do inventário principal apenas os itens que estavam na lista de temporários.
-    /// </summary>
-    public void ClearTemporaryItems()
-    {
-        if (temporaryItems.Count > 0)
-        {
-            Debug.Log($"Removendo {temporaryItems.Count} item(ns) temporário(s) por morte em quest.");
-
-            // Usamos 'new List<ItemSO>(temporaryItems)' para criar uma cópia, 
-            // pois não se pode modificar uma lista enquanto se itera sobre ela.
-            foreach (ItemSO itemToRemove in new List<ItemSO>(temporaryItems))
-            {
-                // Usa a sua função RemoveItem já existente para limpar tudo (grid, lista, eventos).
-                RemoveItem(itemToRemove);
-            }
-
-            temporaryItems.Clear();
         }
     }
 }

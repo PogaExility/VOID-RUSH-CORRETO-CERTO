@@ -25,40 +25,42 @@ public class DamageZone : MonoBehaviour
     }
 
     // Chamado quando o jogador ENTRA na zona de dano.
+    // Dentro de DamageZone.cs
+    // Dentro do seu DamageZone.cs
+
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // Verifica se o objeto que entrou tem o script PlayerStats (ou seja, é o nosso jogador)
         PlayerStats player = other.GetComponent<PlayerStats>();
         if (player != null)
         {
-            // Se o dano não for contínuo, causa dano uma única vez, na entrada.
+            // Calcula a direção do ataque (do espinho para o jogador)
+            Vector2 attackDirection = (player.transform.position - transform.position).normalized;
+
             if (!continuousDamage)
             {
-                player.TakeDamage(damageAmount);
-                // Opcional: Adicionar um efeito visual ou sonoro de dano aqui
+                // Passa a direção do ataque para a função TakeDamage
+                player.TakeDamage(damageAmount, attackDirection);
             }
-
-            // Reseta o timer do dano contínuo para que o primeiro tick seja imediato.
-            lastDamageTime = Time.time;
+            // ...
         }
     }
 
-    // Chamado A CADA FRAME enquanto o jogador PERMANECE dentro da zona de dano.
     private void OnTriggerStay2D(Collider2D other)
     {
-        // Se o dano não for contínuo, não faz nada.
         if (!continuousDamage) return;
 
-        // Verifica se o objeto é o jogador
         PlayerStats player = other.GetComponent<PlayerStats>();
         if (player != null)
         {
-            // Verifica se já passou tempo suficiente desde o último 'tick' de dano.
             if (Time.time >= lastDamageTime + damageInterval)
             {
-                player.TakeDamage(damageAmount);
-                lastDamageTime = Time.time; // Atualiza o timer
-                // Opcional: Adicionar um efeito visual ou sonoro de dano aqui
+                // Calcula a direção do ataque também para o dano contínuo.
+                Vector2 attackDirection = (other.transform.position - transform.position).normalized;
+
+                // --- E AQUI TAMBÉM ---
+                player.TakeDamage(damageAmount, attackDirection);
+
+                lastDamageTime = Time.time;
             }
         }
     }

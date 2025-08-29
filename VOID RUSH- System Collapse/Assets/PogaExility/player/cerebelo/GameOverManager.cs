@@ -5,29 +5,21 @@ using System.Collections;
 public class GameOverManager : MonoBehaviour
 {
     [Header("Referências")]
-    [Tooltip("Arraste o objeto do jogador que contém o PlayerStats.")]
     public PlayerStats playerStats;
-
-    [Tooltip("Arraste um objeto de Imagem da UI que cobrirá a tela (deve ser preto).")]
     public Image fadePanel;
-
-    [Tooltip("Arraste o Animator do jogador aqui.")]
-    public Animator playerAnimator; // Referência para o Animator do jogador
+    public Animator playerAnimator;
 
     [Header("Configurações de Fade")]
-    [Tooltip("A velocidade com que a tela escurece e clareia.")]
     public float fadeSpeed = 0.5f;
 
-    // Garante que a lógica não seja acionada múltiplas vezes
     private bool isPlayerDead = false;
 
     void Awake()
     {
-        // Garante que o painel comece transparente e desativado para não bloquear cliques
         if (fadePanel != null)
         {
             fadePanel.gameObject.SetActive(false);
-            fadePanel.color = new Color(0, 0, 0, 0); // Preto e totalmente transparente
+            fadePanel.color = new Color(0, 0, 0, 0);
         }
     }
 
@@ -35,7 +27,6 @@ public class GameOverManager : MonoBehaviour
     {
         if (playerStats != null)
         {
-            // Começa a ouvir o evento de morte do jogador
             playerStats.OnDeath += StartGameOverSequence;
         }
     }
@@ -44,89 +35,87 @@ public class GameOverManager : MonoBehaviour
     {
         if (playerStats != null)
         {
-            // Para de ouvir para evitar erros
             playerStats.OnDeath -= StartGameOverSequence;
         }
     }
 
     private void StartGameOverSequence()
     {
-        // Se o jogador já está no processo de morrer, não faz nada.
         if (isPlayerDead) return;
-
-        isPlayerDead = true;
-
-        // Inicia a coroutine que controla a sequência de eventos
         StartCoroutine(GameOverSequenceCoroutine());
     }
 
     private IEnumerator GameOverSequenceCoroutine()
     {
-        // --- 1. Animação de Morte ---
-        // (Assumindo que você tem um gatilho chamado "Death" no seu Animator)
-        if (playerAnimator != null)
-        {
-            playerAnimator.SetTrigger("Death");
-        }
+        isPlayerDead = true;
 
-        // Desativa o controle do jogador para que ele não possa se mover enquanto morre
-        // (Você pode precisar adaptar esta linha para o seu PlayerController)
-        playerStats.GetComponent<PlayerController>().enabled = false;
+        // --- A CORREÇÃO DA VARIÁVEL DUPLICADA ---
+        // Pegamos as referências UMA VEZ no início da corotina.
+        var movementScript = playerStats.GetComponent<AdvancedPlayerMovement2D>();
+        var playerController = playerStats.GetComponent<PlayerController>();
 
-        // Espera um tempo para a animação de morte tocar.
-        // Ajuste este valor para corresponder à duração da sua animação.
+        if (movementScript != null) movementScript.Freeze();
+        if (playerController != null) playerController.enabled = false;
+        if (playerAnimator != null) playerAnimator.SetTrigger("Death");
+
         yield return new WaitForSeconds(1.5f);
 
-        // --- 2. Fade para Preto ---
         if (fadePanel != null)
         {
             fadePanel.gameObject.SetActive(true);
             yield return StartCoroutine(FadeToBlack());
         }
 
-        // --- 3. Respawn do Jogador ---
-        // Pede para o RespawnManager encontrar o ponto e mover o jogador
-        RespawnManager.Instance.RespawnPlayer(playerStats.transform);
+        if (RespawnManager.Instance != null)
+        {
+            RespawnManager.Instance.RespawnPlayer(playerStats.transform);
+        }
 
-        // "Ressuscita" o jogador, restaurando sua vida.
         playerStats.Heal(playerStats.MaxHealth);
 
-        // --- 4. Fade para Transparente ---
         if (fadePanel != null)
         {
             yield return StartCoroutine(FadeToTransparent());
             fadePanel.gameObject.SetActive(false);
         }
 
-        // --- 5. Finalização ---
-        // Devolve o controle ao jogador
-        playerStats.GetComponent<PlayerController>().enabled = true;
+        // Reativamos tudo usando as mesmas referências
+        if (movementScript != null) movementScript.Unfreeze();
+        if (playerController != null) playerController.enabled = true;
+
         isPlayerDead = false;
     }
 
+    // --- AS FUNÇÕES DE FADE, AGORA DENTRO DA CLASSE ---
     private IEnumerator FadeToBlack()
     {
         float elapsedTime = 0f;
+        Color panelColor = new Color(0, 0, 0, 0);
+        fadePanel.color = panelColor;
         while (elapsedTime < fadeSpeed)
         {
-            elapsedTime += Time.unscaledDeltaTime; // Usa tempo não escalado para funcionar mesmo se o jogo pausar
-            float alpha = Mathf.Clamp01(elapsedTime / fadeSpeed);
-            fadePanel.color = new Color(0, 0, 0, alpha);
+            elapsedTime += Time.unscaledDeltaTime;
+            panelColor.a = Mathf.Clamp01(elapsedTime / fadeSpeed);
+            fadePanel.color = panelColor;
             yield return null;
         }
-        fadePanel.color = Color.black; // Garante que fique totalmente preto
+        panelColor.a = 1f;
+        fadePanel.color = panelColor;
     }
 
     private IEnumerator FadeToTransparent()
     {
         float elapsedTime = 0f;
+        Color panelColor = Color.black;
+        fadePanel.color = panelColor;
         while (elapsedTime < fadeSpeed)
         {
             elapsedTime += Time.unscaledDeltaTime;
-            float alpha = 1f - Mathf.Clamp01(elapsedTime / fadeSpeed);
-            fadePanel.color = new Color(0, 0, 0, alpha);
+            panelColor.a = 1f - Mathf.Clamp01(elapsedTime / fadeSpeed);
+            fadePanel.color = panelColor;
             yield return null;
         }
-        fadePanel.color = new Color(0, 0, 0, 0); // Garante que fique totalmente transparente
+        panelColor.a = 0f;
+        fadePanel.color = panelColor;
     }
 }

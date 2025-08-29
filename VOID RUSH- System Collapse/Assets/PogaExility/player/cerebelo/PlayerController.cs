@@ -26,13 +26,16 @@ public class PlayerController : MonoBehaviour
     // ***** ESTA É A FUNÇÃO QUE DEVE PERMANECER *****
     // Dentro do seu PlayerController.cs
 
+    // Dentro do PlayerController.cs
+    // Dentro do seu PlayerController.cs
+
     private void Interact()
     {
         if (nearbyInteractables.Count == 0) return;
         GameObject objectToInteract = nearbyInteractables[0];
         if (objectToInteract == null) { nearbyInteractables.RemoveAt(0); return; }
 
-        // A lógica agora verifica todos os tipos de interagíveis
+        // Sua lógica para QuestGiver, Checkpoint, etc., permanece intacta e na ordem correta
         if (objectToInteract.TryGetComponent<QuestGiver>(out var questGiver))
         {
             questGiver.Interact();
@@ -43,32 +46,28 @@ public class PlayerController : MonoBehaviour
             checkpoint.Interact();
             nearbyInteractables.Remove(objectToInteract);
         }
-        // --- NOVOS INTERAGÍVEIS ---
-        else if (objectToInteract.TryGetComponent<MissionBoard>(out var missionBoard))
-        {
-            missionBoard.Interact();
-            // Não removemos o quadro da lista, pois podemos querer fechar a UI
-        }
-        else if (objectToInteract.TryGetComponent<TravelPoint>(out var travelPoint))
-        {
-            travelPoint.Interact();
-            // Também não removemos, pois o painel pode ser fechado
-        }
-        // --- FIM DOS NOVOS INTERAGÍVEIS ---
+        // ... sua lógica para MissionBoard e TravelPoint ...
+
+        // --- A LÓGICA DE COLETA DE ITEM, AGORA NA ORDEM CORRETA ---
         else if (objectToInteract.TryGetComponent<ItemPickup>(out var itemToPickup))
         {
-            inventoryManager.StartHoldingItem(itemToPickup.itemData);
-            nearbyInteractables.Remove(itemToPickup.gameObject);
-            Destroy(itemToPickup.gameObject);
-
+            // PASSO 1: GARANTE QUE O INVENTÁRIO ESTEJA ABERTO PRIMEIRO.
+            // Isso "acorda" o InventoryGridView e garante que ele está pronto para receber ordens.
             if (!isInventoryOpen)
             {
                 ToggleInventory();
             }
+
+            // PASSO 2: AGORA QUE A UI ESTÁ PRONTA, DAMOS A ORDEM PARA PEGAR O ITEM.
+            // O InventoryGridView, agora ativo, vai ouvir o evento e criar a imagem da arma.
+            inventoryManager.StartHoldingItem(itemToPickup.itemData);
+
+            // PASSO 3: Limpa o objeto do mundo.
+            nearbyInteractables.Remove(itemToPickup.gameObject);
+            Destroy(itemToPickup.gameObject);
         }
     }
 
-    
 
     private SkillSO activeJumpSkill;
     private SkillSO activeDashSkill;
