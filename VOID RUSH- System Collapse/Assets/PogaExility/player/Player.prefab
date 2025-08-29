@@ -1024,7 +1024,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_GravityScale: 1
+  m_GravityScale: 100
   m_Material: {fileID: 6200000, guid: 36ef7b4c82ec71a408c1aa88a6039f5f, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
@@ -1105,6 +1105,7 @@ MonoBehaviour:
   parabolaSteeringForce: 100
   parabolaMaxAirSpeed: 20
   knockbackForce: 5
+  knockbackUpwardForce: 3
   knockbackDuration: 0.2
 --- !u!95 &6689212545231447408
 Animator:

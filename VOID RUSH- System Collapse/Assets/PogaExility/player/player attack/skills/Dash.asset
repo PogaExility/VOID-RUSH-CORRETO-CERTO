@@ -20,7 +20,8 @@ MonoBehaviour:
   movementSkillType: 1
   dashType: 0
   dashDistance: 5
-  dashSpeed: 10
+  dashSpeed: 25
+  wallDashDistance: 7
   jumpHeightMultiplier: 1
   airJumps: 0
   wallJumpForce: {x: 0, y: 0}

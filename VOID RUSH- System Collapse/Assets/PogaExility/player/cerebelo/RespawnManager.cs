@@ -81,26 +81,22 @@ public class RespawnManager : MonoBehaviour
         string currentSceneName = SceneManager.GetActiveScene().name;
         string checkpointSceneName = activeCheckpoint != null ? activeCheckpoint.gameObject.scene.name : initialSpawnSceneName;
 
-        // --- A CONDIÇÃO CORRETA ---
-        // Aplica penalidades APENAS SE a quest estiver ativa.
+        // APLICA PENALIDADES APENAS SE A QUEST ESTIVER ATIVA
         if (QuestManager.Instance != null && QuestManager.Instance.IsQuestActive)
         {
             inventoryManager?.ClearTemporaryItems();
-            QuestManager.Instance.EndQuest(false); // Avisa que a quest falhou
+            QuestManager.Instance.EndQuest(false);
 
-            // Lógica de perder dinheiro...
             Debug.Log($"Jogador perdeu {moneyPenalty} de dinheiro.");
             if (penaltyText != null) StartCoroutine(ShowPenaltyMessage());
 
-            // Volta para a cena do último checkpoint salvo
             SceneManager.LoadScene(checkpointSceneName);
         }
-        else // Se a quest NÃO está ativa...
+        else // Se a quest NÃO está ativa, apenas faz o respawn normal
         {
-            // ...apenas reposiciona o jogador, sem penalidades.
             playerTransform.position = activeCheckpoint != null ? activeCheckpoint.transform.position : initialSpawnPosition;
             Rigidbody2D rb = playerTransform.GetComponent<Rigidbody2D>();
-            if (rb != null) rb.linearVelocity = Vector2.zero;
+            if (rb != null) rb.velocity = Vector2.zero;
         }
     }
 

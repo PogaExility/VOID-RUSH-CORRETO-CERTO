@@ -47,10 +47,9 @@ public class GameOverManager : MonoBehaviour
 
     private IEnumerator GameOverSequenceCoroutine()
     {
+        if (isPlayerDead) yield break;
         isPlayerDead = true;
 
-        // --- A CORREÇÃO DA VARIÁVEL DUPLICADA ---
-        // Pegamos as referências UMA VEZ no início da corotina.
         var movementScript = playerStats.GetComponent<AdvancedPlayerMovement2D>();
         var playerController = playerStats.GetComponent<PlayerController>();
 
@@ -79,7 +78,6 @@ public class GameOverManager : MonoBehaviour
             fadePanel.gameObject.SetActive(false);
         }
 
-        // Reativamos tudo usando as mesmas referências
         if (movementScript != null) movementScript.Unfreeze();
         if (playerController != null) playerController.enabled = true;
 

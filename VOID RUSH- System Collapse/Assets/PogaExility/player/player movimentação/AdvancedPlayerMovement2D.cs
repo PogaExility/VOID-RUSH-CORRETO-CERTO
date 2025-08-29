@@ -1,6 +1,6 @@
 using UnityEngine;
 using TMPro;
-using System.Collections; // Necessário para Coroutines
+using System.Collections;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(CapsuleCollider2D))]
 public class AdvancedPlayerMovement2D : MonoBehaviour
@@ -34,9 +34,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     [Header("Física de Dano")]
     public float knockbackForce = 5f;
+    public float knockbackUpwardForce = 3f;
     public float knockbackDuration = 0.2f;
 
-    // --- Variáveis de Estado Internas ---
+    // --- Variáveis de Estado Internas (ÚNICAS E CORRETAS) ---
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
     private float moveInput;
@@ -51,7 +52,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isInParabolaArc = false;
     private bool isJumping = false;
     private bool isLanding = false;
-    private bool isInKnockback = false; // O estado que controla o knockback
+    private bool isInKnockback = false;
     private Coroutine knockbackCoroutine;
 
     void Awake()
@@ -63,7 +64,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     void Update()
     {
-        // Se estiver em knockback ou aterrissando, o input do jogador é ignorado.
         if (isInKnockback || isLanding)
         {
             moveInput = 0;
@@ -88,7 +88,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         CheckCollisions();
 
-        // Se qualquer um destes estados de alta prioridade estiver ativo, a física normal é pausada.
         if (isLanding) { rb.linearVelocity = Vector2.zero; return; }
         if (isDashing || isWallJumping || isInKnockback) return;
 
@@ -97,17 +96,17 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         HandleGravity();
     }
 
-    // --- FUNÇÕES DE CONTROLE DE ESTADO (Chamadas por outros scripts) ---
+    // --- FUNÇÕES DE CONTROLE DE FÍSICA E ESTADO ---
 
     public void Freeze()
     {
-        rb.linearVelocity = Vector2.zero; // Obsoleto, mas seguro de usar para zerar
-        rb.bodyType = RigidbodyType2D.Kinematic; // A forma moderna de desligar a física
+        rb.linearVelocity = Vector2.zero;
+        rb.bodyType = RigidbodyType2D.Kinematic;
     }
 
     public void Unfreeze()
     {
-        rb.bodyType = RigidbodyType2D.Dynamic; // A forma moderna de religar a física
+        rb.bodyType = RigidbodyType2D.Dynamic;
     }
 
     public void ApplyKnockback(Vector2 attackDirection)
@@ -123,10 +122,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         isInKnockback = true;
         rb.linearVelocity = Vector2.zero;
-        rb.AddForce(-attackDirection.normalized * knockbackForce, ForceMode2D.Impulse);
-
+        Vector2 knockbackDirection = -attackDirection.normalized;
+        knockbackDirection.y += knockbackUpwardForce;
+        rb.AddForce(knockbackDirection.normalized * knockbackForce, ForceMode2D.Impulse);
         yield return new WaitForSeconds(knockbackDuration);
-
         isInKnockback = false;
         knockbackCoroutine = null;
     }
@@ -147,7 +146,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         if ((ejectDirection.x > 0 && !isFacingRight) || (ejectDirection.x < 0 && isFacingRight)) { Flip(); }
         rb.linearDamping = parabolaLinearDamping;
     }
-
 
     private void CheckCollisions() { Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset; Vector2 capsuleSize = capsuleCollider.size; RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, 0.1f, collisionLayer); isGrounded = hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) < 45f; if (isGrounded) { if (isInParabolaArc || isWallJumping) rb.linearDamping = 0f; isWallJumping = false; isInParabolaArc = false; coyoteTimeCounter = coyoteTime; isJumping = false; } float wallRayStartOffset = capsuleCollider.size.x * 0.5f; isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer); isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer); }
     public void DoJump(float multiplier) { isJumping = true; rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier); }
@@ -183,6 +181,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private void HandleGravity() { rb.gravityScale = isWallSliding ? 0 : (rb.linearVelocity.y < 0 ? gravityScaleOnFall : baseGravity); }
     private void UpdateTimers() { if (!isGrounded) coyoteTimeCounter -= Time.deltaTime; }
     public void CutJump() { if (rb.linearVelocity.y > 0) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f); } }
+
     public Vector2 GetWallEjectDirection() { return isTouchingWallLeft ? Vector2.right : Vector2.left; }
     public bool IsGrounded() { return isGrounded; }
     public bool IsWallSliding() { return isWallSliding; }
