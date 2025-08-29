@@ -1,3 +1,5 @@
+// Salve como "SkillSOEditor.cs"
+
 using UnityEngine;
 using UnityEditor;
 
@@ -11,50 +13,63 @@ public class SkillSOEditor : Editor
 
         EditorGUILayout.LabelField("Informações Gerais", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("skillName"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("activationKey"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("energyCost"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("visualEffectPrefab"));
-
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("skillClass"));
         EditorGUILayout.Space(10);
 
-        EditorGUILayout.LabelField("Configuração da Skill", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("skillClass"));
+        EditorGUILayout.LabelField("Sistema de Ativação", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("requiredKeys"), true);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("triggerKeys"), true);
+        EditorGUILayout.Space(10);
 
-        switch (skill.skillClass)
+        if (skill.skillClass == SkillClass.Movimento)
         {
-            case SkillClass.Movimento:
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("movementSkillType"));
+            EditorGUILayout.LabelField("Configuração da Lógica de Movimento", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("movementSkillType"));
+            EditorGUILayout.Space();
 
-                switch (skill.movementSkillType)
-                {
-                    case MovementSkillType.Dash:
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashType"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashDistance"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashSpeed"));
-                        break;
+            switch (skill.movementSkillType)
+            {
+                case MovementSkillType.SuperJump:
+                    EditorGUILayout.LabelField("Modificadores de Pulo", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("jumpForce"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("airJumps"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("gravityScaleOnFall"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("coyoteTime"));
+                    break;
 
-                    // ===== INÍCIO DA CORREÇÃO =====
-                    case MovementSkillType.WallDash:
-                        // Mostra os campos de Velocidade e agora DISTÂNCIA
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("dashSpeed"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashDistance"));
-                        break;
-                    // ===== FIM DA CORREÇÃO =====
+                case MovementSkillType.Dash:
+                case MovementSkillType.WallDash:
+                    EditorGUILayout.LabelField("Modificadores de Dash", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("dashType"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("dashSpeed"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("dashDuration"));
+                    break;
 
-                    case MovementSkillType.SuperJump:
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("jumpHeightMultiplier"));
-                        EditorGUILayout.PropertyField(serializedObject.FindProperty("airJumps"));
-                        break;
-                }
-                break;
+                case MovementSkillType.WallJump:
+                    EditorGUILayout.LabelField("Modificadores de Pulo de Parede", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("wallJumpForce"));
+                    break;
 
-            case SkillClass.Buff:
-                EditorGUILayout.HelpBox("Configurações para skills de Buff ainda não implementadas.", MessageType.Info);
-                break;
+                case MovementSkillType.WallSlide:
+                    EditorGUILayout.LabelField("Modificadores de Deslize na Parede", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("wallSlideSpeed"));
+                    break;
 
-            case SkillClass.Dano:
-                EditorGUILayout.HelpBox("Configurações para skills de Dano ainda não implementadas.", MessageType.Info);
-                break;
+                case MovementSkillType.WallDashJump:
+                    EditorGUILayout.LabelField("Modificadores de Lançamento da Parede", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_LaunchForceX"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_LaunchForceY"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_ParabolaDamping"));
+                    break;
+
+                case MovementSkillType.DashJump:
+                    EditorGUILayout.LabelField("Modificadores de Dash com Pulo", EditorStyles.boldLabel);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_DashSpeed"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_DashDuration"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_JumpForce"));
+                    break;
+            }
         }
 
         serializedObject.ApplyModifiedProperties();

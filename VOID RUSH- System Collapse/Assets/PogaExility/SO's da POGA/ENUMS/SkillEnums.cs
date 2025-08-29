@@ -1,14 +1,21 @@
+// Salve como "SkillEnums.cs"
+
 public enum SkillClass { Movimento, Buff, Dano }
 public enum DashType { Normal, Aereo }
 
-// <<< ESTA É A ESTRUTURA CORRETA E COMPLETA >>>
+/// <summary>
+/// Define todas as lógicas de movimento possíveis que uma SkillSO pode representar.
+/// Cada item aqui corresponde a um "case" no SkillRelease.
+/// </summary>
 public enum MovementSkillType
 {
     None,
-    Dash,
     SuperJump,
-    WallJump,     // Ação separada
-    WallDash,     // Ação separada
-    WallDashJump, // A AÇÃO COMBINADA
+    Dash,
+    DashJump,
+    WallSlide,
+    WallJump,
+    WallDash,
+    WallDashJump,
     Stealth
 }

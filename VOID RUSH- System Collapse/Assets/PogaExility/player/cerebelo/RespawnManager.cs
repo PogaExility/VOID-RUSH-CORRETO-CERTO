@@ -96,7 +96,7 @@ public class RespawnManager : MonoBehaviour
         {
             playerTransform.position = activeCheckpoint != null ? activeCheckpoint.transform.position : initialSpawnPosition;
             Rigidbody2D rb = playerTransform.GetComponent<Rigidbody2D>();
-            if (rb != null) rb.velocity = Vector2.zero;
+            if (rb != null) rb.linearVelocity = Vector2.zero;
         }
     }
 

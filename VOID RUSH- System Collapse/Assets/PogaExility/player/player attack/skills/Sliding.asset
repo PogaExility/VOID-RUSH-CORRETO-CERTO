@@ -10,17 +10,26 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dcd2bd671c9f9d74e8e050bd52ee256a, type: 3}
-  m_Name: WallJump
+  m_Name: Sliding
   m_EditorClassIdentifier: 
-  skillName: WallJump
-  activationKey: 32
+  skillName: Sliding
   energyCost: 0
   skillClass: 0
-  visualEffectPrefab: {fileID: 0}
-  movementSkillType: 3
-  dashType: 0
-  dashDistance: 5
-  dashSpeed: 25
-  jumpHeightMultiplier: 1
+  requiredKeys: 
+  triggerKeys: 20000000
+  movementSkillType: 5
+  jumpForce: 12
   airJumps: 0
+  gravityScaleOnFall: 1.6
+  coyoteTime: 0.1
   wallJumpForce: {x: 0, y: 0}
+  wallSlideSpeed: 2
+  dashType: 0
+  dashSpeed: 25
+  dashDuration: 0.2
+  dashJump_DashSpeed: 25
+  dashJump_DashDuration: 0.4
+  dashJump_JumpForce: 15
+  wallDashJump_LaunchForceX: 25
+  wallDashJump_LaunchForceY: 15
+  wallDashJump_ParabolaDamping: 0.3

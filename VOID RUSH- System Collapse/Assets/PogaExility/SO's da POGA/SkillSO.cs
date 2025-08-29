@@ -1,34 +1,47 @@
+// Salve como "SkillSO.cs"
+
 using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "NewSkill", menuName = "NEXUS/Skill")]
 public class SkillSO : ScriptableObject
 {
     [Header("Informações Gerais")]
     public string skillName;
-    public KeyCode activationKey;
     public float energyCost = 0f;
     public SkillClass skillClass;
 
-    [Header("Efeitos")]
-    public GameObject visualEffectPrefab;
+    [Header("Sistema de Ativação")]
+    public List<KeyCode> requiredKeys = new List<KeyCode>();
+    public List<KeyCode> triggerKeys = new List<KeyCode>();
 
-    [Header("Configurações de Movimento")]
+    [Header("Configuração da Lógica de Movimento")]
     public MovementSkillType movementSkillType;
 
-    [Header("Configurações de Dash")]
-    public DashType dashType;
-    public float dashDistance = 5f;
-    public float dashSpeed = 25f;
+    // --- SEÇÃO DE MODIFICADORES DE FÍSICA INDEPENDENTES ---
 
-    // ===== INÍCIO DA ALTERAÇÃO =====
-    [Tooltip("A DISTÂNCIA em unidades que o Wall Dash horizontal percorre.")]
-    public float wallDashDistance = 7f; // TROCADO DE DURAÇÃO PARA DISTÂNCIA
-    // ===== FIM DA ALTERAÇÃO =====
+    [Header("-> Pulo (SuperJump)")]
+    public float jumpForce = 12f;
+    public int airJumps = 1;
+    public float gravityScaleOnFall = 1.6f;
+    public float coyoteTime = 0.1f;
 
-    [Header("Configurações de Pulo")]
-    public float jumpHeightMultiplier = 1f;
-    public int airJumps = 0;
+    [Header("-> Parede")]
+    public Vector2 wallJumpForce = new Vector2(10f, 12f);
+    public float wallSlideSpeed = 2f;
 
-    [Header("Configurações Específicas de Parede")]
-    public Vector2 wallJumpForce;
+    [Header("-> Dash (Padrão & WallDash)")]
+    public DashType dashType = DashType.Normal;
+    public float dashSpeed = 30f;
+    public float dashDuration = 0.2f;
+
+    [Header("-> Dash com Pulo (DashJump)")]
+    public float dashJump_DashSpeed = 25f;
+    public float dashJump_DashDuration = 0.4f;
+    public float dashJump_JumpForce = 15f;
+
+    [Header("-> Lançamento da Parede (WallDashJump)")]
+    public float wallDashJump_LaunchForceX = 25f;
+    public float wallDashJump_LaunchForceY = 15f;
+    public float wallDashJump_ParabolaDamping = 0.3f;
 }

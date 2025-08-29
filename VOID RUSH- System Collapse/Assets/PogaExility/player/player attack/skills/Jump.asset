@@ -13,14 +13,23 @@ MonoBehaviour:
   m_Name: Jump
   m_EditorClassIdentifier: 
   skillName: Jump
-  activationKey: 32
   energyCost: 0
   skillClass: 0
-  visualEffectPrefab: {fileID: 0}
-  movementSkillType: 2
-  dashDistance: 5
-  dashSpeed: 25
-  canDashInAir: 0
-  ignoresGravity: 0
-  jumpHeightMultiplier: 1
+  requiredKeys: 
+  triggerKeys: 20000000
+  movementSkillType: 1
+  jumpForce: 12
   airJumps: 0
+  gravityScaleOnFall: 1.6
+  coyoteTime: 0.1
+  wallJumpForce: {x: 10, y: 12}
+  wallSlideSpeed: 2
+  dashType: 0
+  dashSpeed: 25
+  dashDuration: 0.2
+  dashJump_DashSpeed: 25
+  dashJump_DashDuration: 0.4
+  dashJump_JumpForce: 15
+  wallDashJump_LaunchForceX: 25
+  wallDashJump_LaunchForceY: 15
+  wallDashJump_ParabolaDamping: 0.3

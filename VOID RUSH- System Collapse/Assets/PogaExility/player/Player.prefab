@@ -1169,10 +1169,10 @@ MonoBehaviour:
   baseDashSkill: {fileID: 11400000, guid: b39e077050357654ab0fdaaf2cd24349, type: 2}
   upgradedJumpSkill: {fileID: 11400000, guid: 611ca41d6bd97ac4f8f8881d21225fb9, type: 2}
   upgradedDashSkill: {fileID: 11400000, guid: 1e71423f8a0f7c54dadb9cedbf71d7fe, type: 2}
-  skillSlot1: {fileID: 0}
-  skillSlot2: {fileID: 0}
-  wallJumpSkill: {fileID: 11400000, guid: ebe4f492f4225a244819f893403ad033, type: 2}
-  wallDashSkill: {fileID: 11400000, guid: 4b89ac77f7e847f4685e312bc7eed78d, type: 2}
+  wallSkills:
+  - {fileID: 11400000, guid: ebe4f492f4225a244819f893403ad033, type: 2}
+  - {fileID: 11400000, guid: 4b89ac77f7e847f4685e312bc7eed78d, type: 2}
+  - {fileID: 11400000, guid: 36704b31bbc9d9943ac64e5a550749a4, type: 2}
 --- !u!114 &5749790382507345129
 MonoBehaviour:
   m_ObjectHideFlags: 0

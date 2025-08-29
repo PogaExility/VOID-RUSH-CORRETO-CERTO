@@ -17,8 +17,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public float deceleration = 60f;
 
     [Header("Pulo")]
-    public float jumpForce = 10f;
-    public float gravityScaleOnFall = 2.5f;
+    public float jumpForce = 12f;
+    public float gravityScaleOnFall = 1.6f;
     public float baseGravity = 1f;
     public float coyoteTime = 0.1f;
 
@@ -37,7 +37,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public float knockbackUpwardForce = 3f;
     public float knockbackDuration = 0.2f;
 
-    // --- Variáveis de Estado Internas (ÚNICAS E CORRETAS) ---
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
     private float moveInput;
@@ -64,14 +63,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     void Update()
     {
-        if (isInKnockback || isLanding)
-        {
-            moveInput = 0;
-        }
-        else
-        {
-            moveInput = Input.GetAxisRaw("Horizontal");
-        }
+        if (isInKnockback || isLanding) { moveInput = 0; }
+        else { moveInput = Input.GetAxisRaw("Horizontal"); }
 
         isJumping = rb.linearVelocity.y > 0.1f && !isGrounded;
 
@@ -96,8 +89,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         HandleGravity();
     }
 
-    // --- FUNÇÕES DE CONTROLE DE FÍSICA E ESTADO ---
-
     public void Freeze()
     {
         rb.linearVelocity = Vector2.zero;
@@ -111,10 +102,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     public void ApplyKnockback(Vector2 attackDirection)
     {
-        if (knockbackCoroutine != null)
-        {
-            StopCoroutine(knockbackCoroutine);
-        }
+        if (knockbackCoroutine != null) StopCoroutine(knockbackCoroutine);
         knockbackCoroutine = StartCoroutine(KnockbackCoroutine(attackDirection));
     }
 
@@ -129,8 +117,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         isInKnockback = false;
         knockbackCoroutine = null;
     }
-
-    // --- SUAS FUNÇÕES ORIGINAIS (INTACTAS) ---
 
     public void OnLandingStart() { isLanding = true; }
     public void OnLandingComplete() { isLanding = false; }
@@ -148,6 +134,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     }
 
     private void CheckCollisions() { Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset; Vector2 capsuleSize = capsuleCollider.size; RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, 0.1f, collisionLayer); isGrounded = hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) < 45f; if (isGrounded) { if (isInParabolaArc || isWallJumping) rb.linearDamping = 0f; isWallJumping = false; isInParabolaArc = false; coyoteTimeCounter = coyoteTime; isJumping = false; } float wallRayStartOffset = capsuleCollider.size.x * 0.5f; isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer); isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer); }
+
     public void DoJump(float multiplier) { isJumping = true; rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier); }
     public void DoWallJump(float multiplier) { isJumping = true; isWallSliding = false; isWallJumping = true; Vector2 ejectDirection = GetWallEjectDirection(); rb.linearVelocity = new Vector2(ejectDirection.x * wallJumpForce.x, wallJumpForce.y * multiplier); Flip(); }
     public void Flip() { isFacingRight = !isFacingRight; transform.Rotate(0f, 180f, 0f); }
@@ -158,8 +145,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         if (isInParabolaArc)
         {
-            if ((moveInput > 0 && rb.linearVelocity.x >= parabolaMaxAirSpeed) ||
-                (moveInput < 0 && rb.linearVelocity.x <= -parabolaMaxAirSpeed))
+            if ((moveInput > 0 && rb.linearVelocity.x >= parabolaMaxAirSpeed) || (moveInput < 0 && rb.linearVelocity.x <= -parabolaMaxAirSpeed))
             {
                 return;
             }
@@ -188,7 +174,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public bool IsInParabolaArc() { return isInParabolaArc; }
     public float GetVerticalVelocity() { return rb.linearVelocity.y; }
     public bool IsMoving() { return Mathf.Abs(moveInput) > 0.1f; }
-    public Vector2 GetDashDirection() { return Mathf.Abs(moveInput) > 0.01f ? (moveInput > 0 ? Vector2.right : Vector2.left) : GetFacingDirection(); }
     public Vector2 GetFacingDirection() { return isFacingRight ? Vector2.right : Vector2.left; }
     public void SetGravityScale(float scale) { rb.gravityScale = scale; }
     public void SetVelocity(float x, float y) { rb.linearVelocity = new Vector2(x, y); }
