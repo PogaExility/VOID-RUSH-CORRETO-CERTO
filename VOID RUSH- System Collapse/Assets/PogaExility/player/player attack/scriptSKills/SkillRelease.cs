@@ -10,6 +10,28 @@ public class SkillRelease : MonoBehaviour
     private AdvancedPlayerMovement2D movement;
     private PlayerController playerController;
 
+    private IEnumerator ExecuteWallDashCoroutine(float speed, float duration)
+    {
+        movement.OnDashStart();
+        movement.StopWallSlide(); // Garante que o estado de slide pare
+        movement.SetGravityScale(0f);
+
+        // --- A LÓGICA CORRETA ---
+        Vector2 direction = movement.GetWallEjectDirection(); // Pega a direção para LONGE da parede
+
+        float timer = 0f;
+        while (timer < duration)
+        {
+            movement.SetVelocity(direction.x * speed, 0);
+            timer += Time.deltaTime;
+            yield return null;
+        }
+        movement.SetVelocity(0, 0);
+        movement.SetGravityScale(movement.baseGravity);
+        movement.OnDashEnd();
+        currentActionCoroutine = null;
+    }
+
     void Awake()
     {
         movement = GetComponent<AdvancedPlayerMovement2D>();
@@ -131,7 +153,7 @@ public class SkillRelease : MonoBehaviour
             // --- O RESTO DAS SUAS AÇÕES, INTACTAS ---
             case MovementSkillType.Dash:
             case MovementSkillType.WallDash:
-                currentActionCoroutine = StartCoroutine(ExecuteDashCoroutine(skill.dashSpeed, skill.dashDuration));
+                currentActionCoroutine = StartCoroutine(ExecuteWallDashCoroutine(skill.dashSpeed, skill.dashDuration)); // Chama a nova corotina
                 return true;
 
             case MovementSkillType.DashJump:
@@ -164,15 +186,40 @@ public class SkillRelease : MonoBehaviour
     {
         movement.OnDashStart();
         movement.SetGravityScale(0f);
-        Vector2 direction = movement.GetFacingDirection();
+
+        // --- A LÓGICA DE DIREÇÃO CORRIGIDA ---
+        // 1. Pega o input horizontal atual do jogador.
+        float horizontalInput = Input.GetAxisRaw("Horizontal");
+        Vector2 direction;
+
+        // 2. Se o jogador estiver pressionando uma direção, essa é a direção do dash.
+        if (Mathf.Abs(horizontalInput) > 0.1f)
+        {
+            direction = new Vector2(Mathf.Sign(horizontalInput), 0);
+
+            // Garante que o personagem vire para a direção do dash INSTANTANEAMENTE.
+            if ((direction.x > 0 && !movement.IsFacingRight()) || (direction.x < 0 && movement.IsFacingRight()))
+            {
+                movement.Flip();
+            }
+        }
+        else // 3. Se não, usa a direção que o personagem já estava olhando (dash neutro).
+        {
+            direction = movement.GetFacingDirection();
+        }
+        // --- FIM DA CORREÇÃO ---
+
         float timer = 0f;
         while (timer < duration)
         {
+            // Interrompe o dash se colidir com uma parede.
             if (movement.IsTouchingWall()) break;
+
             movement.SetVelocity(direction.x * speed, 0);
             timer += Time.deltaTime;
             yield return null;
         }
+
         movement.SetVelocity(0, 0);
         movement.SetGravityScale(movement.baseGravity);
         movement.OnDashEnd();

@@ -183,12 +183,24 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public void DoJump(float multiplier) { isJumping = true; rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier); }
     public void DoWallJump(Vector2 force)
     {
+        StopAllCoroutines(); // Para o caso de alguma outra corotina de movimento estar ativa
+        StartCoroutine(WallJumpCoroutine(force));
+    }
+    private IEnumerator WallJumpCoroutine(Vector2 force)
+    {
         isJumping = true;
         isWallSliding = false;
         isWallJumping = true;
+
         Vector2 ejectDirection = GetWallEjectDirection();
         rb.linearVelocity = new Vector2(ejectDirection.x * force.x, force.y);
         Flip();
+
+        // DURAÇÃO DO ESTADO DE WALL JUMP - permite que o jogador se afaste da parede sem gravidade
+        yield return new WaitForSeconds(0.2f); // Você pode ajustar este tempo
+
+        // Fim do estado, a gravidade e o controle aéreo voltam ao normal
+        isWallJumping = false;
     }
     public void Flip() { isFacingRight = !isFacingRight; transform.Rotate(0f, 180f, 0f); }
     private void HandleFlipLogic() { if (moveInput > 0.01f && !isFacingRight) Flip(); else if (moveInput < -0.01f && isFacingRight) Flip(); }

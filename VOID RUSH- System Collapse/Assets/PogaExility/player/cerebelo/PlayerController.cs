@@ -170,21 +170,29 @@ public class PlayerController : MonoBehaviour
 
     private void HandleSkillInput()
     {
-        // Se o jogador estiver em uma animação de aterrissagem, bloqueia as skills.
         if (isLanding) return;
 
-        // Tenta ativar as skills que mudam com o Power Mode.
-        skillRelease.TryActivateSkill(activeJumpSkill);
-        skillRelease.TryActivateSkill(activeDashSkill);
+        // --- NOVA LÓGICA CONTEXTUAL ---
 
-        // Tenta ativar a skill de DashJump (que não muda com o Power Mode, por enquanto).
-        skillRelease.TryActivateSkill(dashJumpSkill);
-
-        // Tenta ativar todas as skills de parede, que estão sempre disponíveis.
-        skillRelease.TryActivateSkill(wallSlideSkill);
-        skillRelease.TryActivateSkill(wallJumpSkill);
-        skillRelease.TryActivateSkill(wallDashSkill);
-        skillRelease.TryActivateSkill(wallDashJumpSkill);
+        // CONTEXTO 1: O jogador está no ar E tocando uma parede.
+        // Prioridade máxima para skills de parede.
+        if (movementScript.IsTouchingWall() && !movementScript.IsGrounded())
+        {
+            // A ordem de verificação aqui é CRUCIAL para a prioridade.
+            // Skills de duas teclas (mais específicas) devem vir primeiro.
+            if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
+            if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
+            if (skillRelease.TryActivateSkill(wallDashSkill)) return;
+            if (skillRelease.TryActivateSkill(wallSlideSkill)) return; // Por último, a skill de entrada.
+        }
+        else
+        {
+            // CONTEXTO 2: O jogador está em qualquer outra situação (chão, ar livre).
+            // Prioridade para skills básicas e de mobilidade geral.
+            if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
+            if (skillRelease.TryActivateSkill(activeJumpSkill)) return;
+            if (skillRelease.TryActivateSkill(activeDashSkill)) return;
+        }
     }
 
     private void HandleCombatInput()
