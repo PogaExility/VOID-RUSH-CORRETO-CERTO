@@ -94,7 +94,7 @@ public class AIPlatformerMotor : MonoBehaviour
     }
     public void Climb(float direction)
     {
-        rb.linearVelocity = new Vector2(rb.linearVelocity.x, direction * climbSpeed);
+       // rb.linearVelocity = new Vector2(rb.linearVelocity.x, direction * climbSpeed);
         rb.gravityScale = 0; // Anula a gravidade temporariamente
     }
 

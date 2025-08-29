@@ -46,6 +46,7 @@ public enum PlayerState
 {
     None,
     IsGrounded,     // Está no chão?
+    CanJumpFromGround,
     IsTouchingWall, // Está colidindo com uma parede?
     IsWallSliding,  // Está no estado de deslize na parede?
     IsDashing,      // Está no meio de um dash?

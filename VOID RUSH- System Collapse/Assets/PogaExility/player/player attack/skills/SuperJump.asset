@@ -20,7 +20,7 @@ MonoBehaviour:
   actionToPerform: 1
   conditionGroups:
   - logicType: 1
-    states: 0100000006000000
+    states: 0100000007000000
   forbiddenStates: 
   jumpForce: 12
   airJumps: 1

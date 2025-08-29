@@ -56,8 +56,35 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isLanding = false;
     private bool isInKnockback = false;
     private Coroutine knockbackCoroutine;
+    private bool physicsControlDisabled = false; // Para pausar o controle do jogador
+    private Coroutine currentPhysicsCoroutine; // Para garantir que só uma corotina de física rode por vez
+                                               // Adicione estas DUAS funções em AdvancedPlayerMovement2D.cs
+    public void DisablePhysicsControl()
+    {
+        physicsControlDisabled = true;
+    }
 
-    // Adicione estas 3 funções em qualquer lugar dentro da classe AdvancedPlayerMovement2D
+    public void EnablePhysicsControl()
+    {
+        physicsControlDisabled = false;
+    }
+
+    // Adicione esta função em AdvancedPlayerMovement2D.cs
+    public void FaceDirection(int direction)
+    {
+        // direction deve ser -1 para esquerda, 1 para direita
+        if (direction > 0 && !isFacingRight)
+        {
+            Flip();
+        }
+        else if (direction < 0 && isFacingRight)
+        {
+            Flip();
+        }
+    }
+    // Adicione esta função em AdvancedPlayerMovement2D.cs
+   
+
 
     // Dentro do AdvancedPlayerMovement2D.cs
 
@@ -66,10 +93,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         switch (state)
         {
             case PlayerState.IsGrounded: return IsGrounded();
-
-            // --- AQUI ESTÁ A LÓGICA DA SUA NOVA CONDIÇÃO ---
+            case PlayerState.CanJumpFromGround: return CanJumpFromGround(); // <-- ADICIONE ESTA LINHA
             case PlayerState.IsInAir: return !IsGrounded();
-
             case PlayerState.IsTouchingWall: return IsTouchingWall();
             case PlayerState.IsWallSliding: return IsWallSliding();
             case PlayerState.IsDashing: return IsDashing();
@@ -85,19 +110,30 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         rb.linearDamping = damping;
     }
 
+    // Em AdvancedPlayerMovement2D.cs, modifique estas TRÊS funções.
     public void OnParabolaEnd()
     {
         isInParabolaArc = false;
         rb.linearDamping = 0f;
+        // DELETE A LINHA ABAIXO
+        // EnablePhysicsControl(); // <--- REMOVA ISTO
     }
+
+    // Em AdvancedPlayerMovement2D.cs
     public void DoLaunch(float horizontalForce, float verticalForce, float damping)
     {
-        OnParabolaStart(damping); // Reutiliza o estado de parábola
+        // DELETE A LINHA ABAIXO
+        // DisablePhysicsControl(); // <--- REMOVA ISTO
+
+        OnParabolaStart(damping);
         rb.linearVelocity = new Vector2(GetFacingDirection().x * horizontalForce, verticalForce);
     }
 
     public void DoWallLaunch(float horizontalForce, float verticalForce, float damping)
     {
+        // DELETE A LINHA ABAIXO
+        // DisablePhysicsControl(); // <--- REMOVA ISTO
+
         StopWallSlide();
         OnParabolaStart(damping);
         Vector2 ejectDirection = GetWallEjectDirection();
@@ -114,28 +150,32 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     void Update()
     {
-        if (isInKnockback || isLanding) { moveInput = 0; }
-        else { moveInput = Input.GetAxisRaw("Horizontal"); }
+        // SE O CONTROLE ESTIVER DESATIVADO, A ÚNICA COISA QUE ATUALIZAMOS SÃO OS TIMERS.
+        if (physicsControlDisabled)
+        {
+            UpdateTimers(); // O Coyote time precisa continuar contando
+            return;
+        }
 
+        // Se o controle está ativo, tudo funciona como antes.
+        moveInput = Input.GetAxisRaw("Horizontal");
         isJumping = rb.linearVelocity.y > 0.1f && !isGrounded;
-
         if (!isWallSliding && !isWallJumping && !isInKnockback)
         {
             HandleFlipLogic();
         }
-
         UpdateTimers();
         UpdateDebugUI();
     }
 
+    // Em AdvancedPlayerMovement2D.cs
+    // Em AdvancedPlayerMovement2D.cs, substitua a FixedUpdate inteira por esta
     void FixedUpdate()
     {
+        // SEM TRAVAS AQUI
         CheckCollisions();
 
-        if (isLanding) { rb.linearVelocity = Vector2.zero; return; }
-        if (isDashing || isWallJumping || isInKnockback) return;
-
-        HandleWallSlideLogic();
+        // Lógica normal
         HandleMovement();
         HandleGravity();
     }
@@ -180,7 +220,20 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     }
 
     private void CheckCollisions() { Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset; Vector2 capsuleSize = capsuleCollider.size; RaycastHit2D hit = Physics2D.CapsuleCast(capsuleCenter, capsuleSize, capsuleCollider.direction, 0f, Vector2.down, 0.1f, collisionLayer); isGrounded = hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) < 45f; if (isGrounded) { if (isInParabolaArc || isWallJumping) rb.linearDamping = 0f; isWallJumping = false; isInParabolaArc = false; coyoteTimeCounter = coyoteTime; isJumping = false; } float wallRayStartOffset = capsuleCollider.size.x * 0.5f; isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer); isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer); }
-    public void DoJump(float multiplier) { isJumping = true; rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier); }
+    // Em AdvancedPlayerMovement2D.cs
+    public void DoJump(float multiplier)
+    {
+        // --- A TRAVA DE SEGURANÇA ---
+        // Se o personagem já estiver no meio de uma parábola, NÃO PERMITA UM PULO AÉREO.
+        if (isInParabolaArc)
+        {
+            return;
+        }
+
+        // Se não, o pulo funciona normalmente.
+        isJumping = true;
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier);
+    }
     public void DoWallJump(Vector2 force)
     {
         StopAllCoroutines(); // Para o caso de alguma outra corotina de movimento estar ativa
@@ -222,30 +275,37 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     private void HandleMovement()
     {
+        // SE UMA SKILL DE TRAVA (DASH, WALLJUMP) ESTIVER ATIVA, ELA TEM PRIORIDADE TOTAL.
+        if (isDashing || isWallJumping)
+        {
+            return;
+        }
+
+        // SE O JOGADOR ESTIVER EM UMA PARÁBOLA, A ÚNICA FÍSICA APLICADA É O CONTROLE AÉREO.
         if (isInParabolaArc)
         {
-            // Sua lógica de parábola, que já está boa
+            // Lógica de controle aéreo que você já tem
             if ((moveInput > 0 && rb.linearVelocity.x >= parabolaMaxAirSpeed) || (moveInput < 0 && rb.linearVelocity.x <= -parabolaMaxAirSpeed))
             {
                 return;
             }
             rb.AddForce(Vector2.right * moveInput * parabolaSteeringForce);
-        }
-        else
-        {
-            // Se estiver deslizando na parede, o movimento horizontal é bloqueado.
-            if (isWallSliding) return;
 
-            bool isPushingAgainstWall = !isGrounded && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
-            if (isPushingAgainstWall) return;
-
-            // --- AQUI ESTÁ A CORREÇÃO DO "MOONWALK" ---
-            // A velocidade alvo usa 'moveSpeed', não 'moveInput' de novo.
-            float targetSpeed = moveInput * moveSpeed;
-            float speedDiff = targetSpeed - rb.linearVelocity.x;
-            float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
-            rb.AddForce(speedDiff * accelRate * Vector2.right);
+            // --- AQUI ESTÁ A CORREÇÃO QUE MUDA TUDO ---
+            // Impede que a lógica de movimento normal abaixo seja executada e mate o seu impulso.
+            return;
         }
+
+        // SE NENHUMA DAS CONDIÇÕES ACIMA FOR VERDADEIRA, APLICA O MOVIMENTO NORMAL.
+        if (isWallSliding) return;
+
+        bool isPushingAgainstWall = !isGrounded && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
+        if (isPushingAgainstWall) return;
+
+        float targetSpeed = moveInput * moveSpeed;
+        float speedDiff = targetSpeed - rb.linearVelocity.x;
+        float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
+        rb.AddForce(speedDiff * accelRate * Vector2.right);
     }
 
     // Dentro do AdvancedPlayerMovement2D.cs

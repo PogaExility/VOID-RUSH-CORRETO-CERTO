@@ -93,14 +93,24 @@ public class PlayerController : MonoBehaviour
         {
             Interact();
         }
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            // ...manda o script de física cortar a subida.
+            movementScript.CutJump();
+        }
+
 
         if (isInventoryOpen) return;
 
         HandlePowerModeToggle();
-        HandleSkillInput();
+        HandleSkillInput(); // Agora a checagem de skills acontece DEPOIS do Flip
         UpdateAnimations();
 
         wasGroundedLastFrame = movementScript.IsGrounded();
+
+        
+  
+
     }
 
 
@@ -172,23 +182,15 @@ public class PlayerController : MonoBehaviour
     {
         if (isLanding) return;
 
-        // --- NOVA LÓGICA CONTEXTUAL ---
-
-        // CONTEXTO 1: O jogador está no ar E tocando uma parede.
-        // Prioridade máxima para skills de parede.
         if (movementScript.IsTouchingWall() && !movementScript.IsGrounded())
         {
-            // A ordem de verificação aqui é CRUCIAL para a prioridade.
-            // Skills de duas teclas (mais específicas) devem vir primeiro.
             if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
             if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
             if (skillRelease.TryActivateSkill(wallDashSkill)) return;
-            if (skillRelease.TryActivateSkill(wallSlideSkill)) return; // Por último, a skill de entrada.
+            if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
         }
         else
         {
-            // CONTEXTO 2: O jogador está em qualquer outra situação (chão, ar livre).
-            // Prioridade para skills básicas e de mobilidade geral.
             if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
             if (skillRelease.TryActivateSkill(activeJumpSkill)) return;
             if (skillRelease.TryActivateSkill(activeDashSkill)) return;

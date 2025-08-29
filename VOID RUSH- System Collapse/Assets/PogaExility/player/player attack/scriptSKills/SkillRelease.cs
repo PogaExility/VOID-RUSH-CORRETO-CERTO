@@ -152,13 +152,19 @@ public class SkillRelease : MonoBehaviour
 
             // --- O RESTO DAS SUAS AÇÕES, INTACTAS ---
             case MovementSkillType.Dash:
+                // Chama a corotina de Dash correta e funcional.
+                currentActionCoroutine = StartCoroutine(ExecuteDashCoroutine(skill.dashSpeed, skill.dashDuration));
+                return true;
+
+
             case MovementSkillType.WallDash:
-                currentActionCoroutine = StartCoroutine(ExecuteWallDashCoroutine(skill.dashSpeed, skill.dashDuration)); // Chama a nova corotina
+                // Também chama a corotina de WallDash, que lida com a ejeção.
+                currentActionCoroutine = StartCoroutine(ExecuteWallDashCoroutine(skill.dashSpeed, skill.dashDuration));
                 return true;
 
             case MovementSkillType.DashJump:
-                currentActionCoroutine = StartCoroutine(ExecuteDashJumpCoroutine(skill));
-                return true;
+                movement.DoLaunch(skill.dashJump_DashSpeed, skill.dashJump_JumpForce, skill.wallDashJump_ParabolaDamping);
+                return true; // SÓ ISSO
 
             case MovementSkillType.WallJump:
                 movement.DoWallJump(skill.wallJumpForce);
@@ -175,92 +181,90 @@ public class SkillRelease : MonoBehaviour
 
             case MovementSkillType.WallDashJump:
                 movement.DoWallLaunch(skill.wallDashJump_LaunchForceX, skill.wallDashJump_LaunchForceY, skill.wallDashJump_ParabolaDamping);
-                currentActionCoroutine = StartCoroutine(WaitForParabolaEnd());
-                return true;
+                return true; // SÓ ISSO
+
         }
         return false;
     }
     // --- Corotinas que Executam as Ações Físicas ---
 
+    // Corotina para Dash Normal / Aéreo
+    // Substitua a corotina ExecuteDashCoroutine em SkillRelease.cs por esta
     private IEnumerator ExecuteDashCoroutine(float speed, float duration)
     {
+        movement.DisablePhysicsControl();
         movement.OnDashStart();
-        movement.SetGravityScale(0f);
 
-        // --- A LÓGICA DE DIREÇÃO CORRIGIDA ---
-        // 1. Pega o input horizontal atual do jogador.
+        Vector2 dashDirection;
         float horizontalInput = Input.GetAxisRaw("Horizontal");
-        Vector2 direction;
-
-        // 2. Se o jogador estiver pressionando uma direção, essa é a direção do dash.
         if (Mathf.Abs(horizontalInput) > 0.1f)
         {
-            direction = new Vector2(Mathf.Sign(horizontalInput), 0);
-
-            // Garante que o personagem vire para a direção do dash INSTANTANEAMENTE.
-            if ((direction.x > 0 && !movement.IsFacingRight()) || (direction.x < 0 && movement.IsFacingRight()))
-            {
-                movement.Flip();
-            }
+            dashDirection = new Vector2(Mathf.Sign(horizontalInput), 0);
+            movement.FaceDirection((int)dashDirection.x);
         }
-        else // 3. Se não, usa a direção que o personagem já estava olhando (dash neutro).
+        else
         {
-            direction = movement.GetFacingDirection();
+            dashDirection = movement.GetFacingDirection();
         }
-        // --- FIM DA CORREÇÃO ---
 
+        float originalGravity = movement.GetRigidbody().gravityScale;
+        movement.SetGravityScale(0f);
         float timer = 0f;
         while (timer < duration)
         {
-            // Interrompe o dash se colidir com uma parede.
             if (movement.IsTouchingWall()) break;
 
-            movement.SetVelocity(direction.x * speed, 0);
+            // --- CORREÇÃO AQUI ---
+            float currentYVelocity = movement.GetRigidbody().linearVelocity.y; // Usando .linearVelocity
+            movement.SetVelocity(dashDirection.x * speed, currentYVelocity);
             timer += Time.deltaTime;
             yield return null;
         }
 
-        movement.SetVelocity(0, 0);
-        movement.SetGravityScale(movement.baseGravity);
+        // --- E CORREÇÃO AQUI ---
+        movement.SetVelocity(0, movement.GetRigidbody().linearVelocity.y); // Usando .linearVelocity
+        movement.SetGravityScale(originalGravity);
         movement.OnDashEnd();
+        movement.EnablePhysicsControl();
         currentActionCoroutine = null;
     }
 
-    private IEnumerator ExecuteDashJumpCoroutine(SkillSO skill)
-    {
-        movement.OnDashStart();
-        movement.SetGravityScale(0f);
-        Vector2 direction = movement.GetFacingDirection();
-        float timer = 0f;
-        bool jumped = false;
-
-        while (timer < skill.dashJump_DashDuration)
-        {
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                movement.DoLaunch(direction.x * movement.moveSpeed, skill.dashJump_JumpForce, 0.1f);
-                jumped = true;
-                break;
-            }
-            movement.SetVelocity(direction.x * skill.dashJump_DashSpeed, 0);
-            timer += Time.deltaTime;
-            yield return null;
-        }
-        if (!jumped) movement.SetVelocity(0, 0);
-
-        movement.SetGravityScale(movement.baseGravity);
-        movement.OnDashEnd();
-        currentActionCoroutine = null;
-    }
+    // Garanta que esta corotina exista em SkillRelease.cs
     private IEnumerator WaitForParabolaEnd()
     {
-        // Espera até que a propriedade IsInParabolaArc no script de movimento se torne falsa.
-        yield return new WaitUntil(() => !movement.IsInParabolaArc());
+        // Espera até a parábola terminar (tocando o chão) ou ser interrompida (tocando uma parede)
+        yield return new WaitUntil(() => !movement.IsInParabolaArc() || movement.IsTouchingWall());
 
-        // Chama a função OnParabolaEnd para restaurar o estado normal (ex: linear damping).
-        movement.OnParabolaEnd();
+        if (movement.IsTouchingWall())
+        {
+            movement.SetVelocity(0, 0); // Zera a velocidade se bateu na parede
+        }
 
-        // Libera o sistema para a próxima skill.
+        movement.OnParabolaEnd(); // Avisa o "corpo" para limpar o estado de parábola
+        currentActionCoroutine = null; // Libera o sistema para a próxima skill
+    }
+    // Adicione esta corotina inteira ao SkillRelease.cs
+    private IEnumerator ExecuteDashJumpExplosionCoroutine(SkillSO skill)
+    {
+        // 1. TOMA O CONTROLE
+        movement.DisablePhysicsControl();
+        movement.OnDashStart(); // Reutiliza o estado de dash
+
+        // 2. DETERMINA A DIREÇÃO
+        Vector2 launchDirection = movement.GetFacingDirection();
+
+        // 3. EXECUTA A EXPLOSÃO
+        float originalGravity = movement.GetRigidbody().gravityScale;
+        movement.SetGravityScale(0f);
+        movement.SetVelocity(launchDirection.x * skill.dashJump_DashSpeed, skill.dashJump_JumpForce);
+
+        // Duração do "salto" antes que a gravidade volte. Pequeno, só para dar o impulso.
+        yield return new WaitForSeconds(0.2f);
+
+        // 4. DEVOLVE O CONTROLE
+        movement.SetGravityScale(originalGravity);
+        movement.OnDashEnd();
+        movement.EnablePhysicsControl();
         currentActionCoroutine = null;
     }
 }
