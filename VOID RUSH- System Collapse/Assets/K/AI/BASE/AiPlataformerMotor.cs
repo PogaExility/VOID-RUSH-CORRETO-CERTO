@@ -11,13 +11,15 @@ public class AIPlatformerMotor : MonoBehaviour
     public float moveSpeed = 4f;
 
     [Header("Verificação de Ambiente")]
-    public Transform groundCheck_A; // Renomeie o antigo para A
-    public Transform groundCheck_B; // Adicione este novo
+    public Transform groundCheck_A;
+    public Transform groundCheck_B;
     public Transform wallCheck;
     public Transform ledgeCheck;
     public LayerMask groundLayer;
     public float groundCheckRadius = 0.2f;
     public float wallCheckDistance = 1.0f;
+    [Tooltip("Raio para verificar se a IA ainda está em contato com a parede ao escalar.")]
+    public float wallContactRadius = 0.3f; // <-- ADICIONE ESTA LINHA
 
     [HideInInspector]
     public float currentFacingDirection = 1f;
@@ -37,7 +39,11 @@ public class AIPlatformerMotor : MonoBehaviour
             rb.AddForce(force, ForceMode2D.Impulse);
         }
     }
-
+    public void ApplyKnockback(Vector2 force)
+    {
+        rb.linearVelocity = Vector2.zero; // Zera a velocidade atual para um knockback limpo
+        rb.AddForce(force, ForceMode2D.Impulse);
+    }
     public bool IsGrounded()
     {
         if (groundCheck_A == null || groundCheck_B == null) return false;
@@ -86,7 +92,27 @@ public class AIPlatformerMotor : MonoBehaviour
             return true;
         }
     }
+    public void Climb(float direction)
+    {
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, direction * climbSpeed);
+        rb.gravityScale = 0; // Anula a gravidade temporariamente
+    }
 
+    public bool IsTouchingWall()
+    {
+        if (wallCheck == null) return false;
+        return Physics2D.OverlapCircle(wallCheck.position, wallContactRadius, groundLayer);
+    }
+
+    public void RestoreGravity()
+    {
+        rb.gravityScale = 1; // Ou seu valor de gravidade padrão
+    }
+
+    public Rigidbody2D GetRigidbody() { return rb; }
+    public void DisableGravity() { rb.gravityScale = 0; }
+    public void EnableGravity() { rb.gravityScale = 1; }
+    public void ApplyVelocity(Vector2 velocity) { rb.linearVelocity = velocity; }
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;
@@ -102,6 +128,11 @@ public class AIPlatformerMotor : MonoBehaviour
         {
             Gizmos.color = Color.magenta;
             Gizmos.DrawLine(ledgeCheck.position, ledgeCheck.position + Vector3.down * 2f);
+        }
+        if (wallCheck != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(wallCheck.position, wallContactRadius);
         }
     }
 }

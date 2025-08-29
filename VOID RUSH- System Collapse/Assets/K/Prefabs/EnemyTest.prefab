@@ -44,7 +44,7 @@ GameObject:
   - component: {fileID: 3303777242637043310}
   - component: {fileID: 4590336284299838918}
   - component: {fileID: 5658211616576219956}
-  - component: {fileID: 44233821262392013}
+  - component: {fileID: 7502982176693055856}
   m_Layer: 0
   m_Name: EnemyTest
   m_TagString: Untagged
@@ -132,6 +132,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   eyes: {fileID: 1821488007309959327}
+  groundProbeDistance: 0.8
+  groundProbeAngle: 45
+  ledgeDetectionThreshold: 1.2
+  ledgeDwellTime: 0.8
+  ledgeMidScanPauseTime: 0.3
+  ledgeScanUpDuration: 1.2
+  searchTime: 4.93
+  eyeSpeed: 6
   visionRange: 10
   visionAngle: 20
   visionBlockers:
@@ -140,18 +148,17 @@ MonoBehaviour:
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
-  lookSpeed: 4
-  upwardLookAngle: 45
-  downwardLookAngle: 45
-  platformCheckHeight: 5
-  searchTime: 4.93
-  ledgeAnalysisTime: 1.5
   attackRange: 1.5
   attackCooldown: 1.5
   jumpForce: 14
   airControlForce: 5
   maxJumpDistance: 5
+  maxJumpHeight: 3
   maxSafeDropHeight: 4
+  maxHealth: 100
+  attackDamage: 15
+  knockbackForce: 5
+  isBrainedDead: 0
 --- !u!212 &5658211616576219956
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -207,8 +214,8 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!61 &44233821262392013
-BoxCollider2D:
+--- !u!70 &7502982176693055856
+CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -242,17 +249,8 @@ BoxCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 1, y: 1}
-    adaptiveTilingThreshold: 0.5
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  m_Size: {x: 1, y: 1}
-  m_EdgeRadius: 0
+  m_Size: {x: 1, y: 2}
+  m_Direction: 0
 --- !u!1 &6246121293547310721
 GameObject:
   m_ObjectHideFlags: 0
@@ -382,7 +380,7 @@ Transform:
   m_GameObject: {fileID: 7127933840020313715}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.5, y: -0.5, z: 0}
+  m_LocalPosition: {x: -0.5, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -479,7 +477,7 @@ Transform:
   m_GameObject: {fileID: 9123300827179945440}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5, y: -0.5, z: 0}
+  m_LocalPosition: {x: 0.5, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
