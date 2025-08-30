@@ -37,6 +37,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public float knockbackForce = 5f;
     public float knockbackUpwardForce = 3f;
     public float knockbackDuration = 0.2f;
+    public void SetMoveInput(float input)
+    {
+        moveInput = input;
+    }
 
     // --- Variáveis de Estado Internas ---
     private Rigidbody2D rb;
@@ -124,20 +128,15 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     // Em AdvancedPlayerMovement2D.cs
 
-    public void DoLaunch(float horizontalForce, float verticalForce, float damping)
+    // Em AdvancedPlayerMovement2D.cs
+    public void DoLaunch(float horizontalForce, float verticalForce, float damping, Vector2 direction)
     {
-        Debug.Log("<color=lime>MOVEMENT:</color> DoLaunch foi chamado! Iniciando parábola.");
-        OnParabolaStart(damping);
-        rb.linearVelocity = new Vector2(GetFacingDirection().x * horizontalForce, verticalForce);
-
-        // --- A CORREÇÃO QUE O LOG ESTÁ IMPLORANDO ---
-
-        // Força o sistema a acreditar que estamos no ar por um instante,
-        // impedindo que CheckCollisions cancele a parábola.
         isGrounded = false;
-
-        // Zera o Coyote Time para evitar um pulo duplo acidental.
         coyoteTimeCounter = 0;
+        isInParabolaArc = true;
+        rb.linearDamping = damping;
+        // USA A DIREÇÃO FORNECIDA, NÃO DECIDE MAIS SOZINHO
+        rb.linearVelocity = new Vector2(direction.x * horizontalForce, verticalForce);
     }
 
     public void DoWallLaunch(float horizontalForce, float verticalForce, float damping)
@@ -169,7 +168,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         }
 
         // Se o controle está ativo, tudo funciona como antes.
-        moveInput = Input.GetAxisRaw("Horizontal");
+       
         isJumping = rb.linearVelocity.y > 0.1f && !isGrounded;
         if (!isWallSliding && !isWallJumping && !isInKnockback)
         {
@@ -321,41 +320,28 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     // Dentro do AdvancedPlayerMovement2D.cs
 
     // Em AdvancedPlayerMovement2D.cs, substitua HandleMovement por esta versão
+    // Em AdvancedPlayerMovement2D.cs
     private void HandleMovement()
     {
-        // Se uma skill de trava total (Dash, WallJump) estiver ativa, ela tem prioridade.
-        if (isDashing || isWallJumping)
-        {
-            return;
-        }
-
-        // Se estiver em uma parábola, aplica controle aéreo.
         if (isInParabolaArc)
         {
-            if ((moveInput > 0 && rb.linearVelocity.x >= parabolaMaxAirSpeed) || (moveInput < 0 && rb.linearVelocity.x <= -parabolaMaxAirSpeed))
+            if ((moveInput > 0 && rb.linearVelocity.x >= parabolaMaxAirSpeed) ||
+                (moveInput < 0 && rb.linearVelocity.x <= -parabolaMaxAirSpeed))
             {
                 return;
             }
             rb.AddForce(Vector2.right * moveInput * parabolaSteeringForce);
-            return;
         }
-
-        // --- AQUI ESTÁ A CORREÇÃO DO WALLSLIDE ---
-        // Se estiver deslizando na parede, aplica a velocidade de deslize e PARA.
-        if (isWallSliding)
+        else
         {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, -currentWallSlideSpeed);
-            return;
+            // REMOVEMOS a linha "if (isWallSliding)..." daqui.
+            bool isPushingAgainstWall = !isGrounded && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
+            if (isPushingAgainstWall) return;
+            float targetSpeed = moveInput * moveSpeed;
+            float speedDiff = targetSpeed - rb.linearVelocity.x;
+            float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
+            rb.AddForce(speedDiff * accelRate * Vector2.right);
         }
-
-        // Se nenhuma das condições acima for verdade, aplica o movimento normal do jogador.
-        bool isPushingAgainstWall = !isGrounded && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
-        if (isPushingAgainstWall) return;
-
-        float targetSpeed = moveInput * moveSpeed;
-        float speedDiff = targetSpeed - rb.linearVelocity.x;
-        float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
-        rb.AddForce(speedDiff * accelRate * Vector2.right);
     }
 
     // Dentro do AdvancedPlayerMovement2D.cs
@@ -372,16 +358,16 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     // Dentro do AdvancedPlayerMovement2D.cs
 
     // Em AdvancedPlayerMovement2D.cs, substitua HandleGravity por esta versão
+    // Em AdvancedPlayerMovement2D.cs
     private void HandleGravity()
     {
-        // A única tarefa desta função é decidir QUANTA gravidade aplicar.
         if (isWallSliding)
         {
-            rb.gravityScale = 0; // Desliga a gravidade durante o slide.
+            rb.gravityScale = 0; // Desliga a gravidade
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed); // Controla a velocidade de queda
         }
         else
         {
-            // Gravidade normal com bônus na queda.
             rb.gravityScale = rb.linearVelocity.y < 0 ? gravityScaleOnFall : baseGravity;
         }
     }

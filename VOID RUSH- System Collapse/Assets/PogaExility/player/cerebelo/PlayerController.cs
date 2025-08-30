@@ -82,35 +82,41 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Em PlayerController.cs
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Tab))
+        // Lógica de inventário e interação que não depende do estado do jogador
+        if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
+        if (Input.GetKeyDown(KeyCode.E) && canInteract && !isInventoryOpen) { Interact(); }
+
+        // --- O NOVO FLUXO DE COMANDO ---
+
+        // 1. LÊ O INPUT UMA ÚNICA VEZ
+        float horizontalInput = 0;
+        if (!isInventoryOpen)
         {
-            ToggleInventory();
+            horizontalInput = Input.GetAxisRaw("Horizontal");
         }
 
-        if (Input.GetKeyDown(KeyCode.E) && canInteract && !isInventoryOpen)
-        {
-            Interact();
-        }
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            // ...manda o script de física cortar a subida.
-            movementScript.CutJump();
-        }
+        // 2. COMANDA O "CORPO" A SE ATUALIZAR
+        // Isso força o HandleFlipLogic a rodar ANTES de qualquer skill ser testada.
+        movementScript.SetMoveInput(horizontalInput);
 
+        // --- FIM DO NOVO FLUXO ---
 
+        // Se o inventário estiver aberto, para aqui.
         if (isInventoryOpen) return;
 
+        // Agora, o resto da lógica roda com o estado do personagem já atualizado
         HandlePowerModeToggle();
-        HandleSkillInput(); // Agora a checagem de skills acontece DEPOIS do Flip
+        HandleSkillInput();
         UpdateAnimations();
-
         wasGroundedLastFrame = movementScript.IsGrounded();
 
-        
-  
-
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            movementScript.CutJump();
+        }
     }
 
 
@@ -182,55 +188,41 @@ public class PlayerController : MonoBehaviour
     // Em PlayerController.cs
     // Em PlayerController.cs
     // Em PlayerController.cs
+    // Em PlayerController.cs
     private void HandleSkillInput()
     {
         if (isLanding) return;
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            Debug.Log("--- INÍCIO DO FRAME DE DEBUG (Tecla Espaço Pressionada) ---");
-            Debug.Log($"<color=lightblue>PLAYER STATE:</color> IsTouchingWall={movementScript.IsTouchingWall()}, IsGrounded={movementScript.IsGrounded()}, IsWallSliding={movementScript.IsWallSliding()}");
-        }
 
         // LER AS TECLAS DE FORMA EXPLÍCITA
         bool jumpKeyDown = Input.GetKeyDown(KeyCode.Space);
         bool dashKeyDown = Input.GetKeyDown(KeyCode.Q);
         bool dashKeyHeld = Input.GetKey(KeyCode.Q);
         bool jumpKeyHeld = Input.GetKey(KeyCode.Space);
-        bool jumpKeyUp = Input.GetKeyUp(KeyCode.Space);
 
-        // --- LÓGICA DE INPUT SEM AMBIGUIDADE ---
+        // --- LÓGICA DE INPUT CONTEXTUAL ---
 
-        // CONTEXTO DE PAREDE
+        // CONTEXTO 1: JÁ ESTÁ DESLIZANDO
         if (movementScript.IsWallSliding())
         {
-            // Prioridade 1: Skills combinadas
-            if ((jumpKeyDown && dashKeyHeld) || (dashKeyDown && jumpKeyHeld))
-            {
-                if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
-            }
-            // Prioridade 2: Skills de uma tecla
+            if ((jumpKeyDown && dashKeyHeld) || (dashKeyDown && jumpKeyHeld)) { if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return; }
             if (jumpKeyDown) { if (skillRelease.TryActivateSkill(wallJumpSkill)) return; }
             if (dashKeyDown) { if (skillRelease.TryActivateSkill(wallDashSkill)) return; }
         }
-        // CONTEXTO GERAL (CHÃO/AR)
+        // CONTEXTO 2: TOCANDO A PAREDE, MAS NÃO DESLIZANDO (PODE COMEÇAR A DESLIZAR)
+        else if (movementScript.IsTouchingWall() && !movementScript.IsGrounded())
+        {
+            // Se apertar Espaço aqui, a ÚNICA ação possível é iniciar o WallSlide.
+            if (jumpKeyDown)
+            {
+                if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
+            }
+        }
+        // CONTEXTO 3: GERAL (CHÃO/AR LIVRE)
         else
         {
-            // Prioridade 1: DashJump
-            if ((jumpKeyDown && dashKeyHeld) || (dashKeyDown && jumpKeyHeld))
-            {
-                if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
-            }
-
-            // Prioridade 2: Skills de uma tecla
+            if ((jumpKeyDown && dashKeyHeld) || (dashKeyDown && jumpKeyHeld)) { if (skillRelease.TryActivateSkill(dashJumpSkill)) return; }
             if (jumpKeyDown) { if (skillRelease.TryActivateSkill(activeJumpSkill)) return; }
             if (dashKeyDown) { if (skillRelease.TryActivateSkill(activeDashSkill)) return; }
-        }
-
-        // PULO VARIÁVEL: Esta lógica é independente e pode rodar no final
-        if (jumpKeyUp)
-        {
-            movementScript.CutJump();
         }
     }
     private void HandleCombatInput()
@@ -241,6 +233,7 @@ public class PlayerController : MonoBehaviour
 
     // Dentro do seu PlayerController.cs
 
+    // Em PlayerController.cs
     private void UpdateAnimations()
     {
         if (isLanding) return;
@@ -252,33 +245,46 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // --- AQUI ESTÁ A CORREÇÃO DA ANIMAÇÃO ---
-        // Adicionamos uma checagem no topo. Se estiver deslizando na parede,
-        // a animação de "derrapagem" tem prioridade sobre todas as outras.
         if (movementScript.IsWallSliding())
         {
             animatorController.PlayState(PlayerAnimState.derrapagem);
-            return; // Retorna para não executar as outras checagens de animação
-        }
-        // --- FIM DA CORREÇÃO ---
-
-        if (defenseHandler.IsBlocking())
-        {
-            if (defenseHandler.IsInParryWindow()) animatorController.PlayState(PlayerAnimState.parry);
-            else animatorController.PlayState(PlayerAnimState.block);
         }
         else if (!movementScript.IsGrounded())
         {
-            // A checagem de WallSliding acima garante que esta parte não seja executada incorretamente
-            if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dashAereo);
-            else if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando);
-            else animatorController.PlayState(PlayerAnimState.falling);
+            // --- AQUI ESTÁ A CORREÇÃO DA ANIMAÇÃO ---
+            // Se estiver em uma parábola (DashJump ou WallDashJump), a animação é de dash aéreo.
+            if (movementScript.IsInParabolaArc())
+            {
+                animatorController.PlayState(PlayerAnimState.dashAereo);
+            }
+            // Se não, continua com a lógica normal.
+            else if (movementScript.IsDashing())
+            {
+                animatorController.PlayState(PlayerAnimState.dashAereo);
+            }
+            else if (movementScript.GetVerticalVelocity() > 0.1f)
+            {
+                animatorController.PlayState(PlayerAnimState.pulando);
+            }
+            else
+            {
+                animatorController.PlayState(PlayerAnimState.falling);
+            }
         }
         else
         {
-            if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dash);
-            else if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando);
-            else animatorController.PlayState(PlayerAnimState.parado);
+            if (movementScript.IsDashing())
+            {
+                animatorController.PlayState(PlayerAnimState.dash);
+            }
+            else if (movementScript.IsMoving())
+            {
+                animatorController.PlayState(PlayerAnimState.andando);
+            }
+            else
+            {
+                animatorController.PlayState(PlayerAnimState.parado);
+            }
         }
     }
 

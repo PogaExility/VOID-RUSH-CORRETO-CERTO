@@ -211,9 +211,26 @@ public class SkillRelease : MonoBehaviour
                 currentActionCoroutine = StartCoroutine(ExecuteWallDashCoroutine(skill.dashSpeed, skill.dashDuration));
                 return true;
 
+            // Em SkillRelease.cs -> ExecuteAction
             case MovementSkillType.DashJump:
-                movement.DoLaunch(skill.dashJump_DashSpeed, skill.dashJump_JumpForce, skill.wallDashJump_ParabolaDamping);
-                return true; // SÓ ISSO
+                // 1. LÊ O INPUT DO JOGADOR AGORA
+                float horizontalInput = Input.GetAxisRaw("Horizontal");
+                Vector2 launchDirection;
+
+                // 2. SE O JOGADOR ESTIVER PRESSIONANDO UMA DIREÇÃO, USA ELA.
+                if (Mathf.Abs(horizontalInput) > 0.1f)
+                {
+                    launchDirection = new Vector2(Mathf.Sign(horizontalInput), 0);
+                }
+                // 3. SE NÃO, USA A DIREÇÃO QUE O PERSONAGEM JÁ TINHA (NEUTRO).
+                else
+                {
+                    launchDirection = movement.GetFacingDirection();
+                }
+
+                // 4. CHAMA O NOVO DoLaunch COM A DIREÇÃO CORRETA
+                movement.DoLaunch(skill.dashJump_DashSpeed, skill.dashJump_JumpForce, skill.wallDashJump_ParabolaDamping, launchDirection);
+                return true;
 
             case MovementSkillType.WallJump:
                 movement.DoWallJump(skill.wallJumpForce);
@@ -239,42 +256,35 @@ public class SkillRelease : MonoBehaviour
 
     // Corotina para Dash Normal / Aéreo
     // Substitua a corotina ExecuteDashCoroutine em SkillRelease.cs por esta
+    // Em SkillRelease.cs
+    // Em SkillRelease.cs
     private IEnumerator ExecuteDashCoroutine(float speed, float duration)
     {
-        movement.DisablePhysicsControl();
         movement.OnDashStart();
 
-        Vector2 dashDirection;
-        float horizontalInput = Input.GetAxisRaw("Horizontal");
-        if (Mathf.Abs(horizontalInput) > 0.1f)
-        {
-            dashDirection = new Vector2(Mathf.Sign(horizontalInput), 0);
-            movement.FaceDirection((int)dashDirection.x);
-        }
-        else
-        {
-            dashDirection = movement.GetFacingDirection();
-        }
+        // A DIREÇÃO JÁ ESTÁ CORRETA. SEMPRE.
+        // A "race condition" foi eliminada na arquitetura.
+        Vector2 dashDirection = movement.GetFacingDirection();
 
         float originalGravity = movement.GetRigidbody().gravityScale;
         movement.SetGravityScale(0f);
+
         float timer = 0f;
         while (timer < duration)
         {
             if (movement.IsTouchingWall()) break;
 
-            // --- CORREÇÃO AQUI ---
-            float currentYVelocity = movement.GetRigidbody().linearVelocity.y; // Usando .linearVelocity
+            // Preserva o arco do pulo
+            float currentYVelocity = movement.GetRigidbody().linearVelocity.y;
             movement.SetVelocity(dashDirection.x * speed, currentYVelocity);
+
             timer += Time.deltaTime;
             yield return null;
         }
 
-        // --- E CORREÇÃO AQUI ---
-        movement.SetVelocity(0, movement.GetRigidbody().linearVelocity.y); // Usando .linearVelocity
+        movement.SetVelocity(0, movement.GetRigidbody().linearVelocity.y);
         movement.SetGravityScale(originalGravity);
         movement.OnDashEnd();
-        movement.EnablePhysicsControl();
         currentActionCoroutine = null;
     }
 
