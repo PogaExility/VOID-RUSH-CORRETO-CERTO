@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(SkillRelease))]
@@ -55,7 +56,10 @@ public class PlayerController : MonoBehaviour
     private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
-   
+    public SkillSO GetActiveDashSkill()
+    {
+        return activeDashSkill;
+    }
 
 
     void Awake()
@@ -97,25 +101,14 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
         if (Input.GetKeyDown(KeyCode.E) && canInteract && !isInventoryOpen) { Interact(); }
 
-        // --- O NOVO FLUXO DE COMANDO ---
-
-        // 1. LÊ O INPUT UMA ÚNICA VEZ
+     
         float horizontalInput = 0;
         if (!isInventoryOpen)
         {
             horizontalInput = Input.GetAxisRaw("Horizontal");
         }
-
-        // 2. COMANDA O "CORPO" A SE ATUALIZAR
-        // Isso força o HandleFlipLogic a rodar ANTES de qualquer skill ser testada.
         movementScript.SetMoveInput(horizontalInput);
-
-        // --- FIM DO NOVO FLUXO ---
-
-        // Se o inventário estiver aberto, para aqui.
         if (isInventoryOpen) return;
-
-        // Agora, o resto da lógica roda com o estado do personagem já atualizado
         HandlePowerModeToggle();
         HandleSkillInput();
         UpdateAnimations();
@@ -202,19 +195,21 @@ public class PlayerController : MonoBehaviour
     // Em PlayerController.cs
     private void HandleSkillInput()
     {
-        // A ordem de checagem é a única coisa que importa aqui.
-        // O sistema de SkillSO vai cuidar de todas as condições de estado.
+        // 1. O JOGADOR APERTOU A TECLA DO DASH?
+        // Lemos a tecla do SO da skill de dash ativa.
+        if (activeDashSkill.triggerKeys.Any(key => Input.GetKeyDown(key)))
+        {
+            // Se sim, inicia o buffer e NÃO FAZ MAIS NADA NESTE FRAME.
+            // Isso impede que o Dash normal seja ativado se o Pulo for pressionado junto.
+            skillRelease.SetDashBuffer(dashJumpSkill.dashJump_InputBuffer);
+        }
 
-        // 1. SKILLS COMBINADAS (MAIOR PRIORIDADE)
+        // 2. TENTA ATIVAR AS SKILLS EM ORDEM DE PRIORIDADE
         if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
         if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
-
-        // 2. SKILLS DE PAREDE
         if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
         if (skillRelease.TryActivateSkill(wallDashSkill)) return;
         if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
-
-        // 3. SKILLS BÁSICAS
         if (skillRelease.TryActivateSkill(activeJumpSkill)) return;
         if (skillRelease.TryActivateSkill(activeDashSkill)) return;
     }

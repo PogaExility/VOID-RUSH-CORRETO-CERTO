@@ -70,7 +70,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isLanding = false;
     private bool isInKnockback = false;
     private Coroutine knockbackCoroutine;
-    private Coroutine currentPhysicsCoroutine;
+    private bool isIgnoringSteeringInput = false;
+    private Coroutine steeringGraceCoroutine;
+
 
 
     public void DisablePhysicsControl()
@@ -133,15 +135,28 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         rb.linearDamping = damping; // <-- DEFINE O DAMPING DA UNITY
     }
 
+    // Em AdvancedPlayerMovement2D.cs
     public void DoWallLaunch(float horizontalForce, float verticalForce, float customGravityOnFall, float damping)
     {
         StopWallSlide();
         isInParabolaArc = true;
-        Vector2 ejectDirection = GetWallEjectDirection();
+
+        // SUA LÓGICA: O impulso é SEMPRE para longe da parede,
+        // usando a direção que o Flip já estabeleceu.
+        Vector2 ejectDirection = GetFacingDirection();
         rb.linearVelocity = new Vector2(ejectDirection.x * horizontalForce, verticalForce);
-        if ((ejectDirection.x > 0 && !isFacingRight) || (ejectDirection.x < 0 && isFacingRight)) { Flip(); }
+
         currentGravityScaleOnFall = customGravityOnFall;
-        rb.linearDamping = damping; // <-- DEFINE O DAMPING DA UNITY
+        rb.linearDamping = damping;
+
+        // INICIA O PERÍODO DE IMUNIDADE
+        // Se já houver uma corrotina rodando, ela é parada para evitar bugs.
+        if (steeringGraceCoroutine != null)
+        {
+            StopCoroutine(steeringGraceCoroutine);
+        }
+        // O tempo de 0.05s que você pediu.
+        steeringGraceCoroutine = StartCoroutine(SteeringGracePeriodCoroutine(0.2f));
     }
 
     void Awake()
@@ -206,7 +221,16 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         rb.AddForce(knockbackDirection.normalized * knockbackForce, ForceMode2D.Impulse);
         yield return new WaitForSeconds(knockbackDuration);
         isInKnockback = false;
+        
         knockbackCoroutine = null;
+    }
+    // Em AdvancedPlayerMovement2D.cs, adicione esta função inteira
+    private IEnumerator SteeringGracePeriodCoroutine(float duration)
+    {
+        isIgnoringSteeringInput = true;
+        yield return new WaitForSeconds(duration);
+        isIgnoringSteeringInput = false;
+        steeringGraceCoroutine = null;
     }
 
     public void OnLandingStart()
@@ -310,8 +334,21 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         isWallJumping = false;
     }
     public void Flip() { isFacingRight = !isFacingRight; transform.Rotate(0f, 180f, 0f); }
-    private void HandleFlipLogic() { if (moveInput > 0.01f && !isFacingRight) Flip(); else if (moveInput < -0.01f && isFacingRight) Flip(); }
+    // Em AdvancedPlayerMovement2D.cs
+    private void HandleFlipLogic()
+    {
+        // --- ADICIONE ESTA CONDIÇÃO ---
+        // Se a imunidade ao input estiver ativa, não faça nada.
+        if (isIgnoringSteeringInput)
+        {
+            return;
+        }
+        // --- FIM DA ADIÇÃO ---
 
+        // A lógica original continua aqui
+        if (moveInput > 0.01f && !isFacingRight) Flip();
+        else if (moveInput < -0.01f && isFacingRight) Flip();
+    }
 
     public void StartWallSlide(float speed)
     {
@@ -344,36 +381,28 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     // Em AdvancedPlayerMovement2D.cs
     private void HandleMovement()
     {
-        // 1. Estados que travam o controle (inalterado)
         if (isDashing || isWallJumping || isWallSliding)
         {
             return;
         }
 
-        // 2. Lógica da Parábola (A VERSÃO FINAL E CORRETA)
         if (isInParabolaArc)
         {
-            // --- ESTA É A LÓGICA QUE CUMPRE AS SUAS REGRAS ---
+            // Se a imunidade estiver ativa, o input do jogador é completamente ignorado.
+            if (isIgnoringSteeringInput)
+            {
+                return;
+            }
 
-            // Detecta se o jogador está pressionando na direção OPOSTA à sua velocidade atual.
+            // Após a imunidade, a lógica de troca de direção funciona como antes.
             bool wantsToChangeDirection = (moveInput > 0 && rb.linearVelocity.x < -0.1f) || (moveInput < 0 && rb.linearVelocity.x > 0.1f);
 
-            // Se o jogador quer trocar de direção...
             if (wantsToChangeDirection)
             {
-                // ...INVERTE a velocidade horizontal. Isso muda a direção sem adicionar energia.
-                // A velocidade é a mesma, só que para o outro lado.
-                rb.linearVelocity = new Vector2(-rb.linearVelocity.x, rb.linearVelocity.y);
-
-                // E vira o sprite para corresponder.
+                rb.linearVelocity = new Vector2(-rb.linearVelocity .x, rb.linearVelocity.y);
                 Flip();
             }
 
-            // FIM. Não há AddForce. Não há aceleração.
-            // A única coisa que age sobre a velocidade horizontal agora é o linearDamping da Unity,
-            // que vai desacelerar o jogador suavemente, como deveria.
-
-            // --- FIM DA LÓGICA ---
             return;
         }
 

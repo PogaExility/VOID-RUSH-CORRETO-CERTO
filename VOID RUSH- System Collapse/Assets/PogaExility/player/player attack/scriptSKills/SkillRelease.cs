@@ -9,6 +9,11 @@ public class SkillRelease : MonoBehaviour
     private Coroutine currentActionCoroutine;
     private AdvancedPlayerMovement2D movement;
     private PlayerController playerController;
+    private float dashInputBufferTimer = 0f;
+    public void SetDashBuffer(float bufferTime)
+    {
+        dashInputBufferTimer = bufferTime;
+    }
 
 
 
@@ -20,12 +25,33 @@ public class SkillRelease : MonoBehaviour
 
     void Update()
     {
+        // 1. CONTA O CRONÔMETRO DO BUFFER
+        if (dashInputBufferTimer > 0)
+        {
+            dashInputBufferTimer -= Time.deltaTime;
+        }
+
+        // 2. REGISTRA O INPUT DE DASH PARA O BUFFER
+        // Pega a skill de dash ativa do PlayerController
+        SkillSO dashSkill = playerController.GetActiveDashSkill();
+        if (dashSkill != null)
+        {
+            // Se o jogador pressionou a tecla de gatilho do dash...
+            if (dashSkill.triggerKeys.Any(key => Input.GetKeyDown(key)))
+            {
+                // ...inicia o cronômetro. O tempo é pego da skill de DashJump.
+                dashInputBufferTimer = playerController.dashJumpSkill.dashJump_InputBuffer;
+            }
+        }
+
+        // 3. LÓGICA ORIGINAL DE RESETAR PULOS AÉREOS
         SkillSO activeJumpSkill = playerController.GetActiveJumpSkill();
         if (activeJumpSkill != null && movement.IsGrounded())
         {
             currentAirJumps = activeJumpSkill.airJumps;
         }
     }
+
 
     // Dentro do SkillRelease.cs
 
@@ -53,29 +79,38 @@ public class SkillRelease : MonoBehaviour
         return ExecuteAction(skill);
     }
 
- 
+
     private bool CheckKeyPress(SkillSO skill)
     {
-        // Lógica para skills com GATILHO e REQUERIDAS (DashJump, WallDashJump)
-        if (skill.triggerKeys.Count > 0 && skill.requiredKeys.Count > 0)
+        // LÓGICA PARA SKILLS COMBINADAS (DashJump, WallDashJump)
+        if (skill.actionToPerform == MovementSkillType.DashJump || skill.actionToPerform == MovementSkillType.WallDashJump)
         {
-            // O gatilho foi pressionado E a requerida está sendo segurada?
-            bool triggerPressed = skill.triggerKeys.Any(key => Input.GetKeyDown(key));
-            bool requiredHeld = skill.requiredKeys.All(key => Input.GetKey(key));
+            bool triggerPressed = skill.triggerKeys.Any(key => Input.GetKeyDown(key)); // Pulo foi pressionado?
 
+            // CONDIÇÃO DE SUCESSO:
+            // O jogador está segurando a tecla requerida (Q)? OU o buffer de dash está ativo?
+            bool requiredHeld = skill.requiredKeys.All(key => Input.GetKey(key));
+            bool dashBufferActive = dashInputBufferTimer > 0;
+
+            if (triggerPressed && (requiredHeld || dashBufferActive))
+            {
+                dashInputBufferTimer = 0f; // Consome o buffer
+                return true;
+            }
+            return false;
+        }
+
+        // LÓGICA PADRÃO PARA TODAS AS OUTRAS SKILLS (Dash, Pulo Normal, etc.)
+        // Esta lógica restaura o funcionamento correto que eu apaguei.
+        if (skill.triggerKeys.Count > 0)
+        {
+            bool triggerPressed = skill.triggerKeys.Any(key => Input.GetKeyDown(key));
+            bool requiredHeld = skill.requiredKeys.Count == 0 || skill.requiredKeys.All(key => Input.GetKey(key));
             return triggerPressed && requiredHeld;
         }
 
-        // Lógica para skills SÓ com GATILHO (Pulo, Dash normal)
-        if (skill.triggerKeys.Count > 0)
-        {
-            return skill.triggerKeys.Any(key => Input.GetKeyDown(key));
-        }
-
-        // Se a skill não tem gatilho, a checagem de tecla não se aplica
         return false;
     }
-
     private bool CheckStateConditions(SkillSO skill)
     {
         foreach (var group in skill.conditionGroups)
