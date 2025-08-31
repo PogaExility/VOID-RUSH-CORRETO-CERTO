@@ -14,8 +14,6 @@ public class PlayerController : MonoBehaviour
     [Header("Referências de UI")]
     public GameObject inventoryPanel;
 
-
-
     [Header("Referências de Movimento")]
     public SkillRelease skillRelease;
     public AdvancedPlayerMovement2D movementScript;
@@ -57,12 +55,12 @@ public class PlayerController : MonoBehaviour
     private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
-    private Animator animator;
+   
 
 
     void Awake()
     {
-        animator = GetComponent<Animator>();
+       
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
         skillRelease = GetComponent<SkillRelease>();
         combatController = GetComponent<CombatController>();
@@ -201,20 +199,22 @@ public class PlayerController : MonoBehaviour
     // Em PlayerController.cs
     // Em PlayerController.cs
 
+    // Em PlayerController.cs
     private void HandleSkillInput()
     {
-        if (movementScript.IsWallSliding())
-        {
-            if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
-            if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
-            if (skillRelease.TryActivateSkill(wallDashSkill)) return;
-        }
-        else if (movementScript.IsTouchingWall() && !movementScript.IsGrounded())
-        {
-            if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
-        }
+        // A ordem de checagem é a única coisa que importa aqui.
+        // O sistema de SkillSO vai cuidar de todas as condições de estado.
 
+        // 1. SKILLS COMBINADAS (MAIOR PRIORIDADE)
+        if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
         if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
+
+        // 2. SKILLS DE PAREDE
+        if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
+        if (skillRelease.TryActivateSkill(wallDashSkill)) return;
+        if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
+
+        // 3. SKILLS BÁSICAS
         if (skillRelease.TryActivateSkill(activeJumpSkill)) return;
         if (skillRelease.TryActivateSkill(activeDashSkill)) return;
     }
@@ -224,22 +224,12 @@ public class PlayerController : MonoBehaviour
         if (!movementScript.IsDashing()) combatController.ProcessCombatInput();
     }
 
-    // Em PlayerController.cs
-
-    // Substitua a sua UpdateAnimations inteira por esta
-    // Em PlayerController.cs
-    // Em PlayerController.cs
-    // Em PlayerController.cs
+    // Substitua sua função UpdateAnimations por esta versão mais limpa:
     private void UpdateAnimations()
     {
-        // TRAVA PRINCIPAL: Se estamos no processo de pouso, não faça mais nada.
-        if (isLanding)
-        {
-            return;
-        }
+        if (isLanding) return;
 
-        // Se acabamos de tocar o chão, INICIA o processo de pouso.
-        if (!wasGroundedLastFrame && movementScript.IsGrounded())
+        if (!wasGroundedLastFrame && movementScript.CheckState(PlayerState.IsGrounded))
         {
             isLanding = true;
             movementScript.OnLandingStart();
@@ -247,13 +237,10 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // A LINHA PROBLEMÁTICA FOI REMOVIDA DAQUI
-
-        // --- LÓGICA NORMAL DE ANIMAÇÃO (só roda se NÃO estivermos pousando) ---
-        if (movementScript.IsWallSliding()) animatorController.PlayState(PlayerAnimState.derrapagem);
-        else if (movementScript.IsInParabolaArc()) animatorController.PlayState(PlayerAnimState.dashAereo);
-        else if (movementScript.IsDashing()) animatorController.PlayState(movementScript.IsGrounded() ? PlayerAnimState.dash : PlayerAnimState.dashAereo);
-        else if (!movementScript.IsGrounded())
+        if (movementScript.CheckState(PlayerState.IsWallSliding)) animatorController.PlayState(PlayerAnimState.derrapagem);
+        else if (movementScript.CheckState(PlayerState.IsInParabola)) animatorController.PlayState(PlayerAnimState.dashAereo);
+        else if (movementScript.CheckState(PlayerState.IsDashing)) animatorController.PlayState(movementScript.CheckState(PlayerState.IsGrounded) ? PlayerAnimState.dash : PlayerAnimState.dashAereo);
+        else if (!movementScript.CheckState(PlayerState.IsGrounded))
         {
             if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando);
             else animatorController.PlayState(PlayerAnimState.falling);

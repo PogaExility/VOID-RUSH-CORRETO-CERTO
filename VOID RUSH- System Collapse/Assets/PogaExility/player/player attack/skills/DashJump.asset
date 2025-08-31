@@ -22,7 +22,7 @@ MonoBehaviour:
   conditionGroups:
   - logicType: 0
     states: 02000000
-  forbiddenStates: 
+  forbiddenStates: 0500000006000000
   jumpForce: 12
   airJumps: 0
   gravityScaleOnFall: 1.6
@@ -32,9 +32,12 @@ MonoBehaviour:
   dashType: 0
   dashSpeed: 25
   dashDuration: 0.2
-  dashJump_DashSpeed: 25
+  dashJump_DashSpeed: 40
   dashJump_DashDuration: 0.2
-  dashJump_JumpForce: 10
+  dashJump_JumpForce: 15
+  dashJump_ParabolaDamping: 6
+  dashJump_GravityScaleOnFall: 2
   wallDashJump_LaunchForceX: 25
   wallDashJump_LaunchForceY: 15
-  wallDashJump_ParabolaDamping: 0.3
+  wallDashJump_ParabolaDamping: 1
+  wallDashJump_GravityScaleOnFall: 2.5

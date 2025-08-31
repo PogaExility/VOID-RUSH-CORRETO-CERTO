@@ -22,7 +22,7 @@ MonoBehaviour:
   conditionGroups:
   - logicType: 0
     states: 01000000
-  forbiddenStates: 06000000
+  forbiddenStates: 0600000007000000
   jumpForce: 12
   airJumps: 0
   gravityScaleOnFall: 1.6

@@ -71,13 +71,21 @@ public class SkillSO : ScriptableObject
     public float dashSpeed = 30f;
     public float dashDuration = 0.2f;
 
+    // Em SkillSO.cs
+
     [Header("-> Parâmetros de Dash com Pulo (DashJump)")]
     public float dashJump_DashSpeed = 25f;
     public float dashJump_DashDuration = 0.4f;
     public float dashJump_JumpForce = 15f;
 
+    [Tooltip("Atrito do ar via Linear Damping. 0 = sem atrito. 1 = atrito suave. 5 = atrito forte.")]
+    public float dashJump_ParabolaDamping = 1f;
+    public float dashJump_GravityScaleOnFall = 2.5f;
+
     [Header("-> Parâmetros de Lançamento da Parede (WallDashJump)")]
     public float wallDashJump_LaunchForceX = 25f;
     public float wallDashJump_LaunchForceY = 15f;
-    public float wallDashJump_ParabolaDamping = 0.3f;
+    [Tooltip("Atrito do ar via Linear Damping. 0 = sem atrito. 1 = atrito suave. 5 = atrito forte.")]
+    public float wallDashJump_ParabolaDamping = 1f;
+    public float wallDashJump_GravityScaleOnFall = 2.5f;
 }

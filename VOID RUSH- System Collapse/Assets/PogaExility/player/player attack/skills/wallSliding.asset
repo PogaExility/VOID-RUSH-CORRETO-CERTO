@@ -28,13 +28,16 @@ MonoBehaviour:
   gravityScaleOnFall: 1.6
   coyoteTime: 0.1
   wallJumpForce: {x: 10, y: 12}
-  wallSlideSpeed: 0.5
+  wallSlideSpeed: 2
   dashType: 0
   dashSpeed: 30
   dashDuration: 0.2
   dashJump_DashSpeed: 25
   dashJump_DashDuration: 0.4
   dashJump_JumpForce: 15
+  dashJump_ParabolaAirDrag: 0.98
+  dashJump_GravityScaleOnFall: 2.5
   wallDashJump_LaunchForceX: 25
   wallDashJump_LaunchForceY: 15
-  wallDashJump_ParabolaDamping: 0.3
+  wallDashJump_ParabolaAirDrag: 0.98
+  wallDashJump_GravityScaleOnFall: 2.5

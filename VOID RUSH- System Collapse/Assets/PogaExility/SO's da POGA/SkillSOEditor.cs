@@ -78,12 +78,15 @@ public class SkillSOEditor : Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_LaunchForceX"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_LaunchForceY"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_ParabolaDamping"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_GravityScaleOnFall"));
                     break;
-
                 case MovementSkillType.DashJump:
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_DashSpeed"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_DashDuration"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_JumpForce"));
+
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_ParabolaDamping"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_GravityScaleOnFall"));
                     break;
             }
         }

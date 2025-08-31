@@ -1,29 +1,17 @@
-/// <summary>
-/// Define a categoria geral de uma habilidade, usado principalmente para
-/// organizar o Inspector através do SkillSOEditor.
-/// </summary>
+
 public enum SkillClass
 {
     Movimento,
     Buff,
     Dano
 }
-
-/// <summary>
-/// Define as variantes de uma habilidade de Dash, permitindo, por exemplo,
-/// que um Dash só possa ser usado no chão (Normal) ou no ar (Aereo).
-/// </summary>
 public enum DashType
 {
     Normal,
     Aereo
 }
 
-/// <summary>
-/// Define todas as ações de movimento distintas que um SkillSO pode executar.
-/// Cada item aqui corresponde a uma lógica ("case") específica dentro do SkillRelease,
-/// garantindo que cada habilidade seja tratada de forma independente.
-/// </summary>
+
 public enum MovementSkillType
 {
     None,         // Nenhuma ação, usado como padrão.
@@ -53,7 +41,8 @@ public enum PlayerState
     IsJumping,      // A velocidade Y é positiva?
     IsInAir,
     IsInParabola,   // Está no arco de um lançamento (como o WallDashJump)?
-    IsWallJumping   // Está no breve estado de pulo de parede?
+    IsWallJumping,   // Está no breve estado de pulo de parede?
+    IsLanding
 
 }
 
