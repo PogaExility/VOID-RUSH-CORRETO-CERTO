@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: DashFoda
   m_EditorClassIdentifier: 
   skillName: DashFoda
+  cooldownDuration: 0.5
   energyCost: 10
   skillClass: 0
   requiredKeys: 
   triggerKeys: 71000000
+  cancelIfKeysHeld: 
   actionToPerform: 2
   conditionGroups:
   - logicType: 1
@@ -34,6 +36,11 @@ MonoBehaviour:
   dashJump_DashSpeed: 25
   dashJump_DashDuration: 0.4
   dashJump_JumpForce: 15
+  dashJump_InputBuffer: 0.15
+  dashJump_ParabolaDamping: 1
+  dashJump_GravityScaleOnFall: 2.5
   wallDashJump_LaunchForceX: 25
   wallDashJump_LaunchForceY: 15
+  wallDashJump_InputBuffer: 0.15
   wallDashJump_ParabolaDamping: 0.3
+  wallDashJump_GravityScaleOnFall: 2.5

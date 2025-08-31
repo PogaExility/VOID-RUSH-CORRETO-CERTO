@@ -6,9 +6,9 @@ public class CursorManager : MonoBehaviour
     public Texture2D inventoryCursor;
 
     [Header("Hotspots possíveis (px a partir do canto SUPERIOR ESQUERDO da textura)")]
-    public Vector2Int hotspotBaixo = new Vector2Int(115, 55);
-    public Vector2Int hotspotMeio = new Vector2Int(115, 35);
-    public Vector2Int hotspotAlto = new Vector2Int(115, 10); // <<< MAIS ALTO
+    public Vector2Int hotspotBaixo = new Vector2Int(11, 5);
+    public Vector2Int hotspotMeio = new Vector2Int(11, 4);
+    public Vector2Int hotspotAlto = new Vector2Int(11, 3); // <<< MAIS ALTO
 
     public enum HotspotOption { Baixo, Meio, Alto }
     [Header("Hotspot ativo")]

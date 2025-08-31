@@ -35,7 +35,7 @@ MonoBehaviour:
   dashJump_DashSpeed: 25
   dashJump_DashDuration: 0.2
   dashJump_JumpForce: 10
-  dashJump_InputBuffer: 0.7
+  dashJump_InputBuffer: 10
   dashJump_ParabolaDamping: 0.5
   dashJump_GravityScaleOnFall: 2
   wallDashJump_LaunchForceX: 25

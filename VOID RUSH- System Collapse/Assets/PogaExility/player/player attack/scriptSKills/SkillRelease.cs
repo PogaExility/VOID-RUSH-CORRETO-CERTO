@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Linq;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(AdvancedPlayerMovement2D))]
 public class SkillRelease : MonoBehaviour
@@ -10,6 +11,7 @@ public class SkillRelease : MonoBehaviour
     private AdvancedPlayerMovement2D movement;
     private PlayerController playerController;
     private float dashInputBufferTimer = 0f;
+    private Dictionary<SkillSO, float> skillCooldowns = new Dictionary<SkillSO, float>();
     public void SetDashBuffer(float bufferTime)
     {
         dashInputBufferTimer = bufferTime;
@@ -25,26 +27,32 @@ public class SkillRelease : MonoBehaviour
 
     void Update()
     {
-        // 1. CONTA O CRONÔMETRO DO BUFFER
+        // 1. Atualiza o timer do buffer de input
         if (dashInputBufferTimer > 0)
         {
             dashInputBufferTimer -= Time.deltaTime;
         }
 
-        // 2. REGISTRA O INPUT DE DASH PARA O BUFFER
-        // Pega a skill de dash ativa do PlayerController
-        SkillSO dashSkill = playerController.GetActiveDashSkill();
-        if (dashSkill != null)
+        // 2. ATUALIZA TODOS OS COOLDOWNS ATIVOS
+        // Se não houver skills em cooldown, esta parte é pulada (super eficiente).
+        if (skillCooldowns.Count > 0)
         {
-            // Se o jogador pressionou a tecla de gatilho do dash...
-            if (dashSkill.triggerKeys.Any(key => Input.GetKeyDown(key)))
+            // Cria uma lista das skills em cooldown para poder modificar o dicionário com segurança.
+            List<SkillSO> skillsOnCooldown = new List<SkillSO>(skillCooldowns.Keys);
+
+            foreach (SkillSO skill in skillsOnCooldown)
             {
-                // ...inicia o cronômetro. O tempo é pego da skill de DashJump.
-                dashInputBufferTimer = playerController.dashJumpSkill.dashJump_InputBuffer;
+                // Diminui o tempo do cooldown
+                skillCooldowns[skill] -= Time.deltaTime;
+                // Se o tempo acabou, remove a skill do dicionário.
+                if (skillCooldowns[skill] <= 0)
+                {
+                    skillCooldowns.Remove(skill);
+                }
             }
         }
 
-        // 3. LÓGICA ORIGINAL DE RESETAR PULOS AÉREOS
+        // 3. Lógica original de resetar pulos aéreos
         SkillSO activeJumpSkill = playerController.GetActiveJumpSkill();
         if (activeJumpSkill != null && movement.IsGrounded())
         {
@@ -52,31 +60,34 @@ public class SkillRelease : MonoBehaviour
         }
     }
 
-
-    // Dentro do SkillRelease.cs
-
-    // Em SkillRelease.cs
-    // Substitua sua função TryActivateSkill por esta:
     public bool TryActivateSkill(SkillSO skill)
     {
         if (skill == null) return false;
 
-        // CORREÇÃO CRÍTICA: Checa o cancelamento ANTES de tudo e para TODAS as skills.
-        if (skill.cancelIfKeysHeld.Any(key => Input.GetKey(key)))
+        // --- A NOVA CHECAGEM DE COOLDOWN ---
+        // Se a skill que estamos tentando usar está no dicionário, significa que ela está em cooldown.
+        if (skillCooldowns.ContainsKey(skill))
         {
-            return false;
+            return false; // Falha imediatamente.
         }
 
-        // Se outra ação já está rodando, falha.
         if (currentActionCoroutine != null) return false;
+        if (skill.cancelIfKeysHeld.Any(key => Input.GetKey(key))) return false;
+        if (!CheckKeyPress(skill) || !CheckStateConditions(skill)) return false;
 
-        // Checagens normais de tecla e estado.
-        if (!CheckKeyPress(skill) || !CheckStateConditions(skill))
+        // Se a skill foi executada com sucesso...
+        if (ExecuteAction(skill))
         {
-            return false;
+            // ...e se ela TEM um cooldown...
+            if (skill.cooldownDuration > 0)
+            {
+                // ...adiciona ela ao dicionário com sua duração total.
+                skillCooldowns[skill] = skill.cooldownDuration;
+            }
+            return true; // Retorna sucesso.
         }
 
-        return ExecuteAction(skill);
+        return false;
     }
 
 

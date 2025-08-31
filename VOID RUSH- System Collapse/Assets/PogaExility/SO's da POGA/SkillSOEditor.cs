@@ -22,6 +22,7 @@ public class SkillSOEditor : Editor
         // --- Bloco de Informações Gerais (Sempre Visível) ---
         EditorGUILayout.LabelField("Informações Gerais", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("skillName"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("cooldownDuration"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("energyCost"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("skillClass"));
         EditorGUILayout.Space(10);

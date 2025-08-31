@@ -25,13 +25,18 @@ public class ConditionGroup
 [CreateAssetMenu(fileName = "NewSkill", menuName = "NEXUS/Skill (Avançado)")]
 public class SkillSO : ScriptableObject
 {
+
+
     [Header("Informações Gerais")]
     [Tooltip("Nome da habilidade para referência no editor.")]
     public string skillName;
+    [Tooltip("Duração do cooldown em segundos. Deixe em 0 para não ter cooldown.")]
+    public float cooldownDuration = 0f;
     [Tooltip("Custo de energia para usar a habilidade.")]
     public float energyCost = 0f;
     [Tooltip("A categoria geral da habilidade (usado para organizar o editor).")]
     public SkillClass skillClass;
+
 
     [Header("Sistema de Ativação")]
     [Tooltip("Todas as teclas que DEVEM estar sendo seguradas para que a skill possa ser ativada.")]
