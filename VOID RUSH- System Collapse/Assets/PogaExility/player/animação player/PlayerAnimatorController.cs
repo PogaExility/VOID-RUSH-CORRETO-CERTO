@@ -1,5 +1,6 @@
 using UnityEngine;
 
+
 public enum PlayerAnimState
 {
     parado,
@@ -15,11 +16,14 @@ public enum PlayerAnimState
     flip
 }
 
+
 [RequireComponent(typeof(Animator))]
 public class PlayerAnimatorController : MonoBehaviour
 {
     private Animator animator;
     private PlayerAnimState currentState;
+    
+   
 
     // Hashes dos nomes dos estados
     private static readonly int ParadoHash = Animator.StringToHash("parado");
@@ -41,7 +45,10 @@ public class PlayerAnimatorController : MonoBehaviour
     {
         animator = GetComponent<Animator>();
     }
-
+    public Animator GetAnimator()
+    {
+        return animator;
+    }
     public void PlayState(PlayerAnimState state)
     {
         if (state == currentState) return;

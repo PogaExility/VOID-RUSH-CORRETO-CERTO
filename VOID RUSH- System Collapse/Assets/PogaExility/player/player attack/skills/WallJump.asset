@@ -17,6 +17,7 @@ MonoBehaviour:
   skillClass: 0
   requiredKeys: 
   triggerKeys: 20000000
+  cancelIfKeysHeld: 
   actionToPerform: 5
   conditionGroups:
   - logicType: 0

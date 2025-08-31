@@ -1,9 +1,11 @@
-using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 [RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(SkillRelease))]
 public class PlayerController : MonoBehaviour
 {
+   
     // --- SUAS REFERÊNCIAS ORIGINAIS ---
     [Header("Referências de Gerenciamento")]
     public CursorManager cursorManager;
@@ -11,6 +13,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Referências de UI")]
     public GameObject inventoryPanel;
+
 
 
     [Header("Referências de Movimento")]
@@ -54,9 +57,12 @@ public class PlayerController : MonoBehaviour
     private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
+    private Animator animator;
+
 
     void Awake()
     {
+        animator = GetComponent<Animator>();
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
         skillRelease = GetComponent<SkillRelease>();
         combatController = GetComponent<CombatController>();
@@ -81,6 +87,10 @@ public class PlayerController : MonoBehaviour
             cursorManager.SetDefaultCursor();
         }
     }
+
+    // Adicione esta corotina em qualquer lugar dentro da classe PlayerController
+   // Em PlayerController.cs
+
 
     // Em PlayerController.cs
     void Update()
@@ -189,41 +199,24 @@ public class PlayerController : MonoBehaviour
     // Em PlayerController.cs
     // Em PlayerController.cs
     // Em PlayerController.cs
+    // Em PlayerController.cs
+
     private void HandleSkillInput()
     {
-        if (isLanding) return;
-
-        // LER AS TECLAS DE FORMA EXPLÍCITA
-        bool jumpKeyDown = Input.GetKeyDown(KeyCode.Space);
-        bool dashKeyDown = Input.GetKeyDown(KeyCode.Q);
-        bool dashKeyHeld = Input.GetKey(KeyCode.Q);
-        bool jumpKeyHeld = Input.GetKey(KeyCode.Space);
-
-        // --- LÓGICA DE INPUT CONTEXTUAL ---
-
-        // CONTEXTO 1: JÁ ESTÁ DESLIZANDO
         if (movementScript.IsWallSliding())
         {
-            if ((jumpKeyDown && dashKeyHeld) || (dashKeyDown && jumpKeyHeld)) { if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return; }
-            if (jumpKeyDown) { if (skillRelease.TryActivateSkill(wallJumpSkill)) return; }
-            if (dashKeyDown) { if (skillRelease.TryActivateSkill(wallDashSkill)) return; }
+            if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
+            if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
+            if (skillRelease.TryActivateSkill(wallDashSkill)) return;
         }
-        // CONTEXTO 2: TOCANDO A PAREDE, MAS NÃO DESLIZANDO (PODE COMEÇAR A DESLIZAR)
         else if (movementScript.IsTouchingWall() && !movementScript.IsGrounded())
         {
-            // Se apertar Espaço aqui, a ÚNICA ação possível é iniciar o WallSlide.
-            if (jumpKeyDown)
-            {
-                if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
-            }
+            if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
         }
-        // CONTEXTO 3: GERAL (CHÃO/AR LIVRE)
-        else
-        {
-            if ((jumpKeyDown && dashKeyHeld) || (dashKeyDown && jumpKeyHeld)) { if (skillRelease.TryActivateSkill(dashJumpSkill)) return; }
-            if (jumpKeyDown) { if (skillRelease.TryActivateSkill(activeJumpSkill)) return; }
-            if (dashKeyDown) { if (skillRelease.TryActivateSkill(activeDashSkill)) return; }
-        }
+
+        if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
+        if (skillRelease.TryActivateSkill(activeJumpSkill)) return;
+        if (skillRelease.TryActivateSkill(activeDashSkill)) return;
     }
     private void HandleCombatInput()
     {
@@ -231,12 +224,21 @@ public class PlayerController : MonoBehaviour
         if (!movementScript.IsDashing()) combatController.ProcessCombatInput();
     }
 
-    // Dentro do seu PlayerController.cs
+    // Em PlayerController.cs
 
+    // Substitua a sua UpdateAnimations inteira por esta
+    // Em PlayerController.cs
+    // Em PlayerController.cs
     // Em PlayerController.cs
     private void UpdateAnimations()
     {
-        if (isLanding) return;
+        // TRAVA PRINCIPAL: Se estamos no processo de pouso, não faça mais nada.
+        if (isLanding)
+        {
+            return;
+        }
+
+        // Se acabamos de tocar o chão, INICIA o processo de pouso.
         if (!wasGroundedLastFrame && movementScript.IsGrounded())
         {
             isLanding = true;
@@ -245,57 +247,23 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (movementScript.IsWallSliding())
-        {
-            animatorController.PlayState(PlayerAnimState.derrapagem);
-        }
+        // A LINHA PROBLEMÁTICA FOI REMOVIDA DAQUI
+
+        // --- LÓGICA NORMAL DE ANIMAÇÃO (só roda se NÃO estivermos pousando) ---
+        if (movementScript.IsWallSliding()) animatorController.PlayState(PlayerAnimState.derrapagem);
+        else if (movementScript.IsInParabolaArc()) animatorController.PlayState(PlayerAnimState.dashAereo);
+        else if (movementScript.IsDashing()) animatorController.PlayState(movementScript.IsGrounded() ? PlayerAnimState.dash : PlayerAnimState.dashAereo);
         else if (!movementScript.IsGrounded())
         {
-            // --- AQUI ESTÁ A CORREÇÃO DA ANIMAÇÃO ---
-            // Se estiver em uma parábola (DashJump ou WallDashJump), a animação é de dash aéreo.
-            if (movementScript.IsInParabolaArc())
-            {
-                animatorController.PlayState(PlayerAnimState.dashAereo);
-            }
-            // Se não, continua com a lógica normal.
-            else if (movementScript.IsDashing())
-            {
-                animatorController.PlayState(PlayerAnimState.dashAereo);
-            }
-            else if (movementScript.GetVerticalVelocity() > 0.1f)
-            {
-                animatorController.PlayState(PlayerAnimState.pulando);
-            }
-            else
-            {
-                animatorController.PlayState(PlayerAnimState.falling);
-            }
+            if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando);
+            else animatorController.PlayState(PlayerAnimState.falling);
         }
         else
         {
-            if (movementScript.IsDashing())
-            {
-                animatorController.PlayState(PlayerAnimState.dash);
-            }
-            else if (movementScript.IsMoving())
-            {
-                animatorController.PlayState(PlayerAnimState.andando);
-            }
-            else
-            {
-                animatorController.PlayState(PlayerAnimState.parado);
-            }
+            if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando);
+            else animatorController.PlayState(PlayerAnimState.parado);
         }
     }
-
-    public void OnLandingComplete()
-    {
-        isLanding = false;
-        movementScript.OnLandingComplete();
-    }
-
-    // Adicione estas duas funções inteiras em qualquer lugar dentro da classe PlayerController
-
     private void HandlePowerModeToggle()
     {
         if (Input.GetKeyDown(KeyCode.G))
@@ -329,4 +297,12 @@ public class PlayerController : MonoBehaviour
     {
         return activeJumpSkill;
     }
+    // Em PlayerController.cs
+    public void OnLandingAnimationEnd()
+    {
+        Debug.Log("Animação de pouso TERMINOU. Liberando o jogador.");
+        isLanding = false; // Libera a trava da animação
+        movementScript.OnLandingComplete(); // Libera a física do personagem
+    }
+
 }

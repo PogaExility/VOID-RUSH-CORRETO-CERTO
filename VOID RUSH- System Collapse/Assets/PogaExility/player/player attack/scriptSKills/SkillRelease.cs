@@ -200,15 +200,17 @@ public class SkillRelease : MonoBehaviour
                 return false; // Falha se não puder pular
 
             // --- O RESTO DAS SUAS AÇÕES, INTACTAS ---
+
             case MovementSkillType.Dash:
-                // Chama a corotina de Dash correta e funcional.
-                currentActionCoroutine = StartCoroutine(ExecuteDashCoroutine(skill.dashSpeed, skill.dashDuration));
+                // CORREÇÃO: Envie o 'skill' inteiro, não seus parâmetros separados.
+                currentActionCoroutine = StartCoroutine(ExecuteDashCoroutine(skill));
                 return true;
 
 
-            case MovementSkillType.WallDash:
-                // Também chama a corotina de WallDash, que lida com a ejeção.
-                currentActionCoroutine = StartCoroutine(ExecuteWallDashCoroutine(skill.dashSpeed, skill.dashDuration));
+
+            case MovementSkillType.WallDash: // <-- FAÇA O WALLDASH "CAIR" PARA O DASH
+                                             // Ambos agora usam a MESMA corotina, que já está corrigida.
+                currentActionCoroutine = StartCoroutine(ExecuteDashCoroutine(skill));
                 return true;
 
             // Em SkillRelease.cs -> ExecuteAction
@@ -255,29 +257,51 @@ public class SkillRelease : MonoBehaviour
     // --- Corotinas que Executam as Ações Físicas ---
 
     // Corotina para Dash Normal / Aéreo
-    // Substitua a corotina ExecuteDashCoroutine em SkillRelease.cs por esta
+
+    // Em SkillRelease.cs
+
     // Em SkillRelease.cs
     // Em SkillRelease.cs
-    private IEnumerator ExecuteDashCoroutine(float speed, float duration)
+    // Em SkillRelease.cs
+    // Em SkillRelease.cs
+    private IEnumerator ExecuteDashCoroutine(SkillSO skill)
     {
         movement.OnDashStart();
 
-        // A DIREÇÃO JÁ ESTÁ CORRETA. SEMPRE.
-        // A "race condition" foi eliminada na arquitetura.
-        Vector2 dashDirection = movement.GetFacingDirection();
+        Vector2 direction;
+        float inputX = Input.GetAxisRaw("Horizontal");
+
+        if (Mathf.Abs(inputX) > 0.1f)
+        {
+            direction = new Vector2(Mathf.Sign(inputX), 0);
+        }
+        else
+        {
+            direction = movement.GetFacingDirection();
+        }
+        if (skill.actionToPerform == MovementSkillType.WallDash)
+        {
+            // --- A ORDEM QUE FALTAVA ---
+            movement.StopWallSlide();
+
+            direction = movement.GetWallEjectDirection();
+        }
+
+        // --- A CORREÇÃO DO ERRO DE DIGITAÇÃO ---
+        // A segunda condição agora é 'movement.IsFacingRight()', como deveria ser.
+        if ((direction.x > 0 && !movement.IsFacingRight()) || (direction.x < 0 && movement.IsFacingRight()))
+        {
+            movement.Flip();
+        }
+        // --- FIM DA CORREÇÃO ---
 
         float originalGravity = movement.GetRigidbody().gravityScale;
         movement.SetGravityScale(0f);
-
         float timer = 0f;
-        while (timer < duration)
+        while (timer < skill.dashDuration)
         {
-            if (movement.IsTouchingWall()) break;
-
-            // Preserva o arco do pulo
-            float currentYVelocity = movement.GetRigidbody().linearVelocity.y;
-            movement.SetVelocity(dashDirection.x * speed, currentYVelocity);
-
+            if (movement.IsTouchingWall() && timer > 0.1f) break;
+            movement.SetVelocity(direction.x * skill.dashSpeed, movement.GetRigidbody().linearVelocity.y);
             timer += Time.deltaTime;
             yield return null;
         }
@@ -287,7 +311,6 @@ public class SkillRelease : MonoBehaviour
         movement.OnDashEnd();
         currentActionCoroutine = null;
     }
-
     // Garanta que esta corotina exista em SkillRelease.cs
     private IEnumerator WaitForParabolaEnd()
     {

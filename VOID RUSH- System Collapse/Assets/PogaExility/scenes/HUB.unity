@@ -13689,9 +13689,21 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1337808937797036, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.17449951
+      objectReference: {fileID: 0}
     - target: {fileID: 3345193402010468786, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 3884537676286506983, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4622977748956729187, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4708386788519731153, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.x
@@ -13733,11 +13745,20 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4865043882089253536, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0.16023064
+      objectReference: {fileID: 0}
+    - target: {fileID: 6597403887149215505, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8298078936381974819, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: dashJumpSkill
       value: 
       objectReference: {fileID: 11400000, guid: 5f11cbffc7ca4804dadd1ed7b7727ed2, type: 2}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 3884537676286506983, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
