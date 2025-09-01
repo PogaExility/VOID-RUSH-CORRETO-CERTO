@@ -30,7 +30,7 @@ public class InventoryItemView : MonoBehaviour,
         // âncora/pivô top-left para casar com o grid
         rectTransform.pivot = new Vector2(0f, 0f);
         rectTransform.anchorMin = new Vector2(0f, 0f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.anchorMax = new Vector2(0f, 1f);
 
         if (hoverOverlay != null) hoverOverlay.gameObject.SetActive(false);
 
