@@ -4,288 +4,316 @@ using System.Collections.Generic;
 
 public class InventoryManager : MonoBehaviour
 {
-    // --- Eventos para comunicar com outros sistemas ---
+    // --- Estrutura para rastrear itens temporários ---
+    private struct TemporaryItemEntry
+    {
+        public ItemSO item;
+        public int amount;
+    }
+
+    // Eventos para a UI se atualizar
     public event Action<ItemSO, int, int, bool> OnItemAdded;
     public event Action<ItemSO> OnItemRemoved;
-    public event Action<ItemSO, bool> OnItemHeld;
-    public event Action<ItemSO> OnItemDropped;
+    public event Action<ItemSO> OnItemHeld;
 
-    [Header("Configuração do Grid")]
+    [Header("Configuração da Mochila")]
     public int gridWidth = 10;
     public int gridHeight = 6;
 
-    [Header("Referências de Equipamento")]
-    public ItemSO equippedMeleeWeapon;
-    public ItemSO equippedFirearm;
-    public ItemSO equippedBuster;
+    [Header("Estado Atual (Debug)")]
+    [SerializeField] private ItemSO[,] inventoryGrid;
+    [SerializeField] private int[,] stackCounts;
+    [SerializeField] public ItemSO equippedWeapon;
 
-    // --- Estado do Inventário ---
     public ItemSO heldItem { get; private set; }
-    public bool isHeldItemRotated { get; private set; }
-    private ItemSO[,] inventoryGrid;
-    public List<ItemSO> inventoryItems = new List<ItemSO>();
-    private Dictionary<ItemSO, bool> itemRotations = new Dictionary<ItemSO, bool>();
 
-    // --- A NOVA LÓGICA DE QUEST ---
-    private List<ItemSO> temporaryItems = new List<ItemSO>();
-    private ItemSO potentiallyTemporaryItem; // Guarda o item que acabamos de pegar do chão
+    // --- LÓGICA DE ITENS DE QUEST (REINTEGRADA) ---
+    private List<TemporaryItemEntry> temporaryItems = new List<TemporaryItemEntry>();
+
+    private PlayerStats playerStats;
+    private WeaponHandler weaponHandler;
 
     void Awake()
     {
         EnsureGridExists();
+        playerStats = FindObjectOfType<PlayerStats>();
+        weaponHandler = FindObjectOfType<WeaponHandler>();
     }
 
-    private void EnsureGridExists()
+    public void EnsureGridExists()
     {
-        if (inventoryGrid == null)
+        if (inventoryGrid == null || inventoryGrid.GetLength(0) != gridWidth || inventoryGrid.GetLength(1) != gridHeight)
         {
             inventoryGrid = new ItemSO[gridWidth, gridHeight];
+            stackCounts = new int[gridWidth, gridHeight];
         }
     }
 
-    // --- AS NOVAS FUNÇÕES PÚBLICAS DE QUEST ---
+    // --- FUNÇÕES DE QUEST PÚBLICAS (AGORA FUNCIONAM) ---
 
     /// <summary>
-    /// Chamado pelo PlayerController ANTES de pegar um item.
-    /// Ele "avisa" ao manager que o próximo item a ser pego PODE ser temporário.
-    /// </summary>
-    public void FlagItemAsPotentiallyTemporary(ItemSO item)
-    {
-        if (QuestManager.Instance != null && QuestManager.Instance.IsQuestActive && item.isLostOnDeathDuringQuest)
-        {
-            potentiallyTemporaryItem = item;
-        }
-    }
-
-    /// <summary>
-    /// Transforma todos os itens temporários em permanentes.
+    /// Transforma todos os itens temporários em permanentes ao completar uma quest.
     /// </summary>
     public void CommitTemporaryItems()
     {
         if (temporaryItems.Count > 0)
         {
-            Debug.Log($"Itens de quest ({temporaryItems.Count}) foram salvos permanentemente.");
+            Debug.Log($"Itens de quest ({temporaryItems.Count} tipos) foram salvos permanentemente.");
             temporaryItems.Clear();
         }
     }
 
     /// <summary>
-    /// Remove apenas os itens de quest do inventário.
+    /// Remove os itens de quest do inventário ao morrer.
     /// </summary>
     public void ClearTemporaryItems()
     {
         if (temporaryItems.Count > 0)
         {
-            Debug.Log($"Removendo {temporaryItems.Count} itens de quest por morte.");
-            foreach (ItemSO item in new List<ItemSO>(temporaryItems))
+            Debug.Log($"Removendo {temporaryItems.Count} tipos de itens de quest por morte.");
+            foreach (var entry in temporaryItems)
             {
-                RemoveItem(item); // Usa sua função de remoção já existente
+                RemoveItemByType(entry.item, entry.amount);
             }
             temporaryItems.Clear();
         }
     }
 
-    // --- SUAS FUNÇÕES ORIGINAIS (COM PEQUENAS MODIFICAÇÕES) ---
+    // --- MÉTODOS DE MANIPULAÇÃO DE ITENS (ATUALIZADOS) ---
 
-    public void StartHoldingItem(ItemSO item)
+    public bool TryAddItem(ItemSO item, int amount = 1)
     {
-        if (heldItem != null) return;
-        heldItem = item;
-        isHeldItemRotated = false;
-        OnItemHeld?.Invoke(heldItem, isHeldItemRotated);
+        if (item == null || amount <= 0) return false;
+
+        // Antes de adicionar, verifica se é um item de quest
+        bool isQuestItem = QuestManager.Instance != null && QuestManager.Instance.IsQuestActive && item.isLostOnDeathDuringQuest;
+
+        // Se for arma, tenta equipar
+        if (item.itemType == ItemType.Weapon)
+        {
+            if (TryEquipWeapon(item) && isQuestItem)
+            {
+                RecordTemporaryItem(item, 1);
+            }
+            return true;
+        }
+
+        int amountLeftToAdd = amount;
+
+        // Tenta empilhar
+        if (item.stackable)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                for (int x = 0; x < gridWidth; x++)
+                {
+                    if (inventoryGrid[x, y] == item && stackCounts[x, y] < item.maxStack)
+                    {
+                        int spaceAvailable = item.maxStack - stackCounts[x, y];
+                        int amountToStack = Mathf.Min(amountLeftToAdd, spaceAvailable);
+
+                        stackCounts[x, y] += amountToStack;
+                        amountLeftToAdd -= amountToStack;
+
+                        if (isQuestItem) RecordTemporaryItem(item, amountToStack);
+
+                        OnItemAdded?.Invoke(item, x, y, false);
+                        if (amountLeftToAdd <= 0) return true;
+                    }
+                }
+            }
+        }
+
+        // Tenta colocar em slots vazios
+        while (amountLeftToAdd > 0)
+        {
+            bool placed = false;
+            for (int y = 0; y < gridHeight && amountLeftToAdd > 0; y++)
+            {
+                for (int x = 0; x < gridWidth && amountLeftToAdd > 0; x++)
+                {
+                    if (inventoryGrid[x, y] == null)
+                    {
+                        int amountToPlace = item.stackable ? Mathf.Min(amountLeftToAdd, item.maxStack) : 1;
+
+                        inventoryGrid[x, y] = item;
+                        stackCounts[x, y] = amountToPlace;
+                        amountLeftToAdd -= amountToPlace;
+
+                        if (isQuestItem) RecordTemporaryItem(item, amountToPlace);
+
+                        OnItemAdded?.Invoke(item, x, y, false);
+                        placed = true;
+                        break; // Sai do loop interno para procurar o próximo slot vazio
+                    }
+                }
+                if (placed) break; // Sai do loop externo
+            }
+
+            if (!placed)
+            {
+                Debug.LogWarning("Inventário cheio!");
+                return false;
+            }
+        }
+        return true;
     }
 
-    public void PickUpItemFromGrid(ItemSO itemToPickUp)
+    /// <summary>
+    /// Registra um item e sua quantidade como temporário.
+    /// </summary>
+    private void RecordTemporaryItem(ItemSO item, int amount)
     {
-        if (heldItem != null) return;
-        bool wasRotated = itemRotations.ContainsKey(itemToPickUp) && itemRotations[itemToPickUp];
-        RemoveItem(itemToPickUp);
-        heldItem = itemToPickUp;
-        isHeldItemRotated = wasRotated;
-        OnItemHeld?.Invoke(heldItem, isHeldItemRotated);
+        // Se já temos esse tipo de item na lista, apenas somamos a quantidade.
+        for (int i = 0; i < temporaryItems.Count; i++)
+        {
+            if (temporaryItems[i].item == item)
+            {
+                var entry = temporaryItems[i];
+                entry.amount += amount;
+                temporaryItems[i] = entry;
+                Debug.Log($"Adicionado +{amount} de '{item.itemName}' à lista de itens temporários.");
+                return;
+            }
+        }
+
+        // Se não, adiciona uma nova entrada.
+        temporaryItems.Add(new TemporaryItemEntry { item = item, amount = amount });
+        Debug.Log($"'{item.itemName}' (x{amount}) foi registrado como item de quest temporário.");
     }
 
-    public void RotateHeldItem()
+    /// <summary>
+    /// Remove uma quantidade específica de um tipo de item, procurando em todo o inventário.
+    /// </summary>
+    private void RemoveItemByType(ItemSO itemToRemove, int amount)
     {
+        int amountLeftToRemove = amount;
+
+        // Itera de trás para frente para remover de pilhas parciais primeiro
+        for (int y = gridHeight - 1; y >= 0; y--)
+        {
+            for (int x = gridWidth - 1; x >= 0; x--)
+            {
+                if (inventoryGrid[x, y] == itemToRemove)
+                {
+                    int amountInSlot = stackCounts[x, y];
+                    int amountToRemoveFromSlot = Mathf.Min(amountLeftToRemove, amountInSlot);
+
+                    RemoveItemAt(x, y, amountToRemoveFromSlot);
+                    amountLeftToRemove -= amountToRemoveFromSlot;
+
+                    if (amountLeftToRemove <= 0) return;
+                }
+            }
+        }
+    }
+
+    // O resto do seu script (TryEquipWeapon, UseItem, RemoveItemAt, PlaceHeldItemStack, etc.) continua aqui...
+    // Eles já foram corrigidos na resposta anterior e não precisam de mais alterações para a lógica de quest.
+    #region Resto do Código
+    public int GetCountAt(int x, int y)
+    {
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return 0;
+        return stackCounts[x, y];
+    }
+
+    public ItemSO GetItemAt(int x, int y)
+    {
+        if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return null;
+        return inventoryGrid[x, y];
+    }
+    public bool TryEquipWeapon(ItemSO weapon)
+    {
+        if (weapon.itemType != ItemType.Weapon) return false;
+
+        if (equippedWeapon == null)
+        {
+            equippedWeapon = weapon;
+            // weaponHandler.Equip(equippedWeapon); // Integração
+            OnItemAdded?.Invoke(weapon, -1, -1, false); // -1,-1 indica slot de equipamento
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    public void UseItem(int x, int y)
+    {
+        ItemSO item = GetItemAt(x, y);
+        if (item == null) return;
+
+        if (item.itemType == ItemType.Consumable)
+        {
+            playerStats.Heal(item.healthToRestore);
+            RemoveItemAt(x, y, 1);
+        }
+    }
+    public void RemoveItemAt(int x, int y, int amount = int.MaxValue)
+    {
+        ItemSO item = GetItemAt(x, y);
+        if (item == null) return;
+
+        int currentStack = GetCountAt(x, y);
+        int amountToRemove = Mathf.Min(amount, currentStack);
+
+        stackCounts[x, y] -= amountToRemove;
+
+        OnItemRemoved?.Invoke(item);
+
+        if (stackCounts[x, y] <= 0)
+        {
+            inventoryGrid[x, y] = null;
+        }
+
+        OnItemAdded?.Invoke(inventoryGrid[x, y], x, y, false);
+    }
+
+    public bool PlaceHeldItemStack(int x, int y)
+    {
+        if (heldItem == null) return false;
+
+        ItemSO targetSlotItem = GetItemAt(x, y);
+
+        if (targetSlotItem == null)
+        {
+            inventoryGrid[x, y] = heldItem;
+            stackCounts[x, y] = 1;
+            OnItemAdded?.Invoke(heldItem, x, y, false);
+            return true;
+        }
+        else if (targetSlotItem == heldItem && targetSlotItem.stackable && GetCountAt(x, y) < targetSlotItem.maxStack)
+        {
+            stackCounts[x, y]++;
+            OnItemAdded?.Invoke(heldItem, x, y, false);
+            return true;
+        }
+
+        return false;
+    }
+
+    public void StartHoldingItem(int x, int y)
+    {
+        if (heldItem != null) return;
+
+        heldItem = GetItemAt(x, y);
         if (heldItem != null)
         {
-            isHeldItemRotated = !isHeldItemRotated;
-            OnItemHeld?.Invoke(heldItem, isHeldItemRotated);
+            RemoveItemAt(x, y, 1);
+            OnItemHeld?.Invoke(heldItem);
         }
     }
 
     public void DropHeldItem()
     {
-        if (heldItem != null)
+        if (heldItem == null) return;
+
+        if (!TryAddItem(heldItem))
         {
-            OnItemDropped?.Invoke(heldItem);
-            heldItem = null;
-
-            // --- MUDANÇA IMPORTANTE ---
-            // Se o item dropado era o que pegamos do chão, limpamos a flag.
-            potentiallyTemporaryItem = null;
+            Debug.Log("Não coube no inventário, jogou fora: " + heldItem.itemName);
         }
-    }
-
-    public bool PlaceHeldItem(int x, int y)
-    {
-        if (heldItem == null) return false;
-        int width = isHeldItemRotated ? heldItem.height : heldItem.width;
-        int height = isHeldItemRotated ? heldItem.width : heldItem.height;
-        if (!CanPlaceItem(x, y, width, height)) return false;
-        PlaceItem(heldItem, x, y, isHeldItemRotated);
         heldItem = null;
-        return true;
+        OnItemHeld?.Invoke(null);
     }
-
-    public bool AddItem(ItemSO itemToAdd)
-    {
-        EnsureGridExists();
-        for (int y = 0; y < gridHeight; y++)
-        {
-            for (int x = 0; x < gridWidth; x++)
-            {
-                if (CanPlaceItem(x, y, itemToAdd.width, itemToAdd.height))
-                {
-                    PlaceItem(itemToAdd, x, y, false);
-                    return true;
-                }
-            }
-        }
-        Debug.Log("Não há espaço no inventário para: " + itemToAdd.itemName);
-        return false;
-    }
-
-    private void PlaceItem(ItemSO item, int startX, int startY, bool isRotated)
-    {
-        EnsureGridExists();
-        int width = isRotated ? item.height : item.width;
-        int height = isRotated ? item.width : item.height;
-        for (int j = 0; j < height; j++)
-        {
-            for (int i = 0; i < width; i++)
-            {
-                inventoryGrid[startX + i, startY + j] = item;
-            }
-        }
-        if (!inventoryItems.Contains(item))
-        {
-            inventoryItems.Add(item);
-        }
-        itemRotations[item] = isRotated;
-        OnItemAdded?.Invoke(item, startX, startY, isRotated);
-
-        // --- MUDANÇA IMPORTANTE ---
-        // Se o item que acabamos de colocar no grid era o que pegamos do chão,
-        // agora o confirmamos como um item temporário.
-        if (item == potentiallyTemporaryItem)
-        {
-            if (!temporaryItems.Contains(item))
-            {
-                temporaryItems.Add(item);
-                Debug.Log($"'{item.itemName}' foi confirmado como item de quest temporário.");
-            }
-            potentiallyTemporaryItem = null; // Limpa a flag
-        }
-    }
-
-    public void RemoveItem(ItemSO itemToRemove)
-    {
-        EnsureGridExists();
-        if (!inventoryItems.Contains(itemToRemove)) return;
-        if (FindItemPosition(itemToRemove, out int itemX, out int itemY))
-        {
-            bool wasRotated = itemRotations.ContainsKey(itemToRemove) && itemRotations[itemToRemove];
-            int width = wasRotated ? itemToRemove.height : itemToRemove.width;
-            int height = wasRotated ? itemToRemove.width : itemToRemove.height;
-            for (int j = 0; j < height; j++)
-            {
-                for (int i = 0; i < width; i++)
-                {
-                    if (itemX + i < gridWidth && itemY + j < gridHeight)
-                        inventoryGrid[itemX + i, itemY + j] = null;
-                }
-            }
-        }
-        inventoryItems.Remove(itemToRemove);
-        itemRotations.Remove(itemToRemove);
-        OnItemRemoved?.Invoke(itemToRemove);
-    }
-
-    public void DropItemFromUI(ItemSO itemToDrop)
-    {
-        if (inventoryItems.Contains(itemToDrop))
-        {
-            RemoveItem(itemToDrop);
-            OnItemDropped?.Invoke(itemToDrop);
-        }
-    }
-
-    public bool CanPlaceItem(int startX, int startY, int width, int height)
-    {
-        EnsureGridExists();
-        if (startX < 0 || startY < 0 || startX + width > gridWidth || startY + height > gridHeight) return false;
-        for (int j = 0; j < height; j++)
-        {
-            for (int i = 0; i < width; i++)
-            {
-                if (inventoryGrid[startX + i, startY + j] != null) return false;
-            }
-        }
-        return true;
-    }
-
-    public bool FindItemPosition(ItemSO item, out int xPos, out int yPos)
-    {
-        EnsureGridExists();
-        for (int y = 0; y < gridHeight; y++)
-        {
-            for (int x = 0; x < gridWidth; x++)
-            {
-                if (inventoryGrid[x, y] == item)
-                {
-                    xPos = x;
-                    yPos = y;
-                    return true;
-                }
-            }
-        }
-        xPos = -1;
-        yPos = -1;
-        return false;
-    }
-
-    public void RedrawAllItems()
-    {
-        EnsureGridExists();
-        foreach (var item in new List<ItemSO>(inventoryItems))
-        {
-            if (FindItemPosition(item, out int x, out int y))
-            {
-                bool isRotated = itemRotations.ContainsKey(item) && itemRotations[item];
-                OnItemAdded?.Invoke(item, x, y, isRotated);
-            }
-        }
-    }
-
-    public void EquipWeapon(ItemSO weaponToEquip)
-    {
-        if (weaponToEquip.itemType != ItemType.Weapon || !inventoryItems.Contains(weaponToEquip)) return;
-        switch (weaponToEquip.weaponType)
-        {
-            case WeaponType.Melee: equippedMeleeWeapon = weaponToEquip; break;
-            case WeaponType.Firearm: equippedFirearm = weaponToEquip; break;
-            case WeaponType.Buster: equippedBuster = weaponToEquip; break;
-        }
-    }
-
-    public void UnequipWeapon(WeaponType weaponType)
-    {
-        switch (weaponType)
-        {
-            case WeaponType.Melee: equippedMeleeWeapon = null; break;
-            case WeaponType.Firearm: equippedFirearm = null; break;
-            case WeaponType.Buster: equippedBuster = null; break;
-        }
-    }
+    #endregion
 }

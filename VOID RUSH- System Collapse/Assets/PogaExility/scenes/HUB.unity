@@ -13873,6 +13873,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -0.16992188
       objectReference: {fileID: 0}
+    - target: {fileID: 5732621870688067184, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: TrailModule.enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5732621870688067184, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: LightsModule.enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5806496525957464640, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0.5
@@ -13908,6 +13916,10 @@ PrefabInstance:
     - target: {fileID: 6475456776236552968, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 218.48001
+      objectReference: {fileID: 0}
+    - target: {fileID: 6820764418786989435, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7041266499297768467, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.x

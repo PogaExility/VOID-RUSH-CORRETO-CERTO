@@ -3,292 +3,191 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using UnityEngine.EventSystems;
 
-[RequireComponent(typeof(Image))]
-public class InventoryGridView : MonoBehaviour, IPointerClickHandler
+public class InventoryGridView : MonoBehaviour, IPointerClickHandler, IDropHandler
 {
     [Header("Referências")]
     public InventoryManager inventoryManager;
-    public RectTransform slotContainer;   // tem GridLayoutGroup
-    public RectTransform itemContainer;   // itens fixos
+    public Canvas mainCanvas;
+
+    [Header("Containers (Pivot e Anchor Top-Left)")]
+    public RectTransform slotContainer;
+    public RectTransform itemContainer;
 
     [Header("Prefabs")]
-    public InventorySlotView slotPrefab;
+    public GameObject slotPrefab;
     public InventoryItemView itemPrefab;
 
-    private readonly List<InventorySlotView> slotViews = new();
-    private readonly Dictionary<ItemSO, InventoryItemView> itemsInView = new();
+    [Header("UI Fantasma")]
+    public InventoryItemView ghostItemView;
 
-    // guarda a rotação VISUAL (0..3) dos itens já colocados no grid
-    private readonly Dictionary<ItemSO, int> itemVisualSteps = new();
-
-    private InventoryItemView heldItemView;
-    private int heldRotationSteps = 0;      // 0..3 (0/90/180/270)
-    private Vector2 dragOffset = Vector2.zero; // em tela
-
-    private bool isGridGenerated = false;
-    private GridLayoutGroup gridLayout;
-    private float cellSize = 0f;
-    private Canvas mainCanvas;
+    public List<InventorySlotView> slotViews = new List<InventorySlotView>();
+    private Dictionary<string, InventoryItemView> itemsInView = new Dictionary<string, InventoryItemView>();
+    private Vector2 dragOffset;
 
     void Awake()
     {
-        GetComponent<Image>().raycastTarget = true;
-
-        gridLayout = slotContainer.GetComponent<GridLayoutGroup>();
-        mainCanvas = GetComponentInParent<Canvas>();
-
-        if (inventoryManager != null)
-        {
-            inventoryManager.OnItemAdded += AddItemView;
-            inventoryManager.OnItemRemoved += RemoveItemView;
-            inventoryManager.OnItemHeld += OnManagerItemHeld;
-        }
-    }
-
-    void OnDestroy()
-    {
-        if (inventoryManager != null)
-        {
-            inventoryManager.OnItemAdded -= AddItemView;
-            inventoryManager.OnItemRemoved -= RemoveItemView;
-            inventoryManager.OnItemHeld -= OnManagerItemHeld;
-        }
+        // Garante que o Pivot e Anchors estão corretos para o cálculo
+        (slotContainer.pivot, slotContainer.anchorMin, slotContainer.anchorMax) = (new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1));
+        (itemContainer.pivot, itemContainer.anchorMin, itemContainer.anchorMax) = (new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1));
     }
 
     void OnEnable()
     {
-        if (!isGridGenerated) GenerateSlotGrid();
+        GenerateSlotGrid();
+        inventoryManager.OnItemAdded += RedrawSlot;
+        inventoryManager.OnItemRemoved += (item) => RedrawAllItems(); // Simples, redesenha tudo na remoção
+        inventoryManager.OnItemHeld += OnManagerItemHeld;
         RedrawAllItems();
     }
 
-    // ---------- Helpers de célula (considera padding/spacing/pivot) ----------
-    private bool TryLocalToCell(Vector2 localInSlots, out int cx, out int cy)
+    void OnDisable()
     {
-        var gl = gridLayout;
-        var rt = slotContainer;
-        var pad = gl.padding;
-
-        float stepX = gl.cellSize.x + gl.spacing.x;
-        float stepY = gl.cellSize.y + gl.spacing.y;
-
-        float tlX = -rt.rect.width * rt.pivot.x + pad.left;
-        float tlY = rt.rect.height * (1f - rt.pivot.y) - pad.top;
-
-        float dx = localInSlots.x - tlX;
-        float dy = tlY - localInSlots.y;
-
-        if (dx < 0f || dy < 0f) { cx = cy = -1; return false; }
-
-        cx = Mathf.FloorToInt(dx / stepX);
-        cy = Mathf.FloorToInt(dy / stepY);
-
-        if (cx < 0 || cx >= inventoryManager.gridWidth ||
-            cy < 0 || cy >= inventoryManager.gridHeight) return false;
-
-        return true;
-    }
-
-    private Vector2 CellTopLeftLocal(int x, int y)
-    {
-        var gl = gridLayout;
-        var rt = slotContainer;
-        var pad = gl.padding;
-
-        float stepX = gl.cellSize.x + gl.spacing.x;
-        float stepY = gl.cellSize.y + gl.spacing.y;
-
-        float tlX = -rt.rect.width * rt.pivot.x + pad.left;
-        float tlY = rt.rect.height * (1f - rt.pivot.y) - pad.top;
-
-        return new Vector2(tlX + x * stepX, tlY - y * stepY);
-    }
-
-    // ---------- Segurar/arrastar/rotacionar ----------
-    private void OnManagerItemHeld(ItemSO item, bool isRotatedFromManager)
-    {
-        if (heldItemView == null)
-        {
-            heldRotationSteps = isRotatedFromManager ? 1 : 0; // base
-            heldItemView = Instantiate(itemPrefab, mainCanvas.transform);
-            heldItemView.GetComponent<CanvasGroup>().blocksRaycasts = false;
-        }
-
-        heldItemView.Render(item, cellSize, heldRotationSteps);
-
-        if (cellSize > 0f)
-            heldItemView.GetComponent<RectTransform>().position =
-                (Vector2)Input.mousePosition - dragOffset;
-    }
-
-    public void BeginHoldingItem(InventoryItemView clickedItemView, PointerEventData eventData)
-    {
-        if (inventoryManager.heldItem != null) return;
-
-        var rt = clickedItemView.GetComponent<RectTransform>();
-        dragOffset = eventData.position - (Vector2)rt.position;
-
-        // ao pegar do grid, se já tínhamos rotação visual salva, usa como base
-        var data = clickedItemView.GetItemData();
-        if (itemVisualSteps.TryGetValue(data, out int savedSteps))
-            heldRotationSteps = savedSteps;
-
-        inventoryManager.PickUpItemFromGrid(data);
+        inventoryManager.OnItemAdded -= RedrawSlot;
+        inventoryManager.OnItemRemoved -= (item) => RedrawAllItems();
+        inventoryManager.OnItemHeld -= OnManagerItemHeld;
     }
 
     void Update()
     {
-        if (inventoryManager.heldItem == null) return;
-
-        if (heldItemView != null)
+        if (ghostItemView.gameObject.activeSelf)
         {
-            heldItemView.GetComponent<RectTransform>().position =
-                (Vector2)Input.mousePosition - dragOffset;
+            ghostItemView.GetComponent<RectTransform>().position = (Vector2)Input.mousePosition - dragOffset;
+            UpdateSlotPreview();
+        }
+    }
+
+    private void GenerateSlotGrid()
+    {
+        if (slotContainer.childCount > 0) return; // Já gerado
+
+        var gridLayout = slotContainer.GetComponent<GridLayoutGroup>();
+        for (int i = 0; i < inventoryManager.gridWidth * inventoryManager.gridHeight; i++)
+        {
+            var slotGO = Instantiate(slotPrefab, slotContainer);
+            slotGO.name = $"Slot_{i % inventoryManager.gridWidth}_{i / inventoryManager.gridWidth}";
+            var slotView = slotGO.GetComponent<InventorySlotView>();
+            slotViews.Add(slotView);
+        }
+    }
+
+    public void RedrawAllItems()
+    {
+        foreach (var itemView in itemsInView.Values)
+        {
+            if (itemView != null) Destroy(itemView.gameObject);
+        }
+        itemsInView.Clear();
+
+        for (int y = 0; y < inventoryManager.gridHeight; y++)
+        {
+            for (int x = 0; x < inventoryManager.gridWidth; x++)
+            {
+                RedrawSlot(inventoryManager.GetItemAt(x, y), x, y, false);
+            }
+        }
+    }
+
+    private void RedrawSlot(ItemSO item, int x, int y, bool isEquipSlot)
+    {
+        if (isEquipSlot) return; // Ignora slots de equipamento por enquanto
+
+        string key = $"{x},{y}";
+        // Remove a view antiga se existir
+        if (itemsInView.ContainsKey(key) && itemsInView[key] != null)
+        {
+            Destroy(itemsInView[key].gameObject);
+            itemsInView.Remove(key);
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
+        // Se há um item, cria a nova view
+        if (item != null)
         {
-            heldRotationSteps = (heldRotationSteps + 1) & 3; // 0..3
-            heldItemView.Render(inventoryManager.heldItem, cellSize, heldRotationSteps);
-        }
+            var itemView = Instantiate(itemPrefab, itemContainer);
+            itemView.Render(item, x, y);
+            itemView.SetStackCount(inventoryManager.GetCountAt(x, y));
 
-        UpdateSlotPreview();
+            var gridLayout = slotContainer.GetComponent<GridLayoutGroup>();
+            Vector2 position = new Vector2(x * (gridLayout.cellSize.x + gridLayout.spacing.x), -y * (gridLayout.cellSize.y + gridLayout.spacing.y));
+            itemView.GetComponent<RectTransform>().anchoredPosition = position;
+
+            itemsInView[key] = itemView;
+        }
+    }
+
+    private void OnManagerItemHeld(ItemSO item)
+    {
+        if (item != null)
+        {
+            ghostItemView.gameObject.SetActive(true);
+            ghostItemView.Render(item, -1, -1);
+            ghostItemView.SetStackCount(1);
+        }
+        else
+        {
+            ghostItemView.gameObject.SetActive(false);
+            ResetAllSlotPreviews();
+        }
+    }
+
+    public void BeginHoldingItem(int x, int y, PointerEventData eventData)
+    {
+        inventoryManager.StartHoldingItem(x, y);
+
+        // Calcula o offset do Top-Left
+        var itemView = itemsInView[$"{x},{y}"];
+        var rt = itemView.GetComponent<RectTransform>();
+        Vector3[] corners = new Vector3[4];
+        rt.GetWorldCorners(corners); // 0=BL, 1=TL, 2=TR, 3=BR
+        Vector2 tlWorldPos = corners[1];
+        dragOffset = eventData.position - (Vector2)RectTransformUtility.WorldToScreenPoint(mainCanvas.worldCamera, tlWorldPos);
     }
 
     private void UpdateSlotPreview()
     {
-        foreach (var s in slotViews) s.ResetColor();
-        if (cellSize <= 0f || inventoryManager.heldItem == null || heldItemView == null) return;
+        ResetAllSlotPreviews();
 
-        // usa o canto superior-esquerdo real do ghost
-        var rt = heldItemView.GetComponent<RectTransform>();
-        Vector3[] wc = new Vector3[4];
-        rt.GetWorldCorners(wc); // 0=BL,1=TL,2=TR,3=BR
-        Vector2 tlScreen = RectTransformUtility.WorldToScreenPoint(null, wc[1]);
+        Vector2 localPoint;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(slotContainer, Input.mousePosition, mainCanvas.worldCamera, out localPoint);
 
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                slotContainer, tlScreen, null, out Vector2 localPoint))
-            return;
+        var gridLayout = slotContainer.GetComponent<GridLayoutGroup>();
+        int x = Mathf.FloorToInt(localPoint.x / (gridLayout.cellSize.x + gridLayout.spacing.x));
+        int y = Mathf.FloorToInt(-localPoint.y / (gridLayout.cellSize.y + gridLayout.spacing.y));
 
-        if (!TryLocalToCell(localPoint, out int x, out int y)) return;
+        if (x < 0 || x >= inventoryManager.gridWidth || y < 0 || y >= inventoryManager.gridHeight) return;
 
-        var item = inventoryManager.heldItem;
-        bool swap = (heldRotationSteps & 1) == 1;
-        int w = swap ? item.height : item.width;
-        int h = swap ? item.width : item.height;
-        bool can = inventoryManager.CanPlaceItem(x, y, w, h);
+        ItemSO targetItem = inventoryManager.GetItemAt(x, y);
+        bool canPlace = targetItem == null || (targetItem == inventoryManager.heldItem && inventoryManager.GetCountAt(x, y) < targetItem.maxStack);
 
-        for (int j = 0; j < h; j++)
-            for (int i = 0; i < w; i++)
-            {
-                int cx = x + i, cy = y + j;
-                if (cx >= 0 && cx < inventoryManager.gridWidth &&
-                    cy >= 0 && cy < inventoryManager.gridHeight)
-                {
-                    int idx = cy * inventoryManager.gridWidth + cx;
-                    if (idx < slotViews.Count) slotViews[idx].SetPreviewColor(can);
-                }
-            }
+        slotViews[y * inventoryManager.gridWidth + x].SetPreviewColor(canPlace);
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (inventoryManager.heldItem == null || heldItemView == null) return;
-        if (eventData.button != PointerEventData.InputButton.Left) return;
+        if (inventoryManager.heldItem == null) return;
 
-        // canto TL do ghost
-        var rt = heldItemView.GetComponent<RectTransform>();
-        Vector3[] wc = new Vector3[4];
-        rt.GetWorldCorners(wc);
-        Vector2 tlScreen = RectTransformUtility.WorldToScreenPoint(null, wc[1]);
+        Vector2 localPoint;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(slotContainer, eventData.position, mainCanvas.worldCamera, out localPoint);
 
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                slotContainer, tlScreen, null, out Vector2 localPoint))
+        var gridLayout = slotContainer.GetComponent<GridLayoutGroup>();
+        int x = Mathf.FloorToInt(localPoint.x / (gridLayout.cellSize.x + gridLayout.spacing.x));
+        int y = Mathf.FloorToInt(-localPoint.y / (gridLayout.cellSize.y + gridLayout.spacing.y));
+
+        if (x < 0 || x >= inventoryManager.gridWidth || y < 0 || y >= inventoryManager.gridHeight)
+        {
+            inventoryManager.DropHeldItem(); // Clicou fora, tenta devolver
             return;
+        }
 
-        if (!TryLocalToCell(localPoint, out int x, out int y)) return;
-
-        // o Manager só entende “paridade” (deitado vs em pé). Sincroniza se precisar:
-        int neededParity = (heldRotationSteps & 1);
-        int managerParity = inventoryManager.isHeldItemRotated ? 1 : 0;
-        if (neededParity != managerParity) inventoryManager.RotateHeldItem();
-
-        // salva a rotação VISUAL que queremos manter após soltar
-        itemVisualSteps[inventoryManager.heldItem] = heldRotationSteps;
-
-        if (inventoryManager.PlaceHeldItem(x, y))
+        if (inventoryManager.PlaceHeldItemStack(x, y))
         {
-            if (heldItemView != null) Destroy(heldItemView.gameObject);
-            heldItemView = null;
+            // Diminui a pilha "na mão" (neste modelo, sempre 1, então zera)
+            inventoryManager.DropHeldItem(); // Lógica de drop agora decide se devolve ou some
         }
     }
 
-    // ---------- Grid e render fixo ----------
-    private void GenerateSlotGrid()
+    public void OnDrop(PointerEventData eventData) { /* Usamos IPointerClickHandler para mais controle */ }
+    private void ResetAllSlotPreviews()
     {
-        if (gridLayout == null || slotPrefab == null) return;
-
-        slotViews.Clear();
-        foreach (Transform c in slotContainer) Destroy(c.gameObject);
-
-        gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        gridLayout.constraintCount = inventoryManager.gridWidth;
-
-        cellSize = gridLayout.cellSize.x;
-
-        int total = inventoryManager.gridWidth * inventoryManager.gridHeight;
-        for (int i = 0; i < total; i++)
-        {
-            var s = Instantiate(slotPrefab, slotContainer).GetComponent<InventorySlotView>();
-            slotViews.Add(s);
-        }
-        isGridGenerated = true;
-    }
-
-    private void RedrawAllItems()
-    {
-        foreach (var v in itemsInView.Values) if (v != null) Destroy(v.gameObject);
-        itemsInView.Clear();
-        foreach (var s in slotViews) s.SetState(false);
-        inventoryManager?.RedrawAllItems();
-    }
-
-    public void AddItemView(ItemSO item, int x, int y, bool isRotated)
-    {
-        if (cellSize <= 0f) return;
-
-        var v = Instantiate(itemPrefab, itemContainer);
-
-        // usa steps salvos (0..3); se não houver, cai no bool do manager (0/1)
-        int steps = itemVisualSteps.TryGetValue(item, out int s) ? s : (isRotated ? 1 : 0);
-        v.Render(item, cellSize, steps);
-
-        var rt = v.GetComponent<RectTransform>();
-        rt.anchoredPosition = CellTopLeftLocal(x, y);
-
-        itemsInView[item] = v;
-
-        int w = (steps & 1) == 1 ? item.height : item.width;
-        int h = (steps & 1) == 1 ? item.width : item.height;
-
-        for (int j = 0; j < h; j++)
-            for (int i = 0; i < w; i++)
-            {
-                int idx = (y + j) * inventoryManager.gridWidth + (x + i);
-                if (idx < slotViews.Count) slotViews[idx].SetState(true);
-            }
-    }
-
-    public void RemoveItemView(ItemSO item)
-    {
-        if (itemsInView.TryGetValue(item, out var v))
-        {
-            if (v != null) Destroy(v.gameObject);
-            itemsInView.Remove(item);
-        }
-        // opcional: manter a rotação visual no dicionário quando pegar?
-        // se quiser limpar ao remover definitivamente:
-        // itemVisualSteps.Remove(item);
-
-        RedrawAllItems();
+        foreach (var slot in slotViews) slot.ResetColor();
     }
 }

@@ -1,13 +1,12 @@
 using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(ItemSO))] // AGORA EDITA O ItemSO
+[CustomEditor(typeof(ItemSO))]
 public class ItemSOEditor : Editor
 {
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
-
         ItemSO item = (ItemSO)target;
 
         // --- SEÇÃO 1: CAMPOS GERAIS (SEMPRE VISÍVEIS) ---
@@ -15,19 +14,18 @@ public class ItemSOEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemName"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemIcon"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemType"));
-
         EditorGUILayout.Space(10);
 
-        EditorGUILayout.LabelField("Configuração do Inventário (Grid)", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("width"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("height"));
+        EditorGUILayout.LabelField("Configuração do Inventário", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("stackable"));
+        if (item.stackable)
+        {
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("maxStack"));
+        }
         EditorGUILayout.PropertyField(serializedObject.FindProperty("isLostOnDeathDuringQuest"));
-
-
         EditorGUILayout.Space(10);
 
         // --- SEÇÃO 2: CAMPOS CONTEXTUAIS ---
-        // Mostra campos diferentes com base no ItemType selecionado
         switch (item.itemType)
         {
             case ItemType.Weapon:
@@ -37,32 +35,39 @@ public class ItemSOEditor : Editor
             case ItemType.Consumable:
                 EditorGUILayout.LabelField("Configurações de Consumível", EditorStyles.boldLabel);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("healthToRestore"));
-                // (Desenhe outros campos de consumível aqui)
+                break;
+
+            case ItemType.Ammo:
+                EditorGUILayout.HelpBox("Este é um item de Munição.", MessageType.Info);
+                break;
+
+            case ItemType.Material:
+                EditorGUILayout.HelpBox("Este é um Material de Crafting.", MessageType.Info);
+                break;
+
+            case ItemType.Utility:
+                EditorGUILayout.HelpBox("Este é um item Utilitário.", MessageType.Info);
                 break;
 
             case ItemType.KeyItem:
-                // Itens chave podem não ter campos extras
-                EditorGUILayout.HelpBox("Este é um Item Chave.", MessageType.Info);
+                EditorGUILayout.HelpBox("Este é um Item Chave. Geralmente não é empilhável.", MessageType.Info);
+                if (item.stackable) item.stackable = false;
                 break;
         }
 
         serializedObject.ApplyModifiedProperties();
     }
 
-    // Função auxiliar para desenhar todos os campos de arma
     private void DrawWeaponFields()
     {
         ItemSO item = (ItemSO)target;
-
         EditorGUILayout.LabelField("Configuração de Combate", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("weaponType"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("damage"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("attackRate"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("useAimMode"));
-
         EditorGUILayout.Space(5);
 
-        // Mostra campos exclusivos do WeaponType selecionado
         switch (item.weaponType)
         {
             case WeaponType.Melee:
@@ -70,14 +75,12 @@ public class ItemSOEditor : Editor
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("comboAnimations"), true);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("slashEffectPrefab"));
                 break;
-
             case WeaponType.Firearm:
                 EditorGUILayout.LabelField("Exclusivo: Arma de Fogo", EditorStyles.boldLabel);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("magazineSize"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("reloadTime"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("bulletPrefab"));
                 break;
-
             case WeaponType.Buster:
                 EditorGUILayout.LabelField("Exclusivo: Buster", EditorStyles.boldLabel);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("baseEnergyCost"));
