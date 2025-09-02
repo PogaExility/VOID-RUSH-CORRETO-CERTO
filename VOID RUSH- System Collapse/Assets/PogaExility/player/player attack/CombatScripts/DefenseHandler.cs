@@ -1,74 +1,77 @@
 using UnityEngine;
+using System.Collections;
 
-[RequireComponent(typeof(PlayerStats))]
 public class DefenseHandler : MonoBehaviour
 {
-    [Header("Referências")]
-    private PlayerStats _playerStats;
-
     [Header("Configuração de Parry")]
-    public float parryWindow = 0.2f;
+    [Tooltip("A janela de tempo (em segundos) no início do block para conseguir um parry.")]
+    public float parryWindow = 0.15f;
 
-    private bool _isBlocking = false;
-    private bool _canParry = false;
-    private float _blockStartTime;
-    public bool IsInParryWindow()
-    {
-        // Retorna true apenas se o jogador estiver bloqueando E dentro da janela de tempo.
-        return _isBlocking && Time.time - _blockStartTime <= parryWindow;
-    }
+    private bool isBlocking = false;
+    private bool canParry = false;
+    private Coroutine blockCoroutine;
+
+    private PlayerAnimatorController animatorController;
 
     void Awake()
     {
-        _playerStats = GetComponent<PlayerStats>();
+        animatorController = GetComponent<PlayerAnimatorController>();
     }
 
     public void StartBlock()
     {
-        if (_isBlocking) return;
-        _isBlocking = true;
-        _canParry = true;
-        _blockStartTime = Time.time;
-        Debug.Log("Bloqueio Ativo! Janela de Parry aberta.");
+        if (isBlocking) return;
+
+        isBlocking = true;
+        blockCoroutine = StartCoroutine(BlockRoutine());
+        Debug.Log("Começou a bloquear.");
+    }
+
+    private IEnumerator BlockRoutine()
+    {
+        // Animação de Block
+        animatorController.PlayState(PlayerAnimState.block);
+
+        // Janela de Parry
+        canParry = true;
+        yield return new WaitForSeconds(parryWindow);
+        canParry = false;
+
+        // Mantém o estado de block enquanto o botão estiver pressionado
+        while (isBlocking)
+        {
+            yield return null;
+        }
     }
 
     public void EndBlock()
     {
-        if (!_isBlocking) return;
-        _isBlocking = false;
-        _canParry = false;
-        Debug.Log("Bloqueio Terminou.");
+        if (!isBlocking) return;
+
+        isBlocking = false;
+        // A corrotina vai terminar naturalmente. O jogador volta para a animação de "parado".
+        // O PlayerController/AnimatorController cuidará da transição para a animação correta.
+        Debug.Log("Parou de bloquear.");
     }
 
-    public void OnTakeDamage(float damageAmount)
+    // Esta função será chamada por um inimigo ou projétil quando atingir o jogador
+    public void OnHitWhileDefending()
     {
-        if (!_isBlocking) return;
-
-        if (_canParry && Time.time - _blockStartTime <= parryWindow)
+        if (canParry)
         {
-            PerformParry();
+            // SUCESSO NO PARRY
+            animatorController.PlayState(PlayerAnimState.parry);
+            Debug.Log("PARCEIRO! Conseguiu o Parry!");
+            // TODO: Aplicar efeito de parry (stun no inimigo, refletir projétil, etc.)
+
+            // Termina o block imediatamente após o parry
+            EndBlock();
         }
-        else
+        else if (isBlocking)
         {
-            PerformBlock(damageAmount);
+            // SUCESSO NO BLOCK
+            Debug.Log("Bloqueio bem-sucedido.");
+            // TODO: Reduzir stamina/barra de block, tocar efeito de faísca, etc.
         }
     }
-
-    private void PerformParry()
-    {
-        Debug.Log("PARPY! Dano negado!");
-        _playerStats.RecoverBlockGauge(1000);
-        _canParry = false;
-    }
-
-    private void PerformBlock(float damageAmount)
-    {
-        Debug.Log("Dano bloqueado!");
-        _playerStats.DrainBlockGauge(damageAmount);
-    }
-
-    // ====================================================================
-    // FUNÇÃO DE ESTADO ADICIONADA
-    // ====================================================================
-    public bool IsBlocking() => _isBlocking;
 }

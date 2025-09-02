@@ -44,16 +44,15 @@ public class HUDController : MonoBehaviour
             effectsPanel.Toggle();
         }
 
-        // Placeholders de eventos
-        if (Input.GetKeyDown(KeyCode.Alpha1)) rotBar.OnSkillPressed?.Invoke(1);
-        if (Input.GetKeyDown(KeyCode.Alpha2)) rotBar.OnSkillPressed?.Invoke(2);
-        if (Input.GetKeyDown(KeyCode.Alpha3)) rotBar.OnSkillPressed?.Invoke(3);
-        if (Input.GetKeyDown(KeyCode.Alpha4)) rotBar.OnSkillPressed?.Invoke(4);
-        if (Input.GetKeyDown(KeyCode.Alpha5)) rotBar.OnSkillPressed?.Invoke(5);
+        if (Input.GetKeyDown(KeyCode.Alpha1)) rotBar.TriggerSkill(1);
+        if (Input.GetKeyDown(KeyCode.Alpha2)) rotBar.TriggerSkill(2);
+        if (Input.GetKeyDown(KeyCode.Alpha3)) rotBar.TriggerSkill(3);
+        if (Input.GetKeyDown(KeyCode.Alpha4)) rotBar.TriggerSkill(4);
+        if (Input.GetKeyDown(KeyCode.Alpha5)) rotBar.TriggerSkill(5);
 
-        if (Input.GetKeyDown(KeyCode.Q)) rotBar.OnQuickPressed?.Invoke(1);
-        if (Input.GetKeyDown(KeyCode.E)) rotBar.OnQuickPressed?.Invoke(2);
-        if (Input.GetKeyDown(KeyCode.R)) rotBar.OnQuickPressed?.Invoke(3);
+        if (Input.GetKeyDown(KeyCode.Q)) rotBar.TriggerQuickUse(1);
+        if (Input.GetKeyDown(KeyCode.E)) rotBar.TriggerQuickUse(2);
+        if (Input.GetKeyDown(KeyCode.R)) rotBar.TriggerQuickUse(3);
     }
 
     private void ToggleInventoryPanel()

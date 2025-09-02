@@ -1,9 +1,11 @@
 using UnityEngine;
+using System.Collections; // Necessário para corotinas se for preciso
+using System.Collections.Generic;
 
 [RequireComponent(typeof(InventoryManager), typeof(PlayerAttack), typeof(DefenseHandler))]
 public class CombatController : MonoBehaviour
 {
-    [Header("Referências")]
+    // Variáveis que já existem no seu código
     private InventoryManager _inventoryManager;
     public PlayerAttack playerAttack;
     public DefenseHandler defenseHandler;
@@ -11,13 +13,11 @@ public class CombatController : MonoBehaviour
     [Header("Configuração de Postura")]
     public WeaponType activeStance = WeaponType.Melee;
 
-    private ItemSO _currentWeapon;
+    // Variáveis de mira para o pivotamento (passadas para o PlayerAttack)
+    public Vector3 aimDirection { get; private set; }
 
     void Awake()
     {
-        // ====================================================================
-        // A SOLUÇÃO: Pega todas as referências automaticamente no Awake().
-        // ====================================================================
         _inventoryManager = GetComponent<InventoryManager>();
         playerAttack = GetComponent<PlayerAttack>();
         defenseHandler = GetComponent<DefenseHandler>();
@@ -26,45 +26,64 @@ public class CombatController : MonoBehaviour
     void Update()
     {
         HandleStanceSwitch();
+        // A mira deve ser atualizada em todo frame para precisão
+        UpdateAimDirection();
+    }
+
+    private void UpdateAimDirection()
+    {
+        // Pega a posição do mouse na tela e converte para coordenadas do mundo
+        Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mousePos.z = 0; // Garante que a profundidade seja 0
+
+        // A direção de mira é do jogador para o mouse
+        aimDirection = (mousePos - transform.position).normalized;
     }
 
     public void ProcessCombatInput()
     {
+        ItemSO currentWeapon = GetEquippedWeapon();
+
         if (Input.GetButtonDown("Fire1"))
         {
-            switch (activeStance)
+            if (activeStance == WeaponType.Buster && currentWeapon != null)
             {
-                case WeaponType.Melee: _currentWeapon = _inventoryManager.equippedMeleeWeapon; break;
-                case WeaponType.Firearm: _currentWeapon = _inventoryManager.equippedFirearm; break;
-                case WeaponType.Buster: _currentWeapon = _inventoryManager.equippedBuster; break;
+                // Inicia o carregamento do Buster
+                playerAttack.StartBusterCharge(currentWeapon);
             }
-
-            if (_currentWeapon != null)
+            else if (currentWeapon != null)
             {
-                playerAttack.PerformAttack(_currentWeapon);
+                // Ataque imediato (Melee ou Firearm)
+                playerAttack.PerformAttack(currentWeapon, aimDirection);
             }
-            else { Debug.Log("Nenhuma arma equipada para a postura " + activeStance); }
         }
 
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Input.GetButtonUp("Fire1"))
         {
-            defenseHandler.StartBlock();
-        }
-        if (Input.GetKeyUp(KeyCode.F))
-        {
-            defenseHandler.EndBlock();
+            if (activeStance == WeaponType.Buster && currentWeapon != null)
+            {
+                // Libera o tiro carregado
+                playerAttack.ReleaseBusterCharge(currentWeapon, aimDirection);
+            }
         }
 
-        if (activeStance == WeaponType.Firearm && Input.GetKeyDown(KeyCode.R))
-        {
-            playerAttack.Reload(_inventoryManager.equippedFirearm);
-        }
+        // Input de Bloqueio (F)
+        if (Input.GetKeyDown(KeyCode.F)) defenseHandler.StartBlock();
+        if (Input.GetKeyUp(KeyCode.F)) defenseHandler.EndBlock();
+    }
+
+    // Função auxiliar para pegar a arma no slot correto
+    private ItemSO GetEquippedWeapon()
+    {
+        int slotIndex = (int)activeStance;
+        if (slotIndex >= _inventoryManager.equippedWeapons.Length) return null;
+        return _inventoryManager.equippedWeapons[slotIndex];
     }
 
     private void HandleStanceSwitch()
     {
-        if (Input.GetKeyDown(KeyCode.Alpha1)) { activeStance = WeaponType.Melee; Debug.Log("Postura: Melee"); }
-        else if (Input.GetKeyDown(KeyCode.Alpha2)) { activeStance = WeaponType.Firearm; Debug.Log("Postura: Firearm"); }
-        else if (Input.GetKeyDown(KeyCode.Alpha3)) { activeStance = WeaponType.Buster; Debug.Log("Postura: Buster"); }
+        if (Input.GetKeyDown(KeyCode.Alpha1)) activeStance = WeaponType.Melee;
+        else if (Input.GetKeyDown(KeyCode.Alpha2)) activeStance = WeaponType.Firearm;
+        else if (Input.GetKeyDown(KeyCode.Alpha3)) activeStance = WeaponType.Buster;
     }
 }

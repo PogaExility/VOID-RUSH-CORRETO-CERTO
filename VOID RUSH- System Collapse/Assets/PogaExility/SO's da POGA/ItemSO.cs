@@ -1,34 +1,41 @@
 using UnityEngine;
+using System.Collections.Generic;
 
-// Definições de tipos (Enums)
-// NÃO REORDENE - Adicione novos tipos apenas no final.
 public enum ItemType { Consumable, KeyItem, Weapon, Ammo, Material, Utility }
 public enum WeaponType { Melee, Firearm, Buster }
 
 [CreateAssetMenu(fileName = "NewItem", menuName = "NEXUS/Itens/Novo Item", order = 0)]
 public class ItemSO : ScriptableObject
 {
+
     [Header("Informações Gerais")]
     public string itemName;
     public Sprite itemIcon;
-    [Tooltip("Define o tipo principal do item.")]
     public ItemType itemType;
+    [Tooltip("O prefab do objeto que representa este item no mundo do jogo.")]
+    public GameObject itemPrefab;
+
+    [Header("Prefabs & Vínculos")]
+    public GameObject worldPickupPrefab;   // prefab do item no mundo (para soltar/loot)
+    public GameObject equipPrefab;         // prefab da arma na mão (mão do player / socket)
+
 
     [Header("Configuração do Inventário")]
-    [Tooltip("Se marcado, este item pode ser empilhado no mesmo slot.")]
     public bool stackable = true;
-    [Tooltip("A quantidade máxima deste item por slot de inventário.")]
     public int maxStack = 999;
+    [Header("Arma (vínculos de munição)")]
+    public ItemSO[] acceptedAmmo;
+    [Header("Dano por modo")]
+    public float bulletDamage = 10f;       // dano quando tem munição
+    public float powderDamage = 2f;        // “tiro de pólvora” (curto alcance) quando SEM munição
+    public float powderRange = 1.8f;      // a
 
-    // Campo antigo, mantido para compatibilidade, mas ignorado pelo novo sistema 1x1.
     [HideInInspector] public int width = 1;
     [HideInInspector] public int height = 1;
 
     [Header("Configurações de Quest")]
-    [Tooltip("Se marcado, este item será removido do inventário se o jogador morrer enquanto uma quest estiver ativa.")]
     public bool isLostOnDeathDuringQuest = false;
 
-    // --- CAMPOS DE ARMA (WEAPON) ---
     [Header("Configurações de Combate (se for Arma)")]
     public WeaponType weaponType;
     public float damage;
@@ -52,7 +59,6 @@ public class ItemSO : ScriptableObject
     public float baseEnergyCost;
     public float chargedShotDamage;
 
-    // --- CAMPOS DE CONSUMÍVEL (CONSUMABLE) ---
     [Header("Configurações de Consumível")]
     public float healthToRestore;
 }

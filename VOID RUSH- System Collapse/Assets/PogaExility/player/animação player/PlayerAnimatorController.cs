@@ -13,7 +13,12 @@ public enum PlayerAnimState
     pousando,
     parry,
     dashAereo,
-    flip
+    flip,
+    dano,          
+    morrendo,         
+    poucaVidaParado,  
+    paradoCotoco,     
+    andarCotoco       
 }
 
 
@@ -22,8 +27,11 @@ public class PlayerAnimatorController : MonoBehaviour
 {
     private Animator animator;
     private PlayerAnimState currentState;
-    
-   
+    public AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex = 0)
+    {
+        return animator != null ? animator.GetCurrentAnimatorStateInfo(layerIndex) : default;
+    }
+
 
     // Hashes dos nomes dos estados
     private static readonly int ParadoHash = Animator.StringToHash("parado");
@@ -37,6 +45,11 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int ParryHash = Animator.StringToHash("parry");
     private static readonly int DashAereoHash = Animator.StringToHash("dashAereo");
     private static readonly int FlipHash = Animator.StringToHash("flip");
+    private static readonly int DanoHash = Animator.StringToHash("dano");
+    private static readonly int MorrendoHash = Animator.StringToHash("morrendo");
+    private static readonly int PoucaVidaParadoHash = Animator.StringToHash("poucaVidaParado");
+    private static readonly int ParadoCotocoHash = Animator.StringToHash("paradoCotoco");
+    private static readonly int AndarCotocoHash = Animator.StringToHash("andarCotoco");
 
     [Tooltip("Duração da transição suave entre animações.")]
     public float crossFadeDuration = 0.1f;
@@ -75,7 +88,13 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.parry: return ParryHash;
             case PlayerAnimState.dashAereo: return DashAereoHash;
             case PlayerAnimState.flip: return FlipHash;
+            case PlayerAnimState.dano: return DanoHash;
+            case PlayerAnimState.morrendo: return MorrendoHash;
+            case PlayerAnimState.poucaVidaParado: return PoucaVidaParadoHash;
+            case PlayerAnimState.paradoCotoco: return ParadoCotocoHash;
+            case PlayerAnimState.andarCotoco: return AndarCotocoHash;
             default: return ParadoHash;
         }
+
     }
 }

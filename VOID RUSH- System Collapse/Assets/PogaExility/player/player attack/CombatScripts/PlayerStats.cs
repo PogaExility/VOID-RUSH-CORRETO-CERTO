@@ -12,6 +12,8 @@ public class PlayerStats : MonoBehaviour
     [Header("Configurações de Defesa")]
     public float baseMaxBlockGauge = 100f;
     private float _currentBlockGauge;
+    public float lowHealthThreshold = 0.25f; // 25% da vida máxima
+    private PlayerAnimatorController animatorController;
 
     private float _healthBonus = 0f;
     private float _blockGaugeBonus = 0f;
@@ -53,8 +55,12 @@ public class PlayerStats : MonoBehaviour
             }
         }
 
+
         _currentHealth = MaxHealth;
         _currentBlockGauge = MaxBlockGauge;
+        // ...
+        animatorController = GetComponent<PlayerAnimatorController>();
+        OnDeath += PlayDeathAnimation; 
     }
 
     public void TakeDamage(float amount, Vector2 attackDirection)
@@ -68,6 +74,7 @@ public class PlayerStats : MonoBehaviour
 
         if (_currentHealth > 0)
         {
+            animatorController.PlayState(PlayerAnimState.dano);
             movementScript.ApplyKnockback(attackDirection);
             StartCoroutine(InvincibilityCoroutine());
         }
@@ -75,6 +82,12 @@ public class PlayerStats : MonoBehaviour
         {
             OnDeath?.Invoke();
         }
+    }
+
+    private void PlayDeathAnimation()
+    {
+        animatorController.PlayState(PlayerAnimState.morrendo);
+        // Opcional: Desativar controles do jogador aqui
     }
 
     public void Heal(float amount)
@@ -113,6 +126,10 @@ public class PlayerStats : MonoBehaviour
         isInvincible = false;
     }
 
+    public void Update()
+    {
+        CheckLowHealthAnimation();
+    }
     public void DrainBlockGauge(float amount)
     {
         _currentBlockGauge -= amount;
@@ -139,5 +156,16 @@ public class PlayerStats : MonoBehaviour
         _blockGaugeBonus = bonusAmount;
         if (_currentBlockGauge > MaxBlockGauge) _currentBlockGauge = MaxBlockGauge;
         OnBlockGaugeChanged?.Invoke(_currentBlockGauge, MaxBlockGauge);
+    }
+    private void CheckLowHealthAnimation()
+    {
+        // Condições: pouca vida, parado, no chão, e não em outro estado prioritário
+        if (_currentHealth / MaxHealth <= lowHealthThreshold &&
+            !GetComponent<AdvancedPlayerMovement2D>().IsMoving() &&
+            GetComponent<AdvancedPlayerMovement2D>().IsGrounded() &&
+            animatorController.GetCurrentAnimatorStateInfo(0).IsName("parado")) // Só substitui a animação de parado
+        {
+            animatorController.PlayState(PlayerAnimState.poucaVidaParado);
+        }
     }
 }

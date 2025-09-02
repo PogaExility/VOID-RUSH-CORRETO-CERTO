@@ -6,7 +6,8 @@ using UnityEngine;
 [RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(SkillRelease))]
 public class PlayerController : MonoBehaviour
 {
-   
+    
+
     // --- SUAS REFERÊNCIAS ORIGINAIS ---
     [Header("Referências de Gerenciamento")]
     public CursorManager cursorManager;
@@ -56,6 +57,7 @@ public class PlayerController : MonoBehaviour
     private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
+    private bool isInAimMode = false;
     public SkillSO GetActiveDashSkill()
     {
         return activeDashSkill;
@@ -142,7 +144,7 @@ public class PlayerController : MonoBehaviour
 
         if (!isInventoryOpen && inventoryManager.heldItem != null)
         {
-            inventoryManager.DropHeldItem();
+            inventoryManager.ReturnHeldItem(); // A função correta para devolver ao inv.
         }
     }
 
@@ -156,13 +158,18 @@ public class PlayerController : MonoBehaviour
         else if (objectToInteract.TryGetComponent<Checkpoint>(out var checkpoint)) { checkpoint.Interact(); nearbyInteractables.Remove(objectToInteract); }
         else if (objectToInteract.TryGetComponent<ItemPickup>(out var itemToPickup))
         {
-            if (!isInventoryOpen)
+            // A função correta para pegar um item do mundo é TryAddItem
+            if (inventoryManager.TryAddItem(itemToPickup.itemData))
             {
-                ToggleInventory();
+                // Só destrói o objeto se ele foi pego com sucesso
+                nearbyInteractables.Remove(itemToPickup.gameObject);
+                Destroy(itemToPickup.gameObject);
             }
-            inventoryManager.StartHoldingItem(itemToPickup.itemData);
-            nearbyInteractables.Remove(itemToPickup.gameObject);
-            Destroy(itemToPickup.gameObject);
+            else
+            {
+                // Opcional: Feedback se o inventário estiver cheio
+                Debug.Log("Inventário cheio!");
+            }
         }
     }
 
@@ -219,7 +226,27 @@ public class PlayerController : MonoBehaviour
         if (!movementScript.IsDashing()) combatController.ProcessCombatInput();
     }
 
-    // Substitua sua função UpdateAnimations por esta versão mais limpa:
+    private void UpdateAimModeState()
+    {
+        // Entra no modo de mira se a postura for Firearm ou Buster
+        // E se o jogador não estiver fazendo outra ação prioritária (como dashing ou pousando)
+        bool shouldAim = (combatController.activeStance == WeaponType.Firearm || combatController.activeStance == WeaponType.Buster)
+                         && !movementScript.IsDashing() && !isLanding;
+
+        if (isInAimMode != shouldAim)
+        {
+            isInAimMode = shouldAim;
+            // Avisa o PlayerAttack para ativar/desativar o IK dos braços/cabeça
+            playerAttack.SetAiming(isInAimMode);
+        }
+
+        // Se estiver no modo de mira, o flip é controlado pelo mouse
+        if (isInAimMode)
+        {
+            float mouseDirectionX = combatController.aimDirection.x;
+            movementScript.FaceDirection(mouseDirectionX > 0 ? 1 : -1);
+        }
+    }
     private void UpdateAnimations()
     {
         if (isLanding) return;
@@ -244,6 +271,14 @@ public class PlayerController : MonoBehaviour
         {
             if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando);
             else animatorController.PlayState(PlayerAnimState.parado);
+        }
+        if (isInAimMode)
+        {
+            if (movementScript.IsMoving())
+                animatorController.PlayState(PlayerAnimState.andarCotoco);
+            else
+                animatorController.PlayState(PlayerAnimState.paradoCotoco);
+            return; // Sai da função para não tocar as animações normais
         }
     }
     private void HandlePowerModeToggle()

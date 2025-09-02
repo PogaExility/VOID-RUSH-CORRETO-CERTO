@@ -3,7 +3,8 @@ public enum SkillClass
 {
     Movimento,
     Buff,
-    Dano
+    Dano,
+    Combate
 }
 public enum DashType
 {
@@ -11,7 +12,14 @@ public enum DashType
     Aereo
 }
 
-
+public enum CombatSkillType
+{
+    None,
+    MeleeAttack,
+    FirearmAttack,
+    BusterAttack,
+    Block_Parry
+}
 public enum MovementSkillType
 {
     None,         // Nenhuma ação, usado como padrão.

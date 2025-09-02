@@ -9,11 +9,11 @@ public class ItemSOEditor : Editor
         serializedObject.Update();
         ItemSO item = (ItemSO)target;
 
-        // --- SEÇÃO 1: CAMPOS GERAIS (SEMPRE VISÍVEIS) ---
         EditorGUILayout.LabelField("Informações Gerais", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemName"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemIcon"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("itemType"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("itemPrefab"));
         EditorGUILayout.Space(10);
 
         EditorGUILayout.LabelField("Configuração do Inventário", EditorStyles.boldLabel);

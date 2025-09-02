@@ -48,9 +48,10 @@ public class SkillSO : ScriptableObject
     [Tooltip("Se QUALQUER uma destas teclas estiver sendo segurada, a ativação desta skill falha. Útil para evitar que Pulo e DashJump ativem juntos.")]
     public List<KeyCode> cancelIfKeysHeld = new List<KeyCode>();
 
-    [Header("Lógica da Ação")]
-    [Tooltip("A ação principal que esta skill executa. Determina quais parâmetros abaixo são usados.")]
+    [Header("Lógica da Ação (Movimento)")]
+    [Tooltip("A ação de MOVIMENTO que esta skill executa.")]
     public MovementSkillType actionToPerform;
+
 
     // --- O SISTEMA DE CONDIÇÕES AVANÇADO ---
     [Header("Condições de Ativação")]
@@ -96,4 +97,15 @@ public class SkillSO : ScriptableObject
     [Tooltip("Atrito do ar via Linear Damping. 0 = sem atrito. 1 = atrito suave. 5 = atrito forte.")]
     public float wallDashJump_ParabolaDamping = 1f;
     public float wallDashJump_GravityScaleOnFall = 2.5f;
+
+
+    // AQUI É COMBATE
+
+    [Header("Lógica da Ação (Combate)")]
+    [Tooltip("A ação de COMBATE que esta skill executa.")]
+    public CombatSkillType combatActionToPerform;
+
+    [Header("-> Parâmetros de Defesa (Block & Parry)")]
+    [Tooltip("A janela de tempo (em segundos) no início do block para conseguir um parry.")]
+    public float parryWindow = 0.15f;
 }

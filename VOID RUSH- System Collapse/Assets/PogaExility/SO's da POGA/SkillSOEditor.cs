@@ -35,9 +35,10 @@ public class SkillSOEditor : Editor
         EditorGUILayout.Space(10);
 
         // --- Bloco de Lógica da Ação ---
-        EditorGUILayout.LabelField("Lógica da Ação", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Parâmetros da Ação", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("actionToPerform"));
         EditorGUILayout.Space(10);
+       
 
         // --- A NOVA UI DE CONDIÇÕES AVANÇADAS ---
         EditorGUILayout.LabelField("Condições de Ativação", EditorStyles.boldLabel);
@@ -47,11 +48,19 @@ public class SkillSOEditor : Editor
 
         // --- Bloco de Parâmetros de Física (Contextual) ---
         // Mostra apenas os campos de física relevantes para a ação selecionada.
-        if (skill.skillClass == SkillClass.Movimento && skill.actionToPerform != MovementSkillType.None)
+        if (skill.skillClass == SkillClass.Movimento)
         {
-            EditorGUILayout.LabelField("Parâmetros de Física", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Lógica da Ação (Movimento)", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("actionToPerform"));
+        }
+        else if (skill.skillClass == SkillClass.Combate) // <-- NOVA CONDIÇÃO
+        {
+            EditorGUILayout.LabelField("Lógica da Ação (Combate)", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("combatActionToPerform"));
+        }
 
-            switch (skill.actionToPerform)
+      
+        switch (skill.actionToPerform)
             {
                 case MovementSkillType.SuperJump:
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("jumpForce"));
@@ -82,7 +91,7 @@ public class SkillSOEditor : Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_GravityScaleOnFall"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("wallDashJump_InputBuffer"));
                     break;
-                   
+
                 case MovementSkillType.DashJump:
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_DashSpeed"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_DashDuration"));
@@ -91,11 +100,30 @@ public class SkillSOEditor : Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_GravityScaleOnFall"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_InputBuffer"));
                     break;
-                   
+
+            }
+  
+
+        if (skill.skillClass == SkillClass.Combate && skill.combatActionToPerform != CombatSkillType.None)
+        {
+            switch (skill.combatActionToPerform)
+            {
+                case CombatSkillType.Block_Parry:
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("parryWindow"));
+                    // Adicione outros parâmetros de defesa aqui
+                    break;
+                // Adicione cases para outros tipos de skills de combate aqui
             }
         }
-
-        // Padrão de finalização. Aplica todas as mudanças feitas no Inspector.
+        
         serializedObject.ApplyModifiedProperties();
     }
+
+
+
+
+
+    // COMBATEEE
+
+
 }

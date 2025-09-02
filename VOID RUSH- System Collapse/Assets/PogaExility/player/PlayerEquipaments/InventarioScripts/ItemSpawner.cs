@@ -2,50 +2,23 @@ using UnityEngine;
 
 public class ItemSpawner : MonoBehaviour
 {
-    [Header("Referências")]
-    public InventoryManager inventoryManager;
-    public Transform playerTransform;
-
-    [Header("Configuração")]
-    public float dropForce = 3f;
+    public static ItemSpawner Instance { get; private set; }
 
     void Awake()
     {
-        if (inventoryManager != null)
-        {
-            inventoryManager.OnItemDropped += SpawnItemInWorld;
-        }
+        if (Instance != null && Instance != this) Destroy(gameObject);
+        else Instance = this;
     }
 
-    void OnDestroy()
+    public void SpawnItemInWorld(ItemSO item, Vector3 position, int amount)
     {
-        if (inventoryManager != null)
-        {
-            inventoryManager.OnItemDropped -= SpawnItemInWorld;
-        }
-    }
+        if (item == null || item.itemPrefab == null) return;
 
-    private void SpawnItemInWorld(ItemSO itemData)
-    {
-        if (itemData == null || itemData.itemPrefab == null) return;
+        GameObject itemObject = Instantiate(item.itemPrefab, position, Quaternion.identity);
+        ItemPickup pickupComponent = itemObject.GetComponent<ItemPickup>();
+        if (pickupComponent == null) pickupComponent = itemObject.AddComponent<ItemPickup>();
 
-        Vector3 spawnPosition = playerTransform.position + playerTransform.right * 1.5f;
-        GameObject itemObject = Instantiate(itemData.itemPrefab, spawnPosition, Quaternion.identity);
-
-        // --- LIGA A FÍSICA ---
-        Rigidbody2D rb = itemObject.GetComponent<Rigidbody2D>();
-        Collider2D itemCollider = itemObject.GetComponent<Collider2D>();
-
-        if (rb != null)
-        {
-            rb.bodyType = RigidbodyType2D.Dynamic; // LIGA A GRAVIDADE
-            Vector2 dropDirection = (playerTransform.right + Vector3.up).normalized;
-            rb.AddForce(dropDirection * dropForce, ForceMode2D.Impulse);
-        }
-
-        if (itemCollider != null)
-        {
-            itemCollider.isTrigger = false; // TORNA SÓLIDO
-        }
+        pickupComponent.itemData = item;
+        pickupComponent.amount = amount;
     }
 }

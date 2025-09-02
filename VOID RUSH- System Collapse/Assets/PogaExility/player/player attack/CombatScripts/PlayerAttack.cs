@@ -1,108 +1,155 @@
 using UnityEngine;
 using System.Collections;
+using System.Linq;
 
-[RequireComponent(typeof(PlayerStats), typeof(EnergyBarController))]
 public class PlayerAttack : MonoBehaviour
 {
-    [Header("Referências")]
-    public Transform attackPoint;
-    private PlayerStats _playerStats;
-    private EnergyBarController _energyBar;
-    private PlayerAnimatorController _animatorController;
+    private CombatController combatController;
+    private InventoryManager inventoryManager;
+    private PlayerStats playerStats;
 
-    [Header("Status de Combate")]
-    private int _currentAmmo;
-    private bool _isReloading = false;
-    private int _comboCounter = 0;
-    private float _lastAttackTime = 0f;
-    private bool _isAttacking = false;
+    // Lógica de Combate Melee
+    private int meleeComboCount = 0;
+    private float lastAttackTime = 0f;
+    private const float COMBO_RESET_TIME = 1.0f; // Tempo para resetar o combo
 
-    [Header("Configurações Gerais")]
-    public float comboResetTime = 1.5f;
+    // Lógica do Buster
+    private Coroutine busterChargeCoroutine;
+    private float currentChargeTime = 0f;
+    private ItemSO chargingBuster;
+
+    // Referências do player (se necessário para animação/IK)
+    public Transform headPivot;
+    public Transform rightArmPivot;
+    private bool isAiming = false;
+    public void SetAiming(bool aiming)
+    {
+        isAiming = aiming;
+        // Opcional: Ativar/desativar os sprites dos braços/cabeça aqui
+    }
 
     void Awake()
     {
-        _playerStats = GetComponent<PlayerStats>();
-        _energyBar = GetComponent<EnergyBarController>();
-        // _animatorController = GetComponent<PlayerAnimatorController>();
+        combatController = GetComponent<CombatController>();
+        inventoryManager = GetComponent<InventoryManager>();
+        playerStats = GetComponent<PlayerStats>();
     }
 
-    public void PerformAttack(ItemSO weapon)
+    // Chamado pelo CombatController no MOUSE DOWN (ou botão de ataque)
+    public void PerformAttack(ItemSO weapon, Vector3 aimDirection)
     {
-        if (_isReloading || _isAttacking) return;
+        if (weapon.attackRate > Time.time - lastAttackTime) return; // Cooldown de ataque
 
-        switch (weapon.weaponType)
+        if (weapon.weaponType == WeaponType.Melee)
         {
-            case WeaponType.Melee:
-                StartCoroutine(MeleeAttackCoroutine(weapon));
-                break;
-            case WeaponType.Firearm:
-                HandleFirearmAttack(weapon);
-                break;
-            case WeaponType.Buster:
-                HandleBusterAttack(weapon);
-                break;
+            ExecuteMeleeCombo(weapon);
+        }
+        else if (weapon.weaponType == WeaponType.Firearm)
+        {
+            ExecuteFirearmShot(weapon, aimDirection);
+        }
+
+        lastAttackTime = Time.time;
+    }
+
+    // --- LÓGICA DE MELEE COMBO (REQUISITO: 3+ ANIMÇÕES) ---
+    private void ExecuteMeleeCombo(ItemSO weapon)
+    {
+        if (Time.time > lastAttackTime + COMBO_RESET_TIME)
+        {
+            meleeComboCount = 0; // Reseta se demorou demais
+        }
+
+        // Garante que o contador não exceda o número de animações
+        int animationIndex = meleeComboCount % weapon.comboAnimations.Length;
+
+        // TODO: Chamar a função de animação com base no animationIndex
+        Debug.Log($"Ataque Melee Combo {animationIndex + 1} de {weapon.comboAnimations.Length}");
+
+        // TODO: Instanciar slashEffectPrefab no ponto de impacto
+
+        meleeComboCount++;
+    }
+
+    // --- LÓGICA DE FIREARM (ARMA DE FOGO) ---
+    private void ExecuteFirearmShot(ItemSO weapon, Vector3 aimDirection)
+    {
+        // TODO: Lógica de munição real deve ser integrada aqui, usando o InventoryManager
+
+        // Placeholder: Dispara o projétil
+        if (weapon.bulletPrefab != null)
+        {
+            // Instancia o projétil na ponta da arma (use a direção de mira)
+            Instantiate(weapon.bulletPrefab, transform.position, Quaternion.identity);
+            Debug.Log($"Firearm disparado. Dano: {weapon.damage}");
         }
     }
 
-    private IEnumerator MeleeAttackCoroutine(ItemSO weapon)
+    // --- LÓGICA DO BUSTER (CARREGAMENTO) ---
+    public void StartBusterCharge(ItemSO weapon)
     {
-        _isAttacking = true;
-        if (Time.time - _lastAttackTime > comboResetTime) { _comboCounter = 0; }
-        Debug.Log("Ataque Melee #" + (_comboCounter + 1));
-        float attackDuration = 0.5f;
-        yield return new WaitForSeconds(attackDuration);
-        _lastAttackTime = Time.time;
-        _comboCounter++;
-        if (_comboCounter >= 3) { _comboCounter = 0; }
-        _isAttacking = false;
+        if (busterChargeCoroutine != null) return;
+        currentChargeTime = 0f;
+        chargingBuster = weapon;
+        busterChargeCoroutine = StartCoroutine(BusterChargeRoutine(weapon));
+        Debug.Log("Buster: Começando a carregar...");
     }
 
-    private void HandleFirearmAttack(ItemSO weapon)
+    private IEnumerator BusterChargeRoutine(ItemSO weapon)
     {
-        if (_currentAmmo <= 0) { Debug.Log("Sem munição!"); return; }
-        _currentAmmo--;
-        Debug.Log("Tiro! Munição restante: " + _currentAmmo + "/" + weapon.magazineSize);
-    }
-
-    private void HandleBusterAttack(ItemSO weapon)
-    {
-        if (_energyBar.HasEnoughEnergy(weapon.baseEnergyCost))
+        // TODO: Drenar energia do PlayerStats
+        while (Input.GetButton("Fire1") && currentChargeTime < weapon.chargeTime)
         {
-            _energyBar.ConsumeEnergy(weapon.baseEnergyCost);
-            Debug.Log("Tiro de Buster!");
-        }
-        else { Debug.Log("Energia insuficiente!"); }
-    }
-
-    public void Reload(ItemSO weapon)
-    {
-        if (weapon == null || weapon.weaponType != WeaponType.Firearm || _isReloading) return;
-        StartCoroutine(ReloadCoroutine(weapon.reloadTime, weapon.magazineSize));
-    }
-
-    private IEnumerator ReloadCoroutine(float reloadTime, int magazineSize)
-    {
-        _isReloading = true;
-        Debug.Log("Recarregando...");
-        yield return new WaitForSeconds(reloadTime);
-        _currentAmmo = magazineSize;
-        _isReloading = false;
-        Debug.Log("Recarga completa!");
-    }
-
-    public void OnWeaponEquipped(ItemSO weapon)
-    {
-        if (weapon != null && weapon.weaponType == WeaponType.Firearm)
-        {
-            _currentAmmo = weapon.magazineSize;
-            _isReloading = false;
+            currentChargeTime += Time.deltaTime;
+            // Drenar energyCostPerChargeSecond do playerStats a cada frame
+            Debug.Log($"Buster Carregando: {currentChargeTime:F2}s");
+            yield return null;
         }
     }
 
-    // ====================================================================
-    // FUNÇÕES DE ESTADO ADICIONADAS
-    // ====================================================================
-    public bool IsAttacking() => _isAttacking;
-    public bool IsReloading() => _isReloading;
+    public void ReleaseBusterCharge(ItemSO weapon, Vector3 aimDirection)
+    {
+        if (busterChargeCoroutine == null) return;
+        StopCoroutine(busterChargeCoroutine);
+        busterChargeCoroutine = null;
+
+        if (currentChargeTime >= weapon.chargeTime)
+        {
+            // Tiro Carregado
+            // TODO: Instanciar chargedShotPrefab
+            Debug.Log($"Buster: TIRO CARREGADO LIBERADO! Dano: {weapon.chargedShotDamage}");
+        }
+        else
+        {
+            // Tiro Padrão
+            // TODO: Instanciar busterShotPrefab
+            Debug.Log($"Buster: Tiro padrão liberado. Dano: {weapon.damage}");
+        }
+        currentChargeTime = 0f;
+    }
+
+    // --- LÓGICA DE MIRA E PIVOTAMENTO (A SER INTEGRADA NO PRÓXIMO PASSO) ---
+    // A lógica de IK para braços e cabeça será implementada na função LateUpdate
+    // ou no componente de animação, dependendo da sua estrutura de IK.
+
+    public void Reload(ItemSO firearmWeapon)
+    {
+        // Lógica de Recarga
+        Debug.Log("Recarregando " + firearmWeapon.itemName);
+    }
+    void LateUpdate()
+    {
+        if (isAiming)
+        {
+            // Pega a direção de mira do CombatController
+            Vector3 aimDir = combatController.aimDirection;
+
+            // Calcula o ângulo em graus
+            float angle = Mathf.Atan2(aimDir.y, aimDir.x) * Mathf.Rad2Deg;
+
+            // Aplica a rotação aos pivots
+            if (headPivot != null) headPivot.rotation = Quaternion.Euler(0, 0, angle);
+            if (rightArmPivot != null) rightArmPivot.rotation = Quaternion.Euler(0, 0, angle);
+        }
+    }
 }

@@ -10,7 +10,15 @@ public class RotBarController : MonoBehaviour
 
     public event Action<int> OnSkillPressed;
     public event Action<int> OnQuickPressed;
+    public void TriggerSkill(int skillIndex)
+    {
+        OnSkillPressed?.Invoke(skillIndex);
+    }
 
+    public void TriggerQuickUse(int quickIndex)
+    {
+        OnQuickPressed?.Invoke(quickIndex);
+    }
     void Awake()
     {
         // Conectar os eventos dos placeholders de UI ao evento principal
