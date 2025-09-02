@@ -37,6 +37,9 @@ public class SkillSO : ScriptableObject
     [Tooltip("A categoria geral da habilidade (usado para organizar o editor).")]
     public SkillClass skillClass;
 
+ 
+ 
+
 
     [Header("Sistema de Ativação")]
     [Tooltip("Todas as teclas que DEVEM estar sendo seguradas para que a skill possa ser ativada.")]
@@ -48,9 +51,13 @@ public class SkillSO : ScriptableObject
     [Tooltip("Se QUALQUER uma destas teclas estiver sendo segurada, a ativação desta skill falha. Útil para evitar que Pulo e DashJump ativem juntos.")]
     public List<KeyCode> cancelIfKeysHeld = new List<KeyCode>();
 
+    
+    //ATIVAÇÃO DE SKILL FODA
     [Header("Lógica da Ação (Movimento)")]
     [Tooltip("A ação de MOVIMENTO que esta skill executa.")]
     public MovementSkillType actionToPerform;
+    [Tooltip("A ação de COMBATE que esta skill executa (usado se SkillClass for Combate).")]
+    public CombatSkillType combatActionToPerform;
 
 
     // --- O SISTEMA DE CONDIÇÕES AVANÇADO ---
@@ -59,6 +66,7 @@ public class SkillSO : ScriptableObject
     public List<ConditionGroup> conditionGroups = new List<ConditionGroup>();
     [Tooltip("O jogador NÃO PODE estar em NENHUM destes estados para ativar a skill.")]
     public List<PlayerState> forbiddenStates = new List<PlayerState>();
+
 
     // --- SEÇÃO DE MODIFICADORES DE FÍSICA INDEPENDENTES ---
 
@@ -77,7 +85,6 @@ public class SkillSO : ScriptableObject
     public float dashSpeed = 30f;
     public float dashDuration = 0.2f;
 
-    // Em SkillSO.cs
 
     [Header("-> Parâmetros de Dash com Pulo (DashJump)")]
     public float dashJump_DashSpeed = 25f;
@@ -98,14 +105,15 @@ public class SkillSO : ScriptableObject
     public float wallDashJump_ParabolaDamping = 1f;
     public float wallDashJump_GravityScaleOnFall = 2.5f;
 
+    [Header("-> Parâmetros de Block")]
+    [Tooltip("Duração da janela de Parry no início do block (em segundos).")]
+    public float block_ParryWindow = 0.15f;
+    [Tooltip("Redução de dano enquanto bloqueia (ex: 0.75 para 75% de redução).")]
+    public float block_DamageReduction = 0.75f;
 
-    // AQUI É COMBATE
-
-    [Header("Lógica da Ação (Combate)")]
-    [Tooltip("A ação de COMBATE que esta skill executa.")]
-    public CombatSkillType combatActionToPerform;
-
-    [Header("-> Parâmetros de Defesa (Block & Parry)")]
-    [Tooltip("A janela de tempo (em segundos) no início do block para conseguir um parry.")]
-    public float parryWindow = 0.15f;
+    [Header("-> Parâmetros de Parry")]
+    [Tooltip("Multiplicador de dano aplicado ao inimigo após um parry bem-sucedido.")]
+    public float parry_CounterDamageMultiplier = 2.0f;
+    [Tooltip("Duração do 'stun' aplicado ao inimigo (em segundos).")]
+    public float parry_StunDuration = 1.5f;
 }

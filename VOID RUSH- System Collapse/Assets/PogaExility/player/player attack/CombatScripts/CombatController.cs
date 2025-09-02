@@ -48,12 +48,10 @@ public class CombatController : MonoBehaviour
         {
             if (activeStance == WeaponType.Buster && currentWeapon != null)
             {
-                // Inicia o carregamento do Buster
                 playerAttack.StartBusterCharge(currentWeapon);
             }
             else if (currentWeapon != null)
             {
-                // Ataque imediato (Melee ou Firearm)
                 playerAttack.PerformAttack(currentWeapon, aimDirection);
             }
         }
@@ -62,16 +60,10 @@ public class CombatController : MonoBehaviour
         {
             if (activeStance == WeaponType.Buster && currentWeapon != null)
             {
-                // Libera o tiro carregado
                 playerAttack.ReleaseBusterCharge(currentWeapon, aimDirection);
             }
         }
-
-        // Input de Bloqueio (F)
-        if (Input.GetKeyDown(KeyCode.F)) defenseHandler.StartBlock();
-        if (Input.GetKeyUp(KeyCode.F)) defenseHandler.EndBlock();
     }
-
     // Função auxiliar para pegar a arma no slot correto
     private ItemSO GetEquippedWeapon()
     {

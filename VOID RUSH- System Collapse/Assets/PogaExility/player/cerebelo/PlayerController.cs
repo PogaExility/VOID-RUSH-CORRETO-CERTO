@@ -6,51 +6,41 @@ using UnityEngine;
 [RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(SkillRelease))]
 public class PlayerController : MonoBehaviour
 {
-    
 
-    // --- SUAS REFERÊNCIAS ORIGINAIS ---
     [Header("Referências de Gerenciamento")]
-    public CursorManager cursorManager;
     public InventoryManager inventoryManager;
+    public CursorManager cursorManager;
 
     [Header("Referências de UI")]
     public GameObject inventoryPanel;
-
-    [Header("Referências de Movimento")]
-    public SkillRelease skillRelease;
-    public AdvancedPlayerMovement2D movementScript;
-    public PlayerAnimatorController animatorController;
     public EnergyBarController energyBar;
     public GameObject powerModeIndicator;
 
-    [Header("Referências de Combate")]
+    [Header("Referências de Movimento e Combate")]
+    public SkillRelease skillRelease;
+    public AdvancedPlayerMovement2D movementScript;
+    public PlayerAnimatorController animatorController;
     public CombatController combatController;
     public PlayerAttack playerAttack;
     public DefenseHandler defenseHandler;
 
-    // --- A NOVA ESTRUTURA DE SKILLS ---
-    [Header("Skills Básicas")]
+    [Header("Skills de Movimento")]
     public SkillSO baseJumpSkill;
     public SkillSO baseDashSkill;
     public SkillSO dashJumpSkill;
-
-    [Header("Skills com Upgrades (Glow Mode)")]
     public SkillSO upgradedJumpSkill;
     public SkillSO upgradedDashSkill;
-
-    [Header("Skills de Parede (Sempre Ativas)")]
     public SkillSO wallSlideSkill;
     public SkillSO wallJumpSkill;
     public SkillSO wallDashSkill;
     public SkillSO wallDashJumpSkill;
 
+    [Header("Skills de Combate")]
+    public SkillSO blockSkill;
 
-
-
-    // --- SUAS VARIÁVEIS DE ESTADO ORIGINAIS ---
+    // Variáveis de Estado
     private bool isInventoryOpen = false;
     private List<GameObject> nearbyInteractables = new List<GameObject>();
-
     private bool canInteract => nearbyInteractables.Count > 0;
     private SkillSO activeJumpSkill;
     private SkillSO activeDashSkill;
@@ -58,10 +48,8 @@ public class PlayerController : MonoBehaviour
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
     private bool isInAimMode = false;
-    public SkillSO GetActiveDashSkill()
-    {
-        return activeDashSkill;
-    }
+    private bool isAimModeLocked = false;
+    private PlayerStats playerStats;
 
 
     void Awake()
@@ -72,9 +60,12 @@ public class PlayerController : MonoBehaviour
         combatController = GetComponent<CombatController>();
         playerAttack = GetComponent<PlayerAttack>();
         defenseHandler = GetComponent<DefenseHandler>();
+        playerStats = GetComponent<PlayerStats>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         if (inventoryManager == null) inventoryManager = GetComponent<InventoryManager>();
         if (cursorManager == null) cursorManager = FindAnyObjectByType<CursorManager>();
+      
+
     }
 
     void Start()
@@ -93,26 +84,48 @@ public class PlayerController : MonoBehaviour
     }
 
     // Adicione esta corotina em qualquer lugar dentro da classe PlayerController
-   // Em PlayerController.cs
+    // Em PlayerController.cs
 
 
     // Em PlayerController.cs
     void Update()
     {
-        // Lógica de inventário e interação que não depende do estado do jogador
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
-        if (Input.GetKeyDown(KeyCode.E) && canInteract && !isInventoryOpen) { Interact(); }
+        if (Input.GetKeyDown(KeyCode.E))
+            Interact();
 
-     
+        // Trava do modo de mira
+        if (Input.GetKeyDown(KeyCode.CapsLock))
+        {
+            isAimModeLocked = !isAimModeLocked; // Inverte o estado da trava
+
+            if (isAimModeLocked)
+            {
+                // Força a postura para Firearm (ou Buster) para ativar a mira
+                combatController.activeStance = WeaponType.Firearm;
+            }
+            else
+            {
+                // --- A CORREÇÃO ESTÁ AQUI ---
+                // Força a postura de volta para Melee para DESATIVAR a mira
+                combatController.activeStance = WeaponType.Melee;
+            }
+        }
+
         float horizontalInput = 0;
         if (!isInventoryOpen)
         {
             horizontalInput = Input.GetAxisRaw("Horizontal");
         }
         movementScript.SetMoveInput(horizontalInput);
+
         if (isInventoryOpen) return;
+
+        // --- CHAMADAS DAS FUNÇÕES DE LÓGICA ---
         HandlePowerModeToggle();
         HandleSkillInput();
+        HandleCombatInput();      // <-- CHAMADA AQUI
+        UpdateAimModeState();     // <-- CHAMADA AQUI
         UpdateAnimations();
         wasGroundedLastFrame = movementScript.IsGrounded();
 
@@ -121,7 +134,6 @@ public class PlayerController : MonoBehaviour
             movementScript.CutJump();
         }
     }
-
 
     private void ToggleInventory()
     {
@@ -148,59 +160,36 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void Interact()
+    void Interact()
     {
         if (nearbyInteractables.Count == 0) return;
-        GameObject objectToInteract = nearbyInteractables[0];
-        if (objectToInteract == null) { nearbyInteractables.RemoveAt(0); return; }
 
-        if (objectToInteract.TryGetComponent<QuestGiver>(out var questGiver)) { questGiver.Interact(); nearbyInteractables.Remove(objectToInteract); }
-        else if (objectToInteract.TryGetComponent<Checkpoint>(out var checkpoint)) { checkpoint.Interact(); nearbyInteractables.Remove(objectToInteract); }
-        else if (objectToInteract.TryGetComponent<ItemPickup>(out var itemToPickup))
+        GameObject obj = nearbyInteractables[0];
+        if (obj == null) { nearbyInteractables.RemoveAt(0); return; }
+
+        if (obj.TryGetComponent<ItemPickup>(out var pickup))
         {
-            // A função correta para pegar um item do mundo é TryAddItem
-            if (inventoryManager.TryAddItem(itemToPickup.itemData))
+            if (inventoryManager.TryAddItem(pickup.itemData, pickup.amount))
             {
-                // Só destrói o objeto se ele foi pego com sucesso
-                nearbyInteractables.Remove(itemToPickup.gameObject);
-                Destroy(itemToPickup.gameObject);
-            }
-            else
-            {
-                // Opcional: Feedback se o inventário estiver cheio
-                Debug.Log("Inventário cheio!");
+                Destroy(obj);
+                nearbyInteractables.RemoveAt(0);
             }
         }
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
+    void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.GetComponent<ItemPickup>() != null || other.GetComponent<QuestGiver>() != null || other.GetComponent<Checkpoint>() != null || other.GetComponent<MissionBoard>() != null || other.GetComponent<TravelPoint>() != null)
-        {
-            if (!nearbyInteractables.Contains(other.gameObject))
-            {
-                nearbyInteractables.Add(other.gameObject);
-            }
-        }
+        if (other.GetComponent<ItemPickup>())
+            nearbyInteractables.Add(other.gameObject);
     }
 
-    private void OnTriggerExit2D(Collider2D other)
+    void OnTriggerExit2D(Collider2D other)
     {
         if (nearbyInteractables.Contains(other.gameObject))
-        {
             nearbyInteractables.Remove(other.gameObject);
-        }
     }
 
-    // Em PlayerController.cs
-    // Em PlayerController.cs
-    // Em PlayerController.cs
-    // Em PlayerController.cs
-    // Em PlayerController.cs
-    // Em PlayerController.cs
-
-    // Em PlayerController.cs
-    private void HandleSkillInput()
+private void HandleSkillInput()
     {
         // 1. O JOGADOR APERTOU A TECLA DO DASH?
         // Lemos a tecla do SO da skill de dash ativa.
@@ -222,63 +211,143 @@ public class PlayerController : MonoBehaviour
     }
     private void HandleCombatInput()
     {
-        // --- CORREÇÃO CS1955: Usa o método com '()' ---
-        if (!movementScript.IsDashing()) combatController.ProcessCombatInput();
+        combatController.ProcessCombatInput();
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            defenseHandler.StartBlock(blockSkill);
+        }
+        if (Input.GetKeyUp(KeyCode.F))
+        {
+            defenseHandler.EndBlock();
+        }
     }
 
     private void UpdateAimModeState()
     {
-        // Entra no modo de mira se a postura for Firearm ou Buster
-        // E se o jogador não estiver fazendo outra ação prioritária (como dashing ou pousando)
-        bool shouldAim = (combatController.activeStance == WeaponType.Firearm || combatController.activeStance == WeaponType.Buster)
-                         && !movementScript.IsDashing() && !isLanding;
+        bool shouldAim = isAimModeLocked ||
+                        ((combatController.activeStance == WeaponType.Firearm || combatController.activeStance == WeaponType.Buster)
+                         && !movementScript.IsDashing() && !isLanding);
 
+        // A checagem de mudança de estado já existe e é perfeita para isso
         if (isInAimMode != shouldAim)
         {
             isInAimMode = shouldAim;
-            // Avisa o PlayerAttack para ativar/desativar o IK dos braços/cabeça
-            playerAttack.SetAiming(isInAimMode);
-        }
+            playerAttack.SetAiming(isInAimMode); // Isso já ativa/desativa os prefabs
 
-        // Se estiver no modo de mira, o flip é controlado pelo mouse
-        if (isInAimMode)
-        {
-            float mouseDirectionX = combatController.aimDirection.x;
-            movementScript.FaceDirection(mouseDirectionX > 0 ? 1 : -1);
+            // --- ADICIONE ESTE BLOCO ---
+            // Atualiza o cursor do mouse com base no novo estado
+            if (cursorManager != null)
+            {
+                if (isInAimMode)
+                {
+                    cursorManager.SetAimCursor();
+                }
+                else
+                {
+                    cursorManager.SetDefaultCursor();
+                }
+            }
+            // --- FIM DO BLOCO ---
         }
     }
+    // Em PlayerController.cs
     private void UpdateAnimations()
     {
-        if (isLanding) return;
+        // --- HIERARQUIA DE PRIORIDADE ---
+        // A primeira condição que for verdadeira, define a animação e a função termina.
 
-        if (!wasGroundedLastFrame && movementScript.CheckState(PlayerState.IsGrounded))
+        // PRIORIDADE MÁXIMA: Animação de Morte
+        if (playerStats.IsDead()) // (Você precisará de uma função como esta no PlayerStats)
+        {
+            animatorController.PlayState(PlayerAnimState.morrendo);
+             return;
+         }
+
+        // PRIORIDADE 2: Animação de Pouso
+        if (isLanding)
+        {
+            // Se já estamos no processo de pouso, a animação 'pousando' já foi chamada.
+            // Não fazemos nada e deixamos ela terminar. O evento de animação vai limpar 'isLanding'.
+            return;
+        }
+        // Lógica para INICIAR o pouso
+        if (!wasGroundedLastFrame && movementScript.IsGrounded())
         {
             isLanding = true;
             movementScript.OnLandingStart();
             animatorController.PlayState(PlayerAnimState.pousando);
-            return;
+            return; // Animação de pouso definida. Fim.
         }
 
-        if (movementScript.CheckState(PlayerState.IsWallSliding)) animatorController.PlayState(PlayerAnimState.derrapagem);
-        else if (movementScript.CheckState(PlayerState.IsInParabola)) animatorController.PlayState(PlayerAnimState.dashAereo);
-        else if (movementScript.CheckState(PlayerState.IsDashing)) animatorController.PlayState(movementScript.CheckState(PlayerState.IsGrounded) ? PlayerAnimState.dash : PlayerAnimState.dashAereo);
-        else if (!movementScript.CheckState(PlayerState.IsGrounded))
-        {
-            if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando);
-            else animatorController.PlayState(PlayerAnimState.falling);
-        }
-        else
-        {
-            if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando);
-            else animatorController.PlayState(PlayerAnimState.parado);
-        }
+        // PRIORIDADE 3: Animação de Dano
+        // (A chamada para a animação de dano já está no PlayerStats.cs, o que é bom.
+        // Mas precisamos impedir que as animações de movimento a substituam imediatamente).
+         if (animatorController.GetCurrentAnimatorStateInfo(0).IsName("dano"))
+         {
+             return; // Deixa a animação de dano terminar.
+         }
+
+        // PRIORIDADE 4: Modo de Mira ("Cotoco")
         if (isInAimMode)
         {
             if (movementScript.IsMoving())
+            {
                 animatorController.PlayState(PlayerAnimState.andarCotoco);
+            }
             else
+            {
                 animatorController.PlayState(PlayerAnimState.paradoCotoco);
-            return; // Sai da função para não tocar as animações normais
+            }
+            return; // Animação de mira definida. Fim.
+        }
+
+        // PRIORIDADE 5: Ações Aéreas e de Parede (Movimento)
+        if (!movementScript.IsGrounded())
+        {
+            if (movementScript.IsWallSliding())
+            {
+                animatorController.PlayState(PlayerAnimState.derrapagem);
+            }
+            else if (movementScript.IsInParabolaArc())
+            {
+                animatorController.PlayState(PlayerAnimState.dashAereo);
+            }
+            else if (movementScript.IsDashing())
+            {
+                animatorController.PlayState(PlayerAnimState.dashAereo);
+            }
+            else if (movementScript.GetVerticalVelocity() > 0.1f)
+            {
+                animatorController.PlayState(PlayerAnimState.pulando);
+            }
+            else
+            {
+                animatorController.PlayState(PlayerAnimState.falling);
+            }
+            return; // Animação aérea definida. Fim.
+        }
+
+        // PRIORIDADE 6: Ações no Chão (Movimento)
+        if (movementScript.IsDashing())
+        {
+            animatorController.PlayState(PlayerAnimState.dash);
+        }
+        else if (movementScript.IsMoving())
+        {
+            animatorController.PlayState(PlayerAnimState.andando);
+        }
+        else
+        {
+            // PRIORIDADE MÍNIMA: Parado ou Parado com Pouca Vida
+             if (playerStats.IsHealthLow()) // (Você precisará de uma função como esta)
+             {
+                 animatorController.PlayState(PlayerAnimState.poucaVidaParado);
+             }
+             else
+            {
+            animatorController.PlayState(PlayerAnimState.parado);
+             }
         }
     }
     private void HandlePowerModeToggle()

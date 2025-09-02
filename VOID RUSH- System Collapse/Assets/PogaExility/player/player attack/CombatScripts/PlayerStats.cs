@@ -17,6 +17,11 @@ public class PlayerStats : MonoBehaviour
 
     private float _healthBonus = 0f;
     private float _blockGaugeBonus = 0f;
+    public bool IsDead()
+    {
+        return _currentHealth <= 0;
+    }
+
 
     // --- ESTE É O ÚNICO BLOCO QUE DEVE EXISTIR ---
     [Header("Efeitos de Dano e Invencibilidade")]
@@ -61,6 +66,7 @@ public class PlayerStats : MonoBehaviour
         // ...
         animatorController = GetComponent<PlayerAnimatorController>();
         OnDeath += PlayDeathAnimation; 
+
     }
 
     public void TakeDamage(float amount, Vector2 attackDirection)
@@ -167,5 +173,9 @@ public class PlayerStats : MonoBehaviour
         {
             animatorController.PlayState(PlayerAnimState.poucaVidaParado);
         }
+    }
+    public bool IsHealthLow()
+    {
+        return _currentHealth / MaxHealth <= lowHealthThreshold;
     }
 }

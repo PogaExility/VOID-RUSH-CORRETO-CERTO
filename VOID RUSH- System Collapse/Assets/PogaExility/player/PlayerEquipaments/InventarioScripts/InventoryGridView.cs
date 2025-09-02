@@ -28,19 +28,46 @@ public class InventoryGridView : MonoBehaviour, IPointerClickHandler
 
     void OnEnable()
     {
-        if (inventoryManager == null)
+        if (inventoryManager == null) inventoryManager = FindFirstObjectByType<InventoryManager>();
+        if (mainCanvas == null) mainCanvas = GetComponentInParent<Canvas>();
+
+        if (slotContainer == null || itemContainer == null || itemPrefab == null)
         {
-            inventoryManager = FindFirstObjectByType<InventoryManager>();
-            if (inventoryManager == null)
-            {
-                Debug.LogError("InventoryManager não encontrado na cena.");
-                return;
-            }
+            Debug.LogError("[InventoryGridView] Faltam refs: "
+                + (slotContainer == null ? "slotContainer " : "")
+                + (itemContainer == null ? "itemContainer " : "")
+                + (itemPrefab == null ? "itemPrefab " : ""));
+            enabled = false; return;
         }
 
-        GenerateSlotGrid();
+        var gl = slotContainer.GetComponent<GridLayoutGroup>();
+        if (gl == null)
+        {
+            Debug.LogError("[InventoryGridView] slotContainer precisa de GridLayoutGroup.");
+            enabled = false; return;
+        }
+
+        if (inventoryManager == null)
+        {
+            Debug.LogError("[InventoryGridView] InventoryManager não encontrado na cena.");
+            enabled = false; return;
+        }
+
+        // 🔒 garante que a estrutura do inventário existe
+        inventoryManager.EnsureGridExists();
+
         inventoryManager.OnBackpackItemChanged += RedrawSlot;
         inventoryManager.OnItemHeld += UpdateGhostItem;
+
+        GenerateSlotGrid();
+
+        // ⏳ adia 1 frame pra garantir que todos Awakes rodaram
+        StartCoroutine(DeferredRedraw());
+    }
+
+    System.Collections.IEnumerator DeferredRedraw()
+    {
+        yield return null; // espera 1 frame
         RedrawAllItems();
     }
 
@@ -77,34 +104,68 @@ public class InventoryGridView : MonoBehaviour, IPointerClickHandler
     // ---------- Itens ----------
     private void RedrawAllItems()
     {
-        foreach (var kv in itemsInView) if (kv.Value) Destroy(kv.Value.gameObject);
-        itemsInView.Clear();
+        if (inventoryManager == null) { Debug.LogError("[InventoryGridView] inventoryManager nulo."); return; }
+        if (itemPrefab == null) { Debug.LogError("[InventoryGridView] itemPrefab nulo."); return; }
+        if (itemContainer == null) { Debug.LogError("[InventoryGridView] itemContainer nulo."); return; }
 
-        for (int y = 0; y < inventoryManager.gridHeight; y++)
-            for (int x = 0; x < inventoryManager.gridWidth; x++)
-                RedrawSlot(inventoryManager.GetItemAt(x, y), x, y);
+        // 🔒 de novo por segurança, em caso de re-enable
+        inventoryManager.EnsureGridExists();
+
+        // limpa antigos
+        foreach (Transform child in itemContainer) Destroy(child.gameObject);
+
+        var gl = slotContainer.GetComponent<GridLayoutGroup>();
+        if (gl == null) { Debug.LogError("[InventoryGridView] GridLayoutGroup ausente no slotContainer."); return; }
+
+        int W = inventoryManager.gridWidth;
+        int H = inventoryManager.gridHeight;
+
+        for (int y = 0; y < H; y++)
+            for (int x = 0; x < W; x++)
+            {
+                var item = inventoryManager.GetItemAt(x, y);   // aqui era onde estourava se a grid não existisse
+                int count = inventoryManager.GetCountAt(x, y);
+                if (item == null || count <= 0) continue;
+
+                var iv = Instantiate(itemPrefab, itemContainer);
+                iv.Render(item, x, y);
+                iv.SetStackCount(count);
+
+                Vector2 pos = new Vector2(
+                    x * (gl.cellSize.x + gl.spacing.x),
+                   -y * (gl.cellSize.y + gl.spacing.y)
+                );
+                iv.GetComponent<RectTransform>().anchoredPosition = pos;
+            }
     }
 
+
+    // redesenha UMA célula quando o manager avisa
     private void RedrawSlot(ItemSO item, int x, int y)
     {
+        if (itemContainer == null || slotContainer == null) return;
+
+        // remove antigo
         string key = $"{x},{y}";
-        if (itemsInView.TryGetValue(key, out var old) && old) Destroy(old.gameObject);
-        itemsInView.Remove(key);
-
-        if (item != null)
+        for (int i = itemContainer.childCount - 1; i >= 0; i--)
         {
-            var iv = Instantiate(itemPrefab, itemContainer);
-            iv.Render(item, x, y);
-            iv.SetStackCount(inventoryManager.GetCountAt(x, y));
-
-            var gl = slotContainer.GetComponent<GridLayoutGroup>();
-            Vector2 pos = new Vector2(
-                x * (gl.cellSize.x + gl.spacing.x),
-               -y * (gl.cellSize.y + gl.spacing.y)
-            );
-            iv.GetComponent<RectTransform>().anchoredPosition = pos;
-            itemsInView[key] = iv;
+            var iv = itemContainer.GetChild(i).GetComponent<InventoryItemView>();
+            if (iv != null && iv.name == key) Destroy(iv.gameObject);
         }
+
+        if (item == null) return;
+
+        var gl = slotContainer.GetComponent<GridLayoutGroup>();
+        var view = Instantiate(itemPrefab, itemContainer);
+        view.name = key;
+        view.Render(item, x, y);
+        view.SetStackCount(inventoryManager.GetCountAt(x, y));
+
+        Vector2 pos = new Vector2(
+            x * (gl.cellSize.x + gl.spacing.x),
+           -y * (gl.cellSize.y + gl.spacing.y)
+        );
+        view.GetComponent<RectTransform>().anchoredPosition = pos;
     }
 
     // ---------- Ghost / drag ----------

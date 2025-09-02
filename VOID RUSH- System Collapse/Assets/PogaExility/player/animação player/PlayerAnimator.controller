@@ -232,7 +232,7 @@ AnimatorStateMachine:
     m_Position: {x: 640, y: -100, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 1263357269430235388}
-    m_Position: {x: 860, y: -50, z: 0}
+    m_Position: {x: 640, y: 50, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 736017401990393376}
     m_Position: {x: 640, y: -50, z: 0}
@@ -284,7 +284,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: andar cotoco
+  m_Name: andarCotoco
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
@@ -297,7 +297,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 255053d73ec31db41b0b24b10446ae77, type: 2}
+  m_Motion: {fileID: 7400000, guid: 4e85e69f85bb16743990ab811c871e23, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -310,7 +310,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pouca vida parado
+  m_Name: poucaVidaParado
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
@@ -336,7 +336,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: parado cotoco
+  m_Name: paradoCotoco
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
@@ -349,7 +349,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 2be6c984859efc74b80283556146f64d, type: 2}
+  m_Motion: {fileID: 7400000, guid: 924129bb0c41a6046b6e31f440a43529, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 

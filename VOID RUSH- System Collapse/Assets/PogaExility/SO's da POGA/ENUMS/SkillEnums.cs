@@ -3,7 +3,6 @@ public enum SkillClass
 {
     Movimento,
     Buff,
-    Dano,
     Combate
 }
 public enum DashType
@@ -18,7 +17,8 @@ public enum CombatSkillType
     MeleeAttack,
     FirearmAttack,
     BusterAttack,
-    Block_Parry
+    Block,          
+    Parry
 }
 public enum MovementSkillType
 {
@@ -50,7 +50,9 @@ public enum PlayerState
     IsInAir,
     IsInParabola,   // Está no arco de um lançamento (como o WallDashJump)?
     IsWallJumping,   // Está no breve estado de pulo de parede?
-    IsLanding
+    IsLanding,
+    IsBlocking,
+    IsParrying,
 
 }
 

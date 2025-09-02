@@ -47,6 +47,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public float knockbackForce = 5f;
     public float knockbackUpwardForce = 3f;
     public float knockbackDuration = 0.2f;
+    private DefenseHandler defenseHandler;
     public void SetMoveInput(float input)
     {
         moveInput = input;
@@ -112,6 +113,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             case PlayerState.IsInParabola: return IsInParabolaArc();
             case PlayerState.IsWallJumping: return IsWallJumping();
             case PlayerState.IsLanding: return isLanding;
+            case PlayerState.IsBlocking: return defenseHandler != null && defenseHandler.IsBlocking();
+            case PlayerState.IsParrying: return defenseHandler != null && defenseHandler.CanParry();
             default: return false;
         }
     }
@@ -165,6 +168,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         capsuleCollider = GetComponent<CapsuleCollider2D>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         currentGravityScaleOnFall = gravityScaleOnFall;
+        defenseHandler = GetComponent<DefenseHandler>();
     }
 
     void Update()

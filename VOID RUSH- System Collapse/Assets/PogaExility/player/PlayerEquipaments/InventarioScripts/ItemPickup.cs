@@ -1,19 +1,16 @@
+// FILE: ItemPickup.cs
 using UnityEngine;
 
+[RequireComponent(typeof(Collider2D))]
 public class ItemPickup : MonoBehaviour
 {
     public ItemSO itemData;
     public int amount = 1;
 
-    void OnTriggerEnter2D(Collider2D other)
+    void Reset()
     {
-        if (other.CompareTag("Player"))
-        {
-            InventoryManager manager = other.GetComponentInChildren<InventoryManager>();
-            if (manager != null && manager.TryAddItem(itemData, amount))
-            {
-                Destroy(gameObject);
-            }
-        }
+        // Garanta que o collider é Trigger para acionar OnTriggerEnter2D no Player
+        var col = GetComponent<Collider2D>();
+        if (col != null) col.isTrigger = true;
     }
 }

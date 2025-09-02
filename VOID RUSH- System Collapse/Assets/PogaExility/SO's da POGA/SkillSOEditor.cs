@@ -29,38 +29,29 @@ public class SkillSOEditor : Editor
 
         // --- Bloco do Sistema de Ativação (Sempre Visível) ---
         EditorGUILayout.LabelField("Sistema de Ativação", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("requiredKeys"), true);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("triggerKeys"), true);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("requiredKeys"), true);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("cancelIfKeysHeld"), true);
         EditorGUILayout.Space(10);
 
         // --- Bloco de Lógica da Ação ---
-        EditorGUILayout.LabelField("Parâmetros da Ação", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("actionToPerform"));
-        EditorGUILayout.Space(10);
+       
        
 
         // --- A NOVA UI DE CONDIÇÕES AVANÇADAS ---
-        EditorGUILayout.LabelField("Condições de Ativação", EditorStyles.boldLabel);
+      
         EditorGUILayout.PropertyField(serializedObject.FindProperty("conditionGroups"), true);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("forbiddenStates"), true);
         EditorGUILayout.Space(10);
 
         // --- Bloco de Parâmetros de Física (Contextual) ---
-        // Mostra apenas os campos de física relevantes para a ação selecionada.
+        EditorGUILayout.LabelField("Parâmetros da Ação", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("actionToPerform"));
+        EditorGUILayout.Space(10);
+
         if (skill.skillClass == SkillClass.Movimento)
         {
-            EditorGUILayout.LabelField("Lógica da Ação (Movimento)", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("actionToPerform"));
-        }
-        else if (skill.skillClass == SkillClass.Combate) // <-- NOVA CONDIÇÃO
-        {
-            EditorGUILayout.LabelField("Lógica da Ação (Combate)", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("combatActionToPerform"));
-        }
-
-      
-        switch (skill.actionToPerform)
+            switch (skill.actionToPerform)
             {
                 case MovementSkillType.SuperJump:
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("jumpForce"));
@@ -100,30 +91,30 @@ public class SkillSOEditor : Editor
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_GravityScaleOnFall"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("dashJump_InputBuffer"));
                     break;
-
-            }
-  
-
-        if (skill.skillClass == SkillClass.Combate && skill.combatActionToPerform != CombatSkillType.None)
-        {
-            switch (skill.combatActionToPerform)
-            {
-                case CombatSkillType.Block_Parry:
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("parryWindow"));
-                    // Adicione outros parâmetros de defesa aqui
-                    break;
-                // Adicione cases para outros tipos de skills de combate aqui
             }
         }
-        
+
+
+        else if (skill.skillClass == SkillClass.Combate)
+        {
+            // --- O NOVO SWITCH CASE PARA COMBATE ---
+            switch (skill.combatActionToPerform)
+            {
+                case CombatSkillType.Block:
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("block_ParryWindow"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("block_DamageReduction"));
+                    break;
+
+                case CombatSkillType.Parry:
+                    EditorGUILayout.HelpBox("Os parâmetros de Parry são usados quando um Block resulta em um Parry. Configure-os aqui.", MessageType.Info);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("parry_CounterDamageMultiplier"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("parry_StunDuration"));
+                    break;
+
+                    // Adicione cases para MeleeAttack, FirearmAttack, etc. aqui no futuro
+            }
+        }
+
         serializedObject.ApplyModifiedProperties();
     }
-
-
-
-
-
-    // COMBATEEE
-
-
 }

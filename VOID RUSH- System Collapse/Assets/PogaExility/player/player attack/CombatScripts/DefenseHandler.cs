@@ -9,7 +9,10 @@ public class DefenseHandler : MonoBehaviour
 
     private bool isBlocking = false;
     private bool canParry = false;
+    public bool IsBlocking() => isBlocking;
+    public bool CanParry() => canParry;
     private Coroutine blockCoroutine;
+
 
     private PlayerAnimatorController animatorController;
 
@@ -18,25 +21,20 @@ public class DefenseHandler : MonoBehaviour
         animatorController = GetComponent<PlayerAnimatorController>();
     }
 
-    public void StartBlock()
+    public void StartBlock(SkillSO blockSkill)
     {
-        if (isBlocking) return;
+        if (isBlocking || blockSkill == null || blockSkill.combatActionToPerform != CombatSkillType.Block) return;
 
         isBlocking = true;
-        blockCoroutine = StartCoroutine(BlockRoutine());
-        Debug.Log("Começou a bloquear.");
+        blockCoroutine = StartCoroutine(BlockRoutine(blockSkill));
     }
 
-    private IEnumerator BlockRoutine()
+    private IEnumerator BlockRoutine(SkillSO blockSkill)
     {
-        // Animação de Block
         animatorController.PlayState(PlayerAnimState.block);
-
-        // Janela de Parry
         canParry = true;
-        yield return new WaitForSeconds(parryWindow);
+        yield return new WaitForSeconds(blockSkill.block_ParryWindow); // Usa o parâmetro do SkillSO
         canParry = false;
-
         // Mantém o estado de block enquanto o botão estiver pressionado
         while (isBlocking)
         {
@@ -55,16 +53,12 @@ public class DefenseHandler : MonoBehaviour
     }
 
     // Esta função será chamada por um inimigo ou projétil quando atingir o jogador
-    public void OnHitWhileDefending()
+    public void OnHitWhileDefending(SkillSO parrySkill)
     {
         if (canParry)
         {
-            // SUCESSO NO PARRY
             animatorController.PlayState(PlayerAnimState.parry);
-            Debug.Log("PARCEIRO! Conseguiu o Parry!");
-            // TODO: Aplicar efeito de parry (stun no inimigo, refletir projétil, etc.)
-
-            // Termina o block imediatamente após o parry
+            Debug.Log($"PARRY! Stun por {parrySkill.parry_StunDuration}s, Dano x{parrySkill.parry_CounterDamageMultiplier}");
             EndBlock();
         }
         else if (isBlocking)

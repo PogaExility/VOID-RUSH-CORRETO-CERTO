@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 28b9d20e41c41d745995106e4c4ce82f
+guid: 708ead0b74fedeb45987573085ec5d9e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6192106979332946634
-    second: anda cotoco true12_0
+      213: -5657078978471054008
+    second: mira_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: anda cotoco true12_0
+      name: mira_0
       rect:
         serializedVersion: 2
-        x: 11
-        y: 6
-        width: 10
-        height: 12
+        x: 0
+        y: 0
+        width: 25
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 63584ad6287311aa0800000000000000
-      internalID: -6192106979332946634
+      spriteID: 84537ed34a40e71b0800000000000000
+      internalID: -5657078978471054008
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      anda cotoco true12_0: -6192106979332946634
+      mira_0: -5657078978471054008
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
