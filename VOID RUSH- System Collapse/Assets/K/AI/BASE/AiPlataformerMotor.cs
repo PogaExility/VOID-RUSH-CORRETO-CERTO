@@ -88,14 +88,14 @@ public class AIPlatformerMotor : MonoBehaviour
         {
             Debug.DrawRay(rayOrigin, Vector2.down * rayDistance, Color.red);
             // Descomente a linha abaixo se quiser spam no console para depuração
-            // Debug.Log($"FRAME {Time.frameCount}: BEIRADA DETECTADA!");
+            Debug.Log($"FRAME {Time.frameCount}: BEIRADA DETECTADA!");
             return true;
         }
     }
-    public void Climb(float direction)
+    public void Climb(float direction, float speed)
     {
-       // rb.linearVelocity = new Vector2(rb.linearVelocity.x, direction * climbSpeed);
-        rb.gravityScale = 0; // Anula a gravidade temporariamente
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, direction * speed);
+        rb.gravityScale = 0;
     }
 
     public bool IsTouchingWall()

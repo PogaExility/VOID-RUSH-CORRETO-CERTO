@@ -26,7 +26,6 @@ public class AIController : MonoBehaviour
     [Range(0, 90)] public float groundProbeAngle = 45f;
     [Tooltip("Se a distância até o chão for maior que este valor, a IA considera uma beirada e para.")]
     public float ledgeDetectionThreshold = 1.2f;
-
     [Header("Análise e Deliberação")]
     [Tooltip("O tempo que a IA passa olhando para baixo antes de iniciar a varredura.")]
     public float ledgeDwellTime = 0.8f;
@@ -35,7 +34,6 @@ public class AIController : MonoBehaviour
     [Tooltip("O tempo total que a IA leva para escanear de baixo para cima.")]
     public float ledgeScanUpDuration = 1.2f;
     public float searchTime = 5f;
-
     [Header("Personalidade e Probabilidade")]
     [Tooltip("A velocidade geral com que a cabeça/olhos se movem para um novo alvo.")]
     public float eyeSpeed = 6f;
@@ -119,45 +117,22 @@ public class AIController : MonoBehaviour
         FaceTarget(playerTarget.position);
         float direction = isFacingRight ? 1 : -1;
 
+        // A única preocupação deste método agora é PAREDES. A beirada é tratada em DecideState.
         if (motor.IsObstacleAhead())
         {
-            // Tenta encontrar uma beirada para pular
-            Vector2 ledgeRayOrigin = (Vector2)eyes.position + Vector2.up * 1.0f;
-            RaycastHit2D ledgeHit = Physics2D.Raycast(ledgeRayOrigin, isFacingRight ? Vector2.right : Vector2.left, 1.5f, motor.groundLayer);
-
-            if (ledgeHit.collider != null)
-            {
-                Vector2 edgeProbeOrigin = new Vector2(ledgeHit.point.x, ledgeHit.point.y + 0.1f);
-                RaycastHit2D edgeHit = Physics2D.Raycast(edgeProbeOrigin, Vector2.down, 0.2f, motor.groundLayer);
-
-                if (edgeHit.collider == null) // É uma beirada
-                {
-                    Vector3 ledgePoint = new Vector3(ledgeHit.point.x, ledgeHit.point.y, 0);
-                    float ledgeHeight = ledgePoint.y - transform.position.y;
-
-                    if (ledgeHeight > 1.0f && ledgeHeight <= maxLedgeGrabHeight)
-                    {
-                        StartCoroutine(TacticalJumpAndGrabRoutine(ledgePoint));
-                        return;
-                    }
-                }
-            }
-
-            // Se não encontrou beirada, tenta escalar
+            // Se pode escalar, entra no estado de escalada.
             if (canClimb)
             {
                 ChangeState(State.Climbing);
                 return;
             }
 
+            // Se não pode escalar, para.
             motor.Stop();
-        }
-        else if (motor.IsLedgeAhead())
-        {
-            StartCoroutine(ExecuteLedgeAnalysis(true));
         }
         else
         {
+            // Se não há obstáculos, move-se em direção ao alvo.
             motor.Move(direction);
         }
     }
@@ -224,7 +199,6 @@ public class AIController : MonoBehaviour
                 break;
         }
     }
-
     void ExecuteBrain()
     {
         if (isExecutingAction || currentState == State.Dead) { motor.Stop(); return; }
@@ -408,7 +382,9 @@ public class AIController : MonoBehaviour
         }
         else
         {
-            motor.Climb(1f);
+            // --- CORREÇÃO ---
+            // Passa a velocidade de escalada para o motor.
+            motor.Climb(1f, climbSpeed);
         }
     }
     #endregion
@@ -429,7 +405,6 @@ public class AIController : MonoBehaviour
             Die();
         }
     }
-
     private void Die()
     {
         Debug.Log($"{gameObject.name} foi derrotado.");
@@ -652,7 +627,6 @@ public class AIController : MonoBehaviour
         isExecutingAction = false;
         ChangeState(State.Hunting);
     }
-
     private IEnumerator VaultOverLedgeRoutine()
     {
         isExecutingAction = true;
