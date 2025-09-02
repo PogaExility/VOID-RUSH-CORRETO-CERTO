@@ -1,7 +1,5 @@
 using UnityEngine;
 
-// O AIManager é o cérebro central que observa o mundo e fornece informações para todos os inimigos.
-// Ele usa o padrão Singleton para garantir que só exista um dele e para ser facilmente acessível.
 public class AIManager : MonoBehaviour
 {
     // --- Padrão Singleton ---

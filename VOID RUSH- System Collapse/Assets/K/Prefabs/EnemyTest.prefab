@@ -41,10 +41,10 @@ GameObject:
   m_Component:
   - component: {fileID: 6882396487554057975}
   - component: {fileID: 5054082563986727206}
-  - component: {fileID: 3303777242637043310}
-  - component: {fileID: 4590336284299838918}
   - component: {fileID: 5658211616576219956}
   - component: {fileID: 7502982176693055856}
+  - component: {fileID: 480485870301662868}
+  - component: {fileID: 970560921708621255}
   m_Layer: 0
   m_Name: EnemyTest
   m_TagString: Untagged
@@ -96,69 +96,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
---- !u!114 &3303777242637043310
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5082244870820680162}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8f9be20353571a44d975d6b2acd6ce2a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  moveSpeed: 4
-  groundCheck_A: {fileID: 3788960539033739152}
-  groundCheck_B: {fileID: 4246373196810520356}
-  wallCheck: {fileID: 9221731014855316367}
-  ledgeCheck: {fileID: 6837651907397231446}
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  groundCheckRadius: 0.2
-  wallCheckDistance: 1
-  currentFacingDirection: 1
---- !u!114 &4590336284299838918
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5082244870820680162}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d3dd2c6c6c0fa747af595abf6136384, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  eyes: {fileID: 1821488007309959327}
-  groundProbeDistance: 0.8
-  groundProbeAngle: 45
-  ledgeDetectionThreshold: 1.2
-  ledgeDwellTime: 0.8
-  ledgeMidScanPauseTime: 0.3
-  ledgeScanUpDuration: 1.2
-  searchTime: 4.93
-  eyeSpeed: 6
-  visionRange: 10
-  visionAngle: 20
-  visionBlockers:
-    serializedVersion: 2
-    m_Bits: 192
-  playerLayer:
-    serializedVersion: 2
-    m_Bits: 8
-  attackRange: 1.5
-  attackCooldown: 1.5
-  jumpForce: 14
-  airControlForce: 5
-  maxJumpDistance: 5
-  maxJumpHeight: 3
-  maxSafeDropHeight: 4
-  maxHealth: 100
-  attackDamage: 15
-  knockbackForce: 5
-  isBrainedDead: 0
 --- !u!212 &5658211616576219956
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -179,6 +116,8 @@ SpriteRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -200,6 +139,7 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -251,6 +191,74 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 1, y: 2}
   m_Direction: 0
+--- !u!114 &480485870301662868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5082244870820680162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f9be20353571a44d975d6b2acd6ce2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AIPlatformerMotor
+  moveSpeed: 4
+  groundCheck_A: {fileID: 3788960539033739152}
+  groundCheck_B: {fileID: 4246373196810520356}
+  wallCheck: {fileID: 9221731014855316367}
+  ledgeCheck: {fileID: 6837651907397231446}
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  groundCheckRadius: 0.2
+  wallCheckDistance: 1
+  wallContactRadius: 0.3
+  currentFacingDirection: 1
+--- !u!114 &970560921708621255
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5082244870820680162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d3dd2c6c6c0fa747af595abf6136384, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AIController
+  eyes: {fileID: 1821488007309959327}
+  groundProbeDistance: 0.8
+  groundProbeAngle: 45
+  ledgeDetectionThreshold: 1.2
+  ledgeDwellTime: 0.8
+  ledgeMidScanPauseTime: 0.3
+  ledgeScanUpDuration: 1.2
+  searchTime: 5
+  eyeSpeed: 6
+  visionRange: 15
+  visionAngle: 90
+  visionBlockers:
+    serializedVersion: 2
+    m_Bits: 64
+  playerLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  attackRange: 1.5
+  attackCooldown: 1.5
+  jumpForce: 14
+  airControlForce: 5
+  maxJumpDistance: 5
+  maxJumpHeight: 3
+  maxSafeDropHeight: 4
+  maxHealth: 100
+  attackDamage: 15
+  knockbackForce: 5
+  isBrainedDead: 0
+  canClimb: 1
+  climbSpeed: 3
+  maxLedgeGrabHeight: 4
+  ledgeHangTime: 1
 --- !u!1 &6246121293547310721
 GameObject:
   m_ObjectHideFlags: 0
@@ -313,6 +321,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -334,6 +344,7 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -350,7 +361,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a4fd2999402fff49ad03d5d4934e658, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  aiController: {fileID: 4590336284299838918}
+  aiController: {fileID: 0}
   viewMeshFilter: {fileID: 3723264640421335045}
   meshResolution: 2
   edgeResolveIterations: 4
