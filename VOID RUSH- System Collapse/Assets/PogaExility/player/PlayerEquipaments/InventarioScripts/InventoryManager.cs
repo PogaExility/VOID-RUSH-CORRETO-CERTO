@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class InventoryManager : MonoBehaviour
 {
+    public static InventoryManager Instance;
     // --- EVENTOS ---
     // A UI vai ouvir esses eventos para saber quando se atualizar.
     // O int é o ÍNDICE do slot que mudou. Simples e eficiente.
@@ -27,6 +28,7 @@ public class InventoryManager : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
         InitializeInventory();
     }
 
@@ -50,6 +52,15 @@ public class InventoryManager : MonoBehaviour
                 weaponSlots[i] = new InventorySlot();
             }
         }
+    }
+    public void SetSlotContent(int index, ItemSO item, int count)
+    {
+        InventorySlot slot = GetBackpackSlot(index);
+        if (slot == null) return;
+
+        slot.Set(item, count);
+        OnBackpackSlotChanged?.Invoke(index);
+
     }
 
     // --- API PÚBLICA: FUNÇÕES QUE OUTROS SCRIPTS VÃO USAR ---

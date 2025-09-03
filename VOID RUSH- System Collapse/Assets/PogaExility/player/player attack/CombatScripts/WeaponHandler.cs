@@ -11,6 +11,10 @@ public class WeaponHandler : MonoBehaviour
     [Header("Runtime")]
     public ItemSO equippedWeapon;              // arma equipada atualmente
     private GameObject equippedGO;             // instância do prefab equipPrefab
+    private void Start()
+    {
+        inventory = InventoryManager.Instance;
+    }
     public interface IDamageable
     {
         void TakeDamage(float amount);

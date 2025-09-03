@@ -1,68 +1,94 @@
 using UnityEngine;
-
+using UnityEngine.UI; // Adicionamos a biblioteca da UI
+using TMPro;
 public class CursorManager : MonoBehaviour
 {
+    // --- Texturas do Cursor (Funcionalidade antiga, mantida) ---
     [Header("Textura do cursor (Texture Type = Default ou Cursor)")]
     public Texture2D inventoryCursor;
     public Texture2D aimCursor;
-
-    [Header("Hotspots possíveis (px a partir do canto SUPERIOR ESQUERDO da textura)")]
-    public Vector2Int hotspotBaixo = new Vector2Int(11, 5);
-    public Vector2Int hotspotMeio = new Vector2Int(11, 4);
-    public Vector2Int hotspotAlto = new Vector2Int(11, 3); // <<< MAIS ALTO
-
-    public enum HotspotOption { Baixo, Meio, Alto }
-    [Header("Hotspot ativo")]
-    public HotspotOption hotspotAtivo = HotspotOption.Alto; // começa no mais alto
-
-    [Header("Modo do cursor")]
     public CursorMode cursorMode = CursorMode.Auto;
-   
+
+    // --- NOVO: Ícone para Arrastar Itens ---
+    [Header("UI para Arrastar Itens")]
+    [SerializeField] private Image heldItemIcon; // Arraste o GameObject "HeldItemIcon" aqui
+    [SerializeField] private TextMeshProUGUI heldItemCountText;
+    private bool isHoldingItem = false;
+
+    private void Start()
+    {
+        // Garante que o ícone fantasma comece desativado
+        if (heldItemIcon != null)
+        {
+            heldItemIcon.gameObject.SetActive(false);
+        }
+        SetDefaultCursor();
+    }
+
+    private void Update()
+    {
+        // Se estivermos segurando um item, a imagem da UI deve seguir o mouse
+        if (isHoldingItem && heldItemIcon != null)
+        {
+            heldItemIcon.transform.position = Input.mousePosition;
+        }
+    }
+
+    // --- MÉTODOS PÚBLICOS PARA MUDAR O CURSOR ---
+
     public void SetInventoryCursor()
     {
+        // Se já estivermos segurando um item, não mude o cursor padrão
+        if (isHoldingItem) return;
+
         Cursor.visible = true;
-
-        if (inventoryCursor == null)
-        {
-            Debug.LogWarning("[CursorManager] inventoryCursor não atribuído.");
-            Cursor.SetCursor(null, Vector2.zero, cursorMode);
-            return;
-        }
-
-        Vector2Int hotspot = hotspotMeio;
-
-        switch (hotspotAtivo)
-        {
-            case HotspotOption.Baixo: hotspot = hotspotBaixo; break;
-            case HotspotOption.Meio: hotspot = hotspotMeio; break;
-            case HotspotOption.Alto: hotspot = hotspotAlto; break;
-        }
-
-        Cursor.SetCursor(inventoryCursor, new Vector2(hotspot.x, hotspot.y), cursorMode);
+        Cursor.SetCursor(inventoryCursor, Vector2.zero, cursorMode);
     }
 
     public void SetDefaultCursor()
     {
+        if (isHoldingItem) return;
+
         Cursor.visible = true;
         Cursor.SetCursor(null, Vector2.zero, cursorMode);
     }
     public void SetAimCursor()
     {
-        Cursor.visible = true; // Garante que o cursor esteja visível
+        if (isHoldingItem) return;
 
-        if (aimCursor != null)
+        Cursor.visible = true;
+        Vector2 hotspot = new Vector2(aimCursor.width / 2, aimCursor.height / 2);
+        Cursor.SetCursor(aimCursor, hotspot, cursorMode);
+    }
+
+    // --- NOVAS FUNÇÕES PARA O INVENTÁRIO CHAMAR ---
+
+    /// <summary>
+    /// Mostra um ícone de item seguindo o mouse e esconde o cursor do sistema.
+    /// </summary>
+    public void ShowHeldItem(Sprite itemSprite, int count)
+    {
+        if (heldItemIcon == null) return;
+
+        isHoldingItem = true;
+        heldItemIcon.sprite = itemSprite;
+        heldItemIcon.gameObject.SetActive(true);
+
+        bool showCount = count > 1;
+        heldItemCountText.enabled = showCount;
+        if (showCount)
         {
-            // Centraliza o hotspot no meio da textura da mira
-            Vector2 hotspot = new Vector2(aimCursor.width / 2, aimCursor.height / 2);
-            Cursor.SetCursor(aimCursor, hotspot, cursorMode);
+            heldItemCountText.text = count.ToString();
         }
-        else
-        {
-            Debug.LogWarning("[CursorManager] aimCursor não atribuído.");
-            // Como fallback, podemos usar o cursor padrão
-            SetDefaultCursor();
-        }
+
+        Cursor.visible = false;
+    }
+    public void HideHeldItem()
+    {
+        if (heldItemIcon == null) return;
+
+        isHoldingItem = false;
+        heldItemIcon.gameObject.SetActive(false);
+        SetInventoryCursor();
     }
 }
-
-

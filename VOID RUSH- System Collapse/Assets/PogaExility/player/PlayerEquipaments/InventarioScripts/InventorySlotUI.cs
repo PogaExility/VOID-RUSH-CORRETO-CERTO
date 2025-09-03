@@ -1,137 +1,81 @@
 using UnityEngine;
-
 using UnityEngine.UI;
-
 using TMPro;
+using UnityEngine.EventSystems;
 
-// Futuramente, adicionaremos interfaces aqui para Drag & Drop, como:
-
-// using UnityEngine.EventSystems;
-
-// public class InventorySlotUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler ...
-
-public class InventorySlotUI : MonoBehaviour
-
+public class InventorySlotUI : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IEndDragHandler, IDropHandler
 {
-
-    [Header("Componentes Visuais (arraste do prefab)")]
-
+    [Header("Componentes Visuais")]
     [SerializeField] private Image iconImage;
-
     [SerializeField] private TextMeshProUGUI countText;
 
-    [SerializeField] private GameObject highlightOverlay; // Opcional: para feedback visual
-
-    // Dados de referência (preenchidos pelo InventoryUI)
-
+    // Referências
     private InventoryManager inventoryManager;
-
     private int slotIndex;
+    private InventoryUI inventoryUI;
 
-    /// <summary>
-
-    /// Configura este slot visual com sua identidade. Chamado uma única vez pelo InventoryUI.
-
-    /// </summary>
-
-    public void Initialize(InventoryManager manager, int index)
-
+    public void Initialize(InventoryManager manager, InventoryUI uiController, int index)
     {
-
         inventoryManager = manager;
-
+        inventoryUI = uiController;
         slotIndex = index;
-
     }
-
-    /// <summary>
-
-    /// Lê os dados do InventoryManager e atualiza o visual deste slot.
-
-    /// Esta é a função principal que é chamada sempre que o slot precisa ser redesenhado.
-
-    /// </summary>
 
     public void Refresh()
-
     {
-
-        if (inventoryManager == null) return; // Segurança
-
+        if (inventoryManager == null) return;
         InventorySlot dataSlot = inventoryManager.GetBackpackSlot(slotIndex);
-
         bool hasItem = dataSlot != null && dataSlot.item != null && dataSlot.count > 0;
 
-        if (hasItem)
+        // Atualizado para a nova função helper
+        bool isHeldByMouse = inventoryUI.IsItemHeld() && inventoryUI.GetOriginIndex() == slotIndex;
+        var tempColor = iconImage.color;
+        tempColor.a = isHeldByMouse ? 0f : 1f; // Fica totalmente invisível se estiver no mouse
+        iconImage.color = tempColor;
+
+        if (hasItem && !isHeldByMouse)
 
         {
-
-            // Ativa os componentes visuais
-
             iconImage.enabled = true;
-
             iconImage.sprite = dataSlot.item.itemIcon;
-
-            // Mostra a contagem apenas se for maior que 1
-
             bool showCount = dataSlot.count > 1;
-
             countText.enabled = showCount;
-
-            if (showCount)
-
-            {
-
-                countText.text = dataSlot.count.ToString();
-
-            }
-
+            if (showCount) countText.text = dataSlot.count.ToString();
         }
-
         else
-
         {
-
-            // Slot vazio: desativa tudo
-
             iconImage.enabled = false;
-
-            iconImage.sprite = null; // Libera a referência do sprite
-
+            iconImage.enabled = false;
             countText.enabled = false;
-
         }
-
     }
 
-    // --- MÉTODOS FUTUROS PARA INTERAÇÃO ---
+    // LÓGICA DO CLICAR-E-CLICAR
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
 
-    // Exemplo de como o tooltip funcionaria aqui:
+        inventoryUI.OnSlotClicked(slotIndex);
+    }
 
-    // public void OnPointerEnter(PointerEventData eventData)
+    // LÓGICA DO SEGURAR-E-ARRASTAR
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
 
-    // {
+        inventoryUI.OnSlotBeginDrag(slotIndex);
+    }
 
-    //     InventorySlot dataSlot = inventoryManager.GetBackpackSlot(slotIndex);
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
 
-    //     if (dataSlot.item != null)
+        inventoryUI.OnSlotEndDrag();
+    }
 
-    //     {
-
-    //         TooltipManager.Instance.Show(dataSlot.item, transform.position);
-
-    //     }
-
-    // }
-
-    //
-
-    // public void OnPointerExit(PointerEventData eventData)
-
-    // {
-
-    //     TooltipManager.Instance.Hide();
-
-    // }
-
+    public void OnDrop(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+        inventoryUI.OnSlotDrop(slotIndex);
+    }
 }
