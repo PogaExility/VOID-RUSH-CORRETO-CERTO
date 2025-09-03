@@ -95,7 +95,7 @@ public class ItemSOEditor : Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("comboAnimations"), true);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("slashEffectPrefab"));
         }
-        else if (item.weaponType == WeaponType.Firearm)
+        else if (item.weaponType == WeaponType.Ranger)
         {
             EditorGUILayout.PropertyField(serializedObject.FindProperty("magazineSize"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("reloadTime"));

@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 public enum ItemType { Consumable, KeyItem, Weapon, Ammo, Material, Utility }
-public enum WeaponType { Melee, Firearm, Buster }
+public enum WeaponType { Melee, Ranger, Buster }
 
 [CreateAssetMenu(fileName = "NewItem", menuName = "NEXUS/Itens/Novo Item", order = 0)]
 public class ItemSO : ScriptableObject
@@ -26,13 +26,9 @@ public class ItemSO : ScriptableObject
     [Header("Arma (vínculos de munição)")]
     public ItemSO[] acceptedAmmo;
     [Header("Dano por modo")]
-    public float bulletDamage = 10f;       // dano quando tem munição
-    public float powderDamage = 2f;        // “tiro de pólvora” (curto alcance) quando SEM munição
-    public float powderRange = 1.8f;      // a
-
-    [HideInInspector] public int width = 1;
-    [HideInInspector] public int height = 1;
-
+    public float bulletDamage = 10f;      
+    public float powderDamage = 2f;
+    public float powderRange = 2f;
     [Header("Configurações de Quest")]
     public bool isLostOnDeathDuringQuest = false;
 
@@ -49,7 +45,7 @@ public class ItemSO : ScriptableObject
     [Header("Melee")]
     public AnimationClip[] comboAnimations;
 
-    [Header("Firearm")]
+    [Header("Ranger")]
     public int magazineSize;
     public float reloadTime;
 

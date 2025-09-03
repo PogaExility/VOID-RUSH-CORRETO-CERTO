@@ -17,15 +17,13 @@ MonoBehaviour:
   itemType: 2
   itemPrefab: {fileID: 5542047071395180099, guid: e5a53f99141e1d545874ba109217c8f1, type: 3}
   worldPickupPrefab: {fileID: 6872308494124798136, guid: 71e2bf77410f6814c9a1c76472cd4418, type: 3}
-  equipPrefab: {fileID: 2956449575489252392, guid: 7098ed3801e571341b1669062390228f, type: 3}
+  equipPrefab: {fileID: 5714271926393328017, guid: 66c925f41377b1646819ba7e7b5bc8eb, type: 3}
   stackable: 0
   maxStack: 1
   acceptedAmmo: []
   bulletDamage: 10
   powderDamage: 2
   powderRange: 1.8
-  width: 2
-  height: 1
   isLostOnDeathDuringQuest: 0
   weaponType: 1
   damage: 0

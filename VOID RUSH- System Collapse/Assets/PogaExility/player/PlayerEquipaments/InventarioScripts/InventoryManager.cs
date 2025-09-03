@@ -1,259 +1,255 @@
-using UnityEngine;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class InventoryManager : MonoBehaviour
 {
-    // --- Eventos para UI e sistemas ---
-    public event Action<ItemSO, int, int> OnBackpackItemChanged; // item, x, y
-    public event Action<ItemSO, int> OnItemHeld;            // item, amount (ghost)
-    public event Action<ItemSO, int> OnWeaponSlotChanged;   // se você quiser ligar com a HUD depois
-    public event Action<ItemSO> OnItemRemoved;   // ADICIONE este evento
-    private int[,] tempCounts;
+    // --- EVENTOS ---
+    // A UI vai ouvir esses eventos para saber quando se atualizar.
+    // O int é o ÍNDICE do slot que mudou. Simples e eficiente.
+    public event Action<int> OnBackpackSlotChanged;
+    public event Action<int> OnWeaponSlotChanged;
+    public event Action OnInventoryRefreshed; // Para mudanças em massa (ex: redimensionar)
 
-    [Header("Configuração do Grid")]
-    public int gridWidth = 10;
-    public int gridHeight = 6;
+    // --- CONFIGURAÇÃO ---
+    [Header("Configuração da Mochila")]
+    [Range(1, 20)] public int gridWidth = 10;
+    [Range(1, 20)] public int gridHeight = 6;
 
-    // --- Estrutura de dados 1×1 (Terraria) ---
-    private ItemSO[,] inventoryGrid;
-    private int[,] stackCounts;
-
-    [Header("Armas equipadas")]
+    [Header("Armas Equipadas")]
     public const int WEAPON_SLOTS_COUNT = 3;
-    public ItemSO[] equippedWeapons = new ItemSO[WEAPON_SLOTS_COUNT];
 
-    // --- Estado de arrasto/ghost ---
-    public ItemSO heldItem { get; private set; }
-    public int heldCount { get; private set; }
+    // --- ESTRUTURA DE DADOS (O CORAÇÃO DO SISTEMA) ---
+    // Adeus arrays 2D. Olá lista de objetos. É serializável, então você pode ver e
+    // editar o inventário no Inspector em tempo de execução para debug.
+    [SerializeField] private List<InventorySlot> backpackSlots = new();
+    [SerializeField] private InventorySlot[] weaponSlots = new InventorySlot[WEAPON_SLOTS_COUNT];
 
-    // --- Refs auxiliares ---
-    private PlayerStats playerStats;
-    private Transform playerTransform;
-
-    void Awake()
+    private void Awake()
     {
-        EnsureGridExists();
-        playerStats = FindFirstObjectByType<PlayerStats>();
-        if (playerStats) playerTransform = playerStats.transform;
+        InitializeInventory();
     }
 
-    public void EnsureGridExists()
+    /// <summary>
+    /// Garante que as listas de slots existam e tenham o tamanho correto.
+    /// </summary>
+    private void InitializeInventory()
     {
-        if (inventoryGrid == null || inventoryGrid.GetLength(0) != gridWidth || inventoryGrid.GetLength(1) != gridHeight)
-            inventoryGrid = new ItemSO[gridWidth, gridHeight];
-        if (stackCounts == null || stackCounts.GetLength(0) != gridWidth || stackCounts.GetLength(1) != gridHeight)
-            stackCounts = new int[gridWidth, gridHeight];
+        // Garante que a mochila tenha o tamanho certo
+        int requiredSize = gridWidth * gridHeight;
+        if (backpackSlots.Count != requiredSize)
+        {
+            ResizeAndPreserve(gridWidth, gridHeight);
+        }
 
-        // ADICIONE isto:
-        if (tempCounts == null || tempCounts.GetLength(0) != gridWidth || tempCounts.GetLength(1) != gridHeight)
-            tempCounts = new int[gridWidth, gridHeight];
+        // Garante que os slots de arma não sejam nulos
+        for (int i = 0; i < WEAPON_SLOTS_COUNT; i++)
+        {
+            if (weaponSlots[i] == null)
+            {
+                weaponSlots[i] = new InventorySlot();
+            }
+        }
     }
 
-    // ---------- GETTERS usados pela UI ----------
-    public ItemSO GetItemAt(int x, int y) => inventoryGrid[x, y];
-    public int GetCountAt(int x, int y) => stackCounts[x, y];
+    // --- API PÚBLICA: FUNÇÕES QUE OUTROS SCRIPTS VÃO USAR ---
 
-    // ---------- Adição (pickup/baú/loja) ----------
-    public bool TryAddItem(ItemSO item, int amount = 1)
+    #region Leitura de Dados
+
+    public int GetBackpackSize() => backpackSlots.Count;
+    public InventorySlot GetBackpackSlot(int index) => (index >= 0 && index < backpackSlots.Count) ? backpackSlots[index] : null;
+    public InventorySlot GetWeaponSlot(int index) => (index >= 0 && index < WEAPON_SLOTS_COUNT) ? weaponSlots[index] : null;
+
+    /// <summary> Conta o total de um item específico em toda a mochila. </summary>
+    public int CountTotalAmount(ItemSO itemToCount)
     {
-        EnsureGridExists();
-        if (item == null || amount <= 0) return false;
+        if (itemToCount == null) return 0;
+        int total = 0;
+        foreach (var slot in backpackSlots)
+        {
+            if (slot.item == itemToCount)
+            {
+                total += slot.count;
+            }
+        }
+        return total;
+    }
 
-        // Arma: tenta equipar direto (backpack não guarda arma)
+    #endregion
+
+    #region Modificação de Dados
+
+    /// <summary> Tenta adicionar uma quantidade de um item à mochila. </summary>
+    /// <returns>A quantidade de itens que NÃO coube no inventário.</returns>
+    public int TryAddItem(ItemSO item, int amount)
+    {
+        if (item == null || amount <= 0) return amount;
+
+        // Se for uma arma, tenta equipar primeiro.
         if (item.itemType == ItemType.Weapon)
         {
             for (int i = 0; i < WEAPON_SLOTS_COUNT; i++)
             {
-                if (equippedWeapons[i] == null)
+                if (weaponSlots[i].item == null)
                 {
-                    equippedWeapons[i] = item;
-                    OnWeaponSlotChanged?.Invoke(item, i);
-                    return true;
+                    weaponSlots[i].Set(item, 1);
+                    OnWeaponSlotChanged?.Invoke(i);
+                    return 0; // Conseguiu equipar tudo.
                 }
             }
-            return false; // slots de arma cheios
         }
 
-        int left = amount;
-        // 1) completa pilhas existentes
-        for (int y = 0; y < gridHeight && left > 0; y++)
-            for (int x = 0; x < gridWidth && left > 0; x++)
+        int amountLeft = amount;
+
+        // 1ª Passada: Tenta empilhar em slots que já contêm o mesmo item.
+        for (int i = 0; i < backpackSlots.Count && amountLeft > 0; i++)
+        {
+            InventorySlot slot = backpackSlots[i];
+            if (slot.item == item && slot.count < item.maxStack)
             {
-                if (inventoryGrid[x, y] == item && stackCounts[x, y] < item.maxStack)
+                int spaceAvailable = item.maxStack - slot.count;
+                int amountToAdd = Mathf.Min(amountLeft, spaceAvailable);
+                slot.count += amountToAdd;
+                amountLeft -= amountToAdd;
+                OnBackpackSlotChanged?.Invoke(i);
+            }
+        }
+
+        // 2ª Passada: Se ainda sobraram itens, procura por slots vazios.
+        for (int i = 0; i < backpackSlots.Count && amountLeft > 0; i++)
+        {
+            InventorySlot slot = backpackSlots[i];
+            if (slot.item == null)
+            {
+                int amountToAdd = Mathf.Min(amountLeft, item.maxStack);
+                slot.Set(item, amountToAdd);
+                amountLeft -= amountToAdd;
+                OnBackpackSlotChanged?.Invoke(i);
+            }
+        }
+
+        return amountLeft;
+    }
+
+    /// <summary> Remove uma quantidade de item de um slot específico da mochila. </summary>
+    public void RemoveFromSlot(int index, int amount)
+    {
+        InventorySlot slot = GetBackpackSlot(index);
+        if (slot == null || slot.item == null) return;
+
+        slot.count -= amount;
+        if (slot.count <= 0)
+        {
+            slot.Clear();
+        }
+        OnBackpackSlotChanged?.Invoke(index);
+    }
+
+    /// <summary> A função MAIS IMPORTANTE para Drag & Drop. Move ou funde itens entre dois slots. </summary>
+    public void SwapOrMergeSlots(int fromIndex, int toIndex)
+    {
+        InventorySlot fromSlot = GetBackpackSlot(fromIndex);
+        InventorySlot toSlot = GetBackpackSlot(toIndex);
+        if (fromSlot == null || toSlot == null || fromSlot == toSlot) return;
+
+        // Caso 1: O slot de destino está vazio. Simplesmente move o item.
+        if (toSlot.item == null)
+        {
+            toSlot.Set(fromSlot.item, fromSlot.count);
+            fromSlot.Clear();
+        }
+        // Caso 2: Os itens são iguais e empilháveis. Tenta fundir (merge).
+        else if (fromSlot.item == toSlot.item && toSlot.item.stackable)
+        {
+            int spaceInToSlot = toSlot.item.maxStack - toSlot.count;
+            if (spaceInToSlot > 0)
+            {
+                int amountToMove = Mathf.Min(fromSlot.count, spaceInToSlot);
+                toSlot.count += amountToMove;
+                fromSlot.count -= amountToMove;
+                if (fromSlot.count <= 0) fromSlot.Clear();
+            }
+            // Se não couber nada, faz uma troca normal (swap)
+            else
+            {
+                (fromSlot.item, toSlot.item) = (toSlot.item, fromSlot.item);
+                (fromSlot.count, toSlot.count) = (toSlot.count, fromSlot.count);
+            }
+        }
+        // Caso 3: Itens diferentes. Faz a troca (swap).
+        else
+        {
+            (fromSlot.item, toSlot.item) = (toSlot.item, fromSlot.item);
+            (fromSlot.count, toSlot.count) = (toSlot.count, fromSlot.count);
+        }
+
+        // Notifica a UI que ambos os slots mudaram.
+        OnBackpackSlotChanged?.Invoke(fromIndex);
+        OnBackpackSlotChanged?.Invoke(toIndex);
+    }
+
+    /// <summary> Desequipa uma arma e tenta colocá-la na mochila. Se não couber, ela é perdida (ou dropada). </summary>
+    public void UnequipWeapon(int weaponIndex)
+    {
+        InventorySlot weaponSlot = GetWeaponSlot(weaponIndex);
+        if (weaponSlot == null || weaponSlot.item == null) return;
+
+        ItemSO weaponToUnequip = weaponSlot.item;
+        weaponSlot.Clear();
+        OnWeaponSlotChanged?.Invoke(weaponIndex);
+
+        // Tenta adicionar a arma de volta à mochila.
+        int amountLeft = TryAddItem(weaponToUnequip, 1);
+
+        // Se não coube, aqui você chamaria a lógica para dropar o item no chão.
+        if (amountLeft > 0)
+        {
+            Debug.LogWarning($"Não havia espaço para {weaponToUnequip.name} na mochila. Item foi dropado/perdido.");
+            // Exemplo: ItemSpawner.Instance.SpawnItemInWorld(weaponToUnequip, transform.position, 1);
+        }
+    }
+
+    #endregion
+
+    // --- FUNÇÕES DE EDITOR E DEBUG ---
+
+    /// <summary>
+    /// Chamado automaticamente no Editor quando você altera um valor no Inspector.
+    /// Útil para redimensionar a grade dinamicamente sem perder os itens.
+    /// </summary>
+    private void OnValidate()
+    {
+        int requiredSize = gridWidth * gridHeight;
+        if (backpackSlots.Count != requiredSize)
+        {
+            // Adicionado um delay para evitar problemas de timing no editor
+            UnityEditor.EditorApplication.delayCall += () =>
+            {
+                if (this != null) // Garante que o objeto ainda existe
                 {
-                    int space = item.maxStack - stackCounts[x, y];
-                    int add = Mathf.Min(space, left);
-                    stackCounts[x, y] += add;
-                    left -= add;
-                    OnBackpackItemChanged?.Invoke(item, x, y);
+                    ResizeAndPreserve(gridWidth, gridHeight);
+                    OnInventoryRefreshed?.Invoke(); // Notifica a UI para redesenhar tudo
                 }
-            }
-        // 2) preenche slots vazios
-        for (int y = 0; y < gridHeight && left > 0; y++)
-            for (int x = 0; x < gridWidth && left > 0; x++)
+            };
+        }
+    }
+
+    private void ResizeAndPreserve(int newWidth, int newHeight)
+    {
+        List<InventorySlot> oldSlots = new List<InventorySlot>(backpackSlots);
+        backpackSlots.Clear();
+
+        int newSize = newWidth * newHeight;
+        for (int i = 0; i < newSize; i++)
+        {
+            if (i < oldSlots.Count)
             {
-                if (inventoryGrid[x, y] == null)
-                {
-                    inventoryGrid[x, y] = item;
-                    int put = Mathf.Min(item.maxStack, left);
-                    stackCounts[x, y] = put;
-                    left -= put;
-                    OnBackpackItemChanged?.Invoke(item, x, y);
-                }
+                backpackSlots.Add(oldSlots[i]);
             }
-
-        return left == 0;
-    }
-
-    // ---------- Remoção/uso ----------
-    public void RemoveItemAt(int x, int y, int amount = 1)
-    {
-        if (inventoryGrid[x, y] == null || amount <= 0) return;
-        stackCounts[x, y] -= amount;
-        if (stackCounts[x, y] <= 0)
-        {
-            inventoryGrid[x, y] = null;
-            stackCounts[x, y] = 0;
-        }
-        OnBackpackItemChanged?.Invoke(inventoryGrid[x, y], x, y);
-    }
-
-    public void UseItem(int x, int y)
-    {
-        var it = GetItemAt(x, y);
-        if (it == null) return;
-
-        if (it.itemType == ItemType.Consumable && playerStats != null)
-        {
-            playerStats.Heal(it.healthToRestore);
-            RemoveItemAt(x, y, 1);
-        }
-        // outros usos (buffs etc.) entram aqui depois
-    }
-
-    // ---------- Pegar/soltar (drag & drop) ----------
-    public void StartHoldingItem(int x, int y, bool halfStack)
-    {
-        var it = GetItemAt(x, y);
-        if (it == null || heldItem != null) return;
-
-        int take = halfStack ? Mathf.Max(1, GetCountAt(x, y) / 2) : GetCountAt(x, y);
-        heldItem = it;
-        heldCount = take;
-
-        stackCounts[x, y] -= take;
-        if (stackCounts[x, y] <= 0) { inventoryGrid[x, y] = null; stackCounts[x, y] = 0; }
-        OnBackpackItemChanged?.Invoke(inventoryGrid[x, y], x, y);
-        OnItemHeld?.Invoke(heldItem, heldCount);
-    }
-
-    public void PlaceHeldItem(int x, int y)
-    {
-        if (heldItem == null) return;
-
-        var cellItem = GetItemAt(x, y);
-        if (cellItem == null)
-        {
-            inventoryGrid[x, y] = heldItem;
-            int put = Mathf.Min(heldItem.maxStack, heldCount);
-            stackCounts[x, y] = put;
-            heldCount -= put;
-        }
-        else if (cellItem == heldItem && heldItem.stackable && stackCounts[x, y] < heldItem.maxStack)
-        {
-            int space = heldItem.maxStack - stackCounts[x, y];
-            int put = Mathf.Min(space, heldCount);
-            stackCounts[x, y] += put;
-            heldCount -= put;
-        }
-
-        OnBackpackItemChanged?.Invoke(GetItemAt(x, y), x, y);
-
-        if (heldCount <= 0) { heldItem = null; heldCount = 0; }
-        OnItemHeld?.Invoke(heldItem, heldCount);
-    }
-
-    public void ReturnHeldItem()
-    {
-        if (heldItem == null) return;
-        // tenta devolver por autostack + slots vazios
-        TryAddItem(heldItem, heldCount);
-        heldItem = null;
-        heldCount = 0;
-        OnItemHeld?.Invoke(null, 0);
-    }
-
-    public void DropHeldItemToWorld()
-    {
-        if (heldItem == null || heldCount <= 0) return;
-
-        // usa teu spawner padrão (ajuste se seu projeto usar outro ponto de origem)
-        Vector3 pos = playerTransform ? playerTransform.position : Vector3.zero;
-        ItemSpawner.Instance.SpawnItemInWorld(heldItem, pos, heldCount);
-
-        heldItem = null;
-        heldCount = 0;
-        OnItemHeld?.Invoke(null, 0);
-    }
-
-    // ---------- Helpers para armas (ammo) ----------
-    public int CountItem(ItemSO item)
-    {
-        if (item == null) return 0;
-        int total = 0;
-        for (int y = 0; y < gridHeight; y++)
-            for (int x = 0; x < gridWidth; x++)
-                if (inventoryGrid[x, y] == item) total += stackCounts[x, y];
-        return total;
-    }
-
-    public bool TryConsumeItem(ItemSO item, int amount = 1)
-    {
-        if (item == null || amount <= 0) return false;
-        if (CountItem(item) < amount) return false;
-
-        int left = amount;
-        for (int y = 0; y < gridHeight && left > 0; y++)
-            for (int x = 0; x < gridWidth && left > 0; x++)
+            else
             {
-                if (inventoryGrid[x, y] != item) continue;
-                int take = Mathf.Min(stackCounts[x, y], left);
-                stackCounts[x, y] -= take;
-                left -= take;
-                if (stackCounts[x, y] <= 0) { inventoryGrid[x, y] = null; stackCounts[x, y] = 0; }
-                OnBackpackItemChanged?.Invoke(inventoryGrid[x, y], x, y);
+                backpackSlots.Add(new InventorySlot());
             }
-        return true;
-    }
-
-    public void CommitTemporaryItems()
-    {
-        // Tudo que era “temporário” até aqui vira permanente (zera contagens temp).
-        for (int y = 0; y < gridHeight; y++)
-            for (int x = 0; x < gridWidth; x++)
-                tempCounts[x, y] = 0;
-    }
-
-    public void ClearTemporaryItems()
-    {
-        // Remove APENAS a parte temporária das pilhas
-        for (int y = 0; y < gridHeight; y++)
-            for (int x = 0; x < gridWidth; x++)
-            {
-                int temp = tempCounts[x, y];
-                if (temp <= 0) continue;
-
-                stackCounts[x, y] = Mathf.Max(0, stackCounts[x, y] - temp);
-                tempCounts[x, y] = 0;
-
-                if (stackCounts[x, y] == 0 && inventoryGrid[x, y] != null)
-                {
-                    var it = inventoryGrid[x, y];
-                    inventoryGrid[x, y] = null;
-                    OnItemRemoved?.Invoke(it);
-                }
-                OnBackpackItemChanged?.Invoke(inventoryGrid[x, y], x, y);
-            }
+        }
     }
 }

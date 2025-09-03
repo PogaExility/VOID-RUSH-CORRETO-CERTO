@@ -58,7 +58,7 @@ public class RespawnManager : MonoBehaviour
             activeCheckpoint.Activate();
         }
 
-        inventoryManager?.CommitTemporaryItems();
+       // inventoryManager?.CommitTemporaryItems();
         Debug.Log($"Novo checkpoint ativado na cena '{SceneManager.GetActiveScene().name}'");
     }
 
@@ -71,7 +71,7 @@ public class RespawnManager : MonoBehaviour
         }
         initialSpawnPosition = returnPosition;
         initialSpawnSceneName = returnSceneName;
-        inventoryManager?.CommitTemporaryItems();
+       // inventoryManager?.CommitTemporaryItems();
         Debug.Log($"Ponto de retorno salvo na cena '{returnSceneName}'.");
     }
 
@@ -84,7 +84,7 @@ public class RespawnManager : MonoBehaviour
         // APLICA PENALIDADES APENAS SE A QUEST ESTIVER ATIVA
         if (QuestManager.Instance != null && QuestManager.Instance.IsQuestActive)
         {
-            inventoryManager?.ClearTemporaryItems();
+            //inventoryManager?.ClearTemporaryItems();
             QuestManager.Instance.EndQuest(false);
 
             Debug.Log($"Jogador perdeu {moneyPenalty} de dinheiro.");

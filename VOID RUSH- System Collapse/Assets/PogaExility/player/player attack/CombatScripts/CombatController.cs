@@ -40,42 +40,42 @@ public class CombatController : MonoBehaviour
         aimDirection = (mousePos - transform.position).normalized;
     }
 
-    public void ProcessCombatInput()
-    {
-        ItemSO currentWeapon = GetEquippedWeapon();
+    //public void ProcessCombatInput()
+  //  {
+     //   ItemSO currentWeapon = GetEquippedWeapon();
 
-        if (Input.GetButtonDown("Fire1"))
-        {
-            if (activeStance == WeaponType.Buster && currentWeapon != null)
-            {
-                playerAttack.StartBusterCharge(currentWeapon);
-            }
-            else if (currentWeapon != null)
-            {
-                playerAttack.PerformAttack(currentWeapon, aimDirection);
-            }
-        }
+       // if (Input.GetButtonDown("Fire1"))
+       // {
+           // if (activeStance == WeaponType.Buster && currentWeapon != null)
+          //  {
+          //      playerAttack.StartBusterCharge(currentWeapon);
+          //  }
+           // else if (currentWeapon != null)
+          //  {
+          //      playerAttack.PerformAttack(currentWeapon, aimDirection);
+         //   }
+     //   }
 
-        if (Input.GetButtonUp("Fire1"))
-        {
-            if (activeStance == WeaponType.Buster && currentWeapon != null)
-            {
-                playerAttack.ReleaseBusterCharge(currentWeapon, aimDirection);
-            }
-        }
-    }
+     //   if (Input.GetButtonUp("Fire1"))
+     //   {
+      //      if (activeStance == WeaponType.Buster && currentWeapon != null)
+      //      {
+      //          playerAttack.ReleaseBusterCharge(currentWeapon, aimDirection);
+      //      }
+    //    }
+  //  }
     // Função auxiliar para pegar a arma no slot correto
-    private ItemSO GetEquippedWeapon()
-    {
-        int slotIndex = (int)activeStance;
-        if (slotIndex >= _inventoryManager.equippedWeapons.Length) return null;
-        return _inventoryManager.equippedWeapons[slotIndex];
-    }
+//private ItemSO GetEquippedWeapon()
+   // {
+      //  int slotIndex = (int)activeStance;
+       // if (slotIndex >= _inventoryManager.equippedWeapons.Length) return null;
+       // return _inventoryManager.equippedWeapons[slotIndex];
+   // }
 
     private void HandleStanceSwitch()
     {
         if (Input.GetKeyDown(KeyCode.Alpha1)) activeStance = WeaponType.Melee;
-        else if (Input.GetKeyDown(KeyCode.Alpha2)) activeStance = WeaponType.Firearm;
+        else if (Input.GetKeyDown(KeyCode.Alpha2)) activeStance = WeaponType.Ranger;
         else if (Input.GetKeyDown(KeyCode.Alpha3)) activeStance = WeaponType.Buster;
     }
 }

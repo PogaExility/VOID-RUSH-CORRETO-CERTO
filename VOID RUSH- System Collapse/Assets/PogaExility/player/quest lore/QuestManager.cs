@@ -45,7 +45,7 @@ public class QuestManager : MonoBehaviour
         if (completedSuccessfully)
         {
             Debug.Log("Quest finalizada com sucesso! Salvando itens.");
-            FindAnyObjectByType<InventoryManager>()?.CommitTemporaryItems();
+           // FindAnyObjectByType<InventoryManager>()?.CommitTemporaryItems();
         }
         else
         {

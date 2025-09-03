@@ -43,16 +43,14 @@ public class WeaponHandler : MonoBehaviour
     }
 
     // === Ammo helpers ===
-    public int GetTotalAmmo()
-    {
-        if (equippedWeapon == null || equippedWeapon.acceptedAmmo == null || equippedWeapon.acceptedAmmo.Length == 0)
-            return 0;
-
-        int total = 0;
-        foreach (var ammo in equippedWeapon.acceptedAmmo)
-            total += inventory.CountItem(ammo);
-        return total;
-    }
+  //  public int GetTotalAmmo()
+  //  {
+  //      if (equippedWeapon == null || equippedWeapon.acceptedAmmo == null || equippedWeapon.acceptedAmmo.Length == 0)
+    //        return 0;
+    //       int total = 0;
+   //     foreach (var ammo in equippedWeapon.acceptedAmmo)
+    //    return total;
+  //  }
 
     public bool TryConsumeOneAmmo()
     {
@@ -61,7 +59,7 @@ public class WeaponHandler : MonoBehaviour
         // prioridade: consome na ordem do array acceptedAmmo
         foreach (var ammo in equippedWeapon.acceptedAmmo)
         {
-            if (inventory.TryConsumeItem(ammo, 1))
+            //if (inventory.TryConsumeItem(ammo, 1))
                 return true;
         }
         return false;

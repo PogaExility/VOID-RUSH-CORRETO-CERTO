@@ -10,15 +10,16 @@ public class PlayerAttack : MonoBehaviour
     [Header("Pivots de Mira (IK)")]
     public GameObject headPivotObject;
     public GameObject rightArmPivotObject;
-    private Transform headPivotTransform;
-    private Transform rightArmPivotTransform;
+
     private bool isAiming = false;
     private int meleeComboCount = 0;
     private float lastAttackTime = 0f;
     private const float COMBO_RESET_TIME = 1.0f;
     private Coroutine busterChargeCoroutine;
     private float currentChargeTime = 0f;
-
+    [Header("Sprites do Player")]
+    public SpriteRenderer fullBodySprite; // Para o sprite do corpo completo
+    public SpriteRenderer torsoOnlySprite; // Para o sprite do corpo "cotoco"
     void Awake()
     {
         // Use GetComponentInParent para mais flexibilidade na hierarquia
@@ -26,7 +27,7 @@ public class PlayerAttack : MonoBehaviour
 
         if (headPivotObject != null)
         {
-            headPivotTransform = headPivotObject.transform;
+            //headPivotTransform = headPivotObject.transform;
         }
         else
         {
@@ -35,7 +36,7 @@ public class PlayerAttack : MonoBehaviour
 
         if (rightArmPivotObject != null)
         {
-            rightArmPivotTransform = rightArmPivotObject.transform;
+           // rightArmPivotTransform = rightArmPivotObject.transform;
         }
         else
         {
@@ -55,8 +56,8 @@ public class PlayerAttack : MonoBehaviour
             Vector3 aimDir = combatController.aimDirection;
             float angle = Mathf.Atan2(aimDir.y, aimDir.x) * Mathf.Rad2Deg;
 
-            if (headPivotTransform != null) headPivotTransform.rotation = Quaternion.Euler(0, 0, angle);
-            if (rightArmPivotTransform != null) rightArmPivotTransform.rotation = Quaternion.Euler(0, 0, angle);
+           // if (headPivotTransform != null) headPivotTransform.rotation = Quaternion.Euler(0, 0, angle);
+            //if (rightArmPivotTransform != null) rightArmPivotTransform.rotation = Quaternion.Euler(0, 0, angle);
         }
     }
     public void SetAiming(bool aiming)
@@ -86,7 +87,7 @@ public class PlayerAttack : MonoBehaviour
         {
             ExecuteMeleeCombo(weapon);
         }
-        else if (weapon.weaponType == WeaponType.Firearm)
+        else if (weapon.weaponType == WeaponType.Ranger)
         {
             ExecuteFirearmShot(weapon, aimDirection);
         }

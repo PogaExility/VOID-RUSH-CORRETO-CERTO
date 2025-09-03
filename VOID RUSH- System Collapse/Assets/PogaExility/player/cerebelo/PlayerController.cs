@@ -8,7 +8,6 @@ public class PlayerController : MonoBehaviour
 {
 
     [Header("Referências de Gerenciamento")]
-    public InventoryManager inventoryManager;
     public CursorManager cursorManager;
 
     [Header("Referências de UI")]
@@ -40,8 +39,6 @@ public class PlayerController : MonoBehaviour
 
     // Variáveis de Estado
     private bool isInventoryOpen = false;
-    private List<GameObject> nearbyInteractables = new List<GameObject>();
-    private bool canInteract => nearbyInteractables.Count > 0;
     private SkillSO activeJumpSkill;
     private SkillSO activeDashSkill;
     private bool isPowerModeActive = false;
@@ -62,7 +59,6 @@ public class PlayerController : MonoBehaviour
         defenseHandler = GetComponent<DefenseHandler>();
         playerStats = GetComponent<PlayerStats>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
-        if (inventoryManager == null) inventoryManager = GetComponent<InventoryManager>();
         if (cursorManager == null) cursorManager = FindAnyObjectByType<CursorManager>();
       
 
@@ -91,8 +87,7 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
-        if (Input.GetKeyDown(KeyCode.E))
-            Interact();
+        
 
         // Trava do modo de mira
         if (Input.GetKeyDown(KeyCode.CapsLock))
@@ -102,7 +97,7 @@ public class PlayerController : MonoBehaviour
             if (isAimModeLocked)
             {
                 // Força a postura para Firearm (ou Buster) para ativar a mira
-                combatController.activeStance = WeaponType.Firearm;
+                combatController.activeStance = WeaponType.Ranger;
             }
             else
             {
@@ -125,7 +120,7 @@ public class PlayerController : MonoBehaviour
         HandlePowerModeToggle();
         HandleSkillInput();
         HandleCombatInput();      // <-- CHAMADA AQUI
-        UpdateAimModeState();     // <-- CHAMADA AQUI
+        //UpdateAimModeState();     // <-- CHAMADA AQUI
         UpdateAnimations();
         wasGroundedLastFrame = movementScript.IsGrounded();
 
@@ -153,41 +148,10 @@ public class PlayerController : MonoBehaviour
                 cursorManager.SetDefaultCursor();
             }
         }
-
-        if (!isInventoryOpen && inventoryManager.heldItem != null)
-        {
-            inventoryManager.ReturnHeldItem(); // A função correta para devolver ao inv.
-        }
     }
+   
 
-    void Interact()
-    {
-        if (nearbyInteractables.Count == 0) return;
-
-        GameObject obj = nearbyInteractables[0];
-        if (obj == null) { nearbyInteractables.RemoveAt(0); return; }
-
-        if (obj.TryGetComponent<ItemPickup>(out var pickup))
-        {
-            if (inventoryManager.TryAddItem(pickup.itemData, pickup.amount))
-            {
-                Destroy(obj);
-                nearbyInteractables.RemoveAt(0);
-            }
-        }
-    }
-
-    void OnTriggerEnter2D(Collider2D other)
-    {
-        if (other.GetComponent<ItemPickup>())
-            nearbyInteractables.Add(other.gameObject);
-    }
-
-    void OnTriggerExit2D(Collider2D other)
-    {
-        if (nearbyInteractables.Contains(other.gameObject))
-            nearbyInteractables.Remove(other.gameObject);
-    }
+ 
 
 private void HandleSkillInput()
     {
@@ -211,7 +175,7 @@ private void HandleSkillInput()
     }
     private void HandleCombatInput()
     {
-        combatController.ProcessCombatInput();
+        //combatController.ProcessCombatInput();
 
         if (Input.GetKeyDown(KeyCode.F))
         {
@@ -223,10 +187,10 @@ private void HandleSkillInput()
         }
     }
 
-    private void UpdateAimModeState()
+   /* private void UpdateAimModeState()
     {
         bool shouldAim = isAimModeLocked ||
-                        ((combatController.activeStance == WeaponType.Firearm || combatController.activeStance == WeaponType.Buster)
+                        ((combatController.activeStance == WeaponType.Ranger || combatController.activeStance == WeaponType.Buster)
                          && !movementScript.IsDashing() && !isLanding);
 
         // A checagem de mudança de estado já existe e é perfeita para isso
@@ -249,8 +213,9 @@ private void HandleSkillInput()
                 }
             }
             // --- FIM DO BLOCO ---
-        }
-    }
+        }*/
+
+    
     // Em PlayerController.cs
     private void UpdateAnimations()
     {
