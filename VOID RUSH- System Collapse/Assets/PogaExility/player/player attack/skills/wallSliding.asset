@@ -13,15 +13,17 @@ MonoBehaviour:
   m_Name: wallSliding
   m_EditorClassIdentifier: 
   skillName: wallSliding
+  cooldownDuration: 0
   energyCost: 0
   skillClass: 0
   requiredKeys: 
   triggerKeys: 20000000
   cancelIfKeysHeld: 
   actionToPerform: 4
+  combatActionToPerform: 0
   conditionGroups:
   - logicType: 0
-    states: 0300000007000000
+    states: 03000000
   forbiddenStates: 01000000
   jumpForce: 12
   airJumps: 1
@@ -35,9 +37,15 @@ MonoBehaviour:
   dashJump_DashSpeed: 25
   dashJump_DashDuration: 0.4
   dashJump_JumpForce: 15
-  dashJump_ParabolaAirDrag: 0.98
+  dashJump_InputBuffer: 0.15
+  dashJump_ParabolaDamping: 1
   dashJump_GravityScaleOnFall: 2.5
   wallDashJump_LaunchForceX: 25
   wallDashJump_LaunchForceY: 15
-  wallDashJump_ParabolaAirDrag: 0.98
+  wallDashJump_InputBuffer: 0.15
+  wallDashJump_ParabolaDamping: 1
   wallDashJump_GravityScaleOnFall: 2.5
+  block_ParryWindow: 0.15
+  block_DamageReduction: 0.75
+  parry_CounterDamageMultiplier: 2
+  parry_StunDuration: 1.5
