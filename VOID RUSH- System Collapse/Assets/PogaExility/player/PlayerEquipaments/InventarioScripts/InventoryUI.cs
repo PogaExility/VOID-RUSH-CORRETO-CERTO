@@ -1,29 +1,40 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems; // <<-- IMPORTANTE
 using UnityEngine.UI;
 
 public class InventoryUI : MonoBehaviour
 {
+    public static InventoryUI Instance;
+
+    [Header("REFERÊNCIAS")]
+    [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private GameObject slotViewPrefab;
     [SerializeField] private GameObject itemViewPrefab;
     [SerializeField] private Transform backpackPanel;
 
-    // A referência que é NULA em tempo de execução
-    [SerializeField] private InventoryManager inventoryManager;
+    [HideInInspector] public Canvas mainCanvas;
+
     private List<GameObject> activeItemViews = new List<GameObject>();
+    private bool isGridCreated = false; // Flag de segurança
 
     void Awake()
     {
-        // Esta linha falha em garantir a referência ANTES do Start
-      
+        Instance = this;
+        mainCanvas = GetComponentInParent<Canvas>();
+
+        // Garante que a referência ao manager existe desde o início
+        if (inventoryManager == null)
+            inventoryManager = InventoryManager.Instance;
+        if (inventoryManager == null)
+            Debug.LogError("FATAL: InventoryManager não encontrado!", this);
     }
 
     void Start()
     {
         CreateGrid();
+        // A inscrição ao evento só acontece DEPOIS que a grade está pronta.
         inventoryManager.OnInventoryChanged += Redraw;
-        Redraw();
+        Redraw(); // Primeiro desenho, agora é seguro.
     }
 
     private void OnDestroy()
@@ -34,28 +45,35 @@ public class InventoryUI : MonoBehaviour
 
     private void CreateGrid()
     {
-        // LINHA 54 (APROXIMADA): AQUI QUEBRA, PORQUE 'inventoryManager' É NULO
-        for (int i = 0; i < inventoryManager.gridWidth * inventoryManager.gridHeight; i++)
+        // Limpa qualquer coisa que estivesse lá antes, para evitar duplicatas
+        foreach (Transform child in backpackPanel)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Cria os slots de fundo
+        for (int i = 0; i < inventoryManager.GetBackpackSize(); i++)
         {
             var slotGO = Instantiate(slotViewPrefab, backpackPanel);
             slotGO.GetComponent<SlotView>().Initialize(i);
         }
+
+        isGridCreated = true; // SINAL VERDE: A grade está pronta.
     }
 
-    // Em InventoryUI.cs, SUBSTITUA a função Redraw
     private void Redraw()
     {
+        // CONDIÇÃO DE SEGURANÇA: Só redesenha se a grade já foi criada.
+        if (!isGridCreated) return;
+
         foreach (var view in activeItemViews) Destroy(view);
         activeItemViews.Clear();
 
-        // >> A CORREÇÃO ESTÁ AQUI <<
-        // Em vez de 'backpackPanel.childCount', usamos o tamanho REAL do inventário.
-        int inventorySize = inventoryManager.GetBackpackSize();
-
-        for (int i = 0; i < inventorySize; i++)
+        // Agora, este loop é seguro.
+        for (int i = 0; i < inventoryManager.GetBackpackSize(); i++)
         {
-            // Pega o transform do slot, que deve corresponder ao índice
-            var slotTransform = backpackPanel.GetChild(i);
+            // Pega o transform do slot. Esta linha não vai mais quebrar.
+            Transform slotTransform = backpackPanel.GetChild(i);
             var data = inventoryManager.GetBackpackSlot(i);
 
             if (data != null && data.item != null)
@@ -67,4 +85,6 @@ public class InventoryUI : MonoBehaviour
             }
         }
     }
+
+    public void RequestRedraw() => Redraw();
 }
