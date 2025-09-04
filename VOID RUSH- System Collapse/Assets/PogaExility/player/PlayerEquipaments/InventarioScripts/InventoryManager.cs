@@ -11,6 +11,10 @@ public class InventoryManager : MonoBehaviour
     [Range(1, 20)] public int gridHeight = 6;
     [SerializeField] private List<InventorySlot> backpackSlots = new();
     [SerializeField] private Transform mainCanvasTransform;
+    public void RequestRedraw()
+    {
+        OnInventoryChanged?.Invoke();
+    }
     public Transform GetMainCanvasTransform()
     {
         return mainCanvasTransform;
