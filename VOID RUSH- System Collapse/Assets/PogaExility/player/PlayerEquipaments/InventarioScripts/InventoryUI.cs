@@ -1,207 +1,82 @@
 using System.Collections.Generic;
-
 using UnityEngine;
-
 using UnityEngine.UI;
-
-[DisallowMultipleComponent]
+using TMPro; // Adicione esta linha no topo
 
 public class InventoryUI : MonoBehaviour
-
 {
+    public static InventoryUI Instance;
 
-    [Header("Referências (arraste do Inspector)")]
+    [Header("REFERÊNCIAS DA UI")]
+    [SerializeField] private GameObject slotPrefab;
+    [SerializeField] private GameObject itemPrefab;
+    [SerializeField] private Transform backpackPanel;
 
-    [SerializeField] private InventoryManager inventoryManager;
+    [Header("ÍCONE DO MOUSE")]
+    [SerializeField] private Image heldItemIcon;
+    [SerializeField] private TextMeshProUGUI heldItemCountText;
 
-    [SerializeField] private GameObject slotUIPrefab;
+    private List<ItemView> itemViewPool = new List<ItemView>();
 
-    [SerializeField] private Transform backpackPanel; // O painel com o GridLayoutGroup
-
-    // Mapeamento interno para acesso rápido
-
-    private List<InventorySlotUI> slotUIInstances = new List<InventorySlotUI>();
-
-    private void Start()
-
+    void Awake() => Instance = this;
+    void Start()
     {
+        CreateGridAndPool();
+        InventoryManager.Instance.OnInventoryChanged += Redraw;
+        Redraw();
+        // Garante que o ícone fantasma comece desligado
+        heldItemIcon.gameObject.SetActive(false);
+    }
+    private void OnDestroy() => InventoryManager.Instance.OnInventoryChanged -= Redraw;
 
-        // Garante que a referência ao manager existe
+    void Update()
+    {
+        // O ícone do mouse segue o mouse
+        if (heldItemIcon.gameObject.activeInHierarchy)
+            heldItemIcon.transform.position = Input.mousePosition;
+    }
 
-        if (inventoryManager == null)
-
+    void CreateGridAndPool()
+    {
+        for (int i = 0; i < InventoryManager.Instance.GetSize(); i++)
         {
+            var slot = Instantiate(slotPrefab, backpackPanel);
+            slot.GetComponent<SlotView>().Initialize(i);
 
-            inventoryManager = FindFirstObjectByType<InventoryManager>();
+            var item = Instantiate(itemPrefab, slot.transform);
+            var itemView = item.GetComponent<ItemView>();
+            itemViewPool.Add(itemView);
+        }
+    }
 
-            if (inventoryManager == null)
+    void Redraw()
+    {
+        // 1. Redesenha a grade do inventário
+        for (int i = 0; i < itemViewPool.Count; i++)
+        {
+            var data = InventoryManager.Instance.GetBackpackSlot(i);
+            var view = itemViewPool[i];
 
+            if (data.item != null)
             {
-
-                Debug.LogError("InventoryManager não encontrado na cena! A UI não pode funcionar.", this);
-
-                enabled = false;
-
-                return;
-
+                view.gameObject.SetActive(true);
+                // >> CORREÇÃO: Envia o ItemSO completo, não só a sprite <<
+                view.Render(data.item, data.count);
             }
-
+            else
+            {
+                view.gameObject.SetActive(false);
+            }
         }
 
-        CreateGridSlots();
-
-        SubscribeToEvents();
-
-        // Desenho inicial de todos os slots
-
-        RedrawAll();
-
-    }
-
-    private void OnDestroy()
-
-    {
-
-        UnsubscribeFromEvents();
-
-    }
-
-    private void SubscribeToEvents()
-
-    {
-
-        inventoryManager.OnBackpackSlotChanged += OnSlotChanged;
-
-        inventoryManager.OnInventoryRefreshed += OnInventoryRefreshed;
-
-    }
-
-    private void UnsubscribeFromEvents()
-
-    {
-
-        if (inventoryManager != null)
-
+        // 2. Redesenha o ícone que está no mouse
+        var heldItemData = InventoryManager.Instance.GetHeldItem();
+        bool isHoldingItem = heldItemData.item != null;
+        heldItemIcon.gameObject.SetActive(isHoldingItem);
+        if (isHoldingItem)
         {
-
-            inventoryManager.OnBackpackSlotChanged -= OnSlotChanged;
-
-            inventoryManager.OnInventoryRefreshed -= OnInventoryRefreshed;
-
+            heldItemIcon.sprite = heldItemData.item.itemIcon;
+            heldItemCountText.text = heldItemData.count > 1 ? heldItemData.count.ToString() : "";
         }
-
     }
-
-    /// <summary>
-
-    /// Cria a grade de slots visuais uma única vez.
-
-    /// </summary>
-
-    private void CreateGridSlots()
-
-    {
-
-        // Limpa qualquer slot antigo que possa existir (útil para testes no editor)
-
-        foreach (Transform child in backpackPanel)
-
-        {
-
-            Destroy(child.gameObject);
-
-        }
-
-        slotUIInstances.Clear();
-
-        // Configura o GridLayout para corresponder ao manager
-
-        var gridLayout = backpackPanel.GetComponent<GridLayoutGroup>();
-
-        if (gridLayout != null)
-
-        {
-
-            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-
-            gridLayout.constraintCount = inventoryManager.gridWidth;
-
-        }
-
-        // Instancia um slot visual para cada slot de dados no manager
-
-        int totalSlots = inventoryManager.GetBackpackSize();
-
-        for (int i = 0; i < totalSlots; i++)
-
-        {
-
-            GameObject newSlotGO = Instantiate(slotUIPrefab, backpackPanel);
-
-            newSlotGO.name = $"Slot_{i}";
-
-            InventorySlotUI slotUI = newSlotGO.GetComponent<InventorySlotUI>();
-
-            slotUI.Initialize(inventoryManager, i); // Dando identidade ao slot
-
-            slotUIInstances.Add(slotUI);
-
-        }
-
-    }
-
-    // --- Handlers de Eventos ---
-
-    /// <summary> Chamado pelo InventoryManager quando um ÚNICO slot muda. </summary>
-
-    private void OnSlotChanged(int index)
-
-    {
-
-        if (index >= 0 && index < slotUIInstances.Count)
-
-        {
-
-            slotUIInstances[index].Refresh();
-
-        }
-
-    }
-
-    /// <summary> Chamado quando o inventário inteiro precisa ser redesenhado. </summary>
-
-    private void OnInventoryRefreshed()
-
-    {
-
-        // Se a grade mudou de tamanho, recria. Senão, apenas redesenha.
-
-        if (slotUIInstances.Count != inventoryManager.GetBackpackSize())
-
-        {
-
-            CreateGridSlots();
-
-        }
-
-        RedrawAll();
-
-    }
-
-    /// <summary> Força a atualização visual de todos os slots. </summary>
-
-    private void RedrawAll()
-
-    {
-
-        foreach (var slotUI in slotUIInstances)
-
-        {
-
-            slotUI.Refresh();
-
-        }
-
-    }
-
 }

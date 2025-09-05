@@ -1,6 +1,6 @@
 using System;
 
-[Serializable] // Permite que isso seja visualizado no Inspector e salvo
+[Serializable]
 public class InventorySlot
 {
     public ItemSO item;

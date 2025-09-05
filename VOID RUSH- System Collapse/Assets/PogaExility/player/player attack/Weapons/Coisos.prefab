@@ -10,10 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 6383436089849062154}
   - component: {fileID: 2582782256906636021}
-  - component: {fileID: 2867194505854869814}
-  m_Layer: 0
-  m_Name: armaEquipada 1
-  m_TagString: Untagged
+  m_Layer: 7
+  m_Name: Coisos
+  m_TagString: Item
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -77,7 +76,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 5919f5b9459751d4a87d64c54db99ec9, type: 3}
+  m_Sprite: {fileID: -1077358520582270867, guid: f807f49f77db94b4ca497d3bc4cb21cd, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -88,18 +87,3 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &2867194505854869814
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5714271926393328017}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 12589f2cb04fc9e488e0808f2b7c7a8c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  inventory: {fileID: 0}
-  weaponSocket: {fileID: 1437116819265621382, guid: 71e2bf77410f6814c9a1c76472cd4418, type: 3}
-  equippedWeapon: {fileID: 11400000, guid: 5645b1e1d1d1f0c4daf1e3eac970514d, type: 2}

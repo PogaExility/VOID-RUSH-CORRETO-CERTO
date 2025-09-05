@@ -47,7 +47,7 @@ public class PlayerController : MonoBehaviour
     private bool isInAimMode = false;
     private bool isAimModeLocked = false;
     private PlayerStats playerStats;
-
+    public bool inventoryLocked = false;
 
     void Awake()
     {
@@ -105,6 +105,7 @@ public class PlayerController : MonoBehaviour
                 // Força a postura de volta para Melee para DESATIVAR a mira
                 combatController.activeStance = WeaponType.Melee;
             }
+
         }
 
         float horizontalInput = 0;
@@ -133,6 +134,7 @@ public class PlayerController : MonoBehaviour
     private void ToggleInventory()
     {
         if (inventoryPanel == null) return;
+        if (inventoryLocked) return;
         isInventoryOpen = !isInventoryOpen;
         inventoryPanel.SetActive(isInventoryOpen);
         Time.timeScale = isInventoryOpen ? 0f : 1f;
@@ -148,6 +150,7 @@ public class PlayerController : MonoBehaviour
                 cursorManager.SetDefaultCursor();
             }
         }
+
     }
    
 

@@ -467,7 +467,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             Vector2 currentVelocity = rb.linearVelocity;
 
             // Monta o texto com os estados e a nova informação de velocidade
-            stateCheckText.text = $"Grounded: {CheckState(PlayerState.IsGrounded)}\n" + $"WallSliding: {CheckState(PlayerState.IsWallSliding)}\n" + $"Dashing: {CheckState(PlayerState.IsDashing)}\n" + $"InParabola: {CheckState(PlayerState.IsInParabola)}\n" + $"--- VELOCIDADE ---\n" + $"X Speed: {currentVelocity.x:F2}\n" +  $"Y Speed: {currentVelocity.y:F2}";   
+            stateCheckText.text = $"Grounded: {CheckState(PlayerState.IsGrounded)}\n" + $"WallSliding: {CheckState(PlayerState.IsWallSliding)}\n" + $"TouchingWall: {CheckState(PlayerState.IsWallSliding)}\n" + $"Dashing: {CheckState(PlayerState.IsDashing)}\n" + $"InParabola: {CheckState(PlayerState.IsInParabola)}\n" + $"--- VELOCIDADE ---\n" + $"X Speed: {currentVelocity.x:F2}\n" +  $"Y Speed: {currentVelocity.y:F2}";   
         }
     }
 }
