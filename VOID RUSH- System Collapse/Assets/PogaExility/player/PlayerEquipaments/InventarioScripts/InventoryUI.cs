@@ -1,107 +1,82 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro; // Adicione esta linha no topo
 
 public class InventoryUI : MonoBehaviour
 {
     public static InventoryUI Instance;
 
-    [Header("REFERÊNCIAS")]
-    [SerializeField] private InventoryManager inventoryManager;
-    [SerializeField] private GameObject slotViewPrefab;
-    [SerializeField] private GameObject itemViewPrefab;
+    [Header("REFERÊNCIAS DA UI")]
+    [SerializeField] private GameObject slotPrefab;
+    [SerializeField] private GameObject itemPrefab;
     [SerializeField] private Transform backpackPanel;
 
-    [HideInInspector] public Canvas mainCanvas;
+    [Header("ÍCONE DO MOUSE")]
+    [SerializeField] private Image heldItemIcon;
+    [SerializeField] private TextMeshProUGUI heldItemCountText;
 
-    // >> A LISTA SEGURA QUE VAI GUARDAR OS SLOTS CRIADOS <<
-    private List<SlotView> createdSlots = new List<SlotView>();
-    private List<GameObject> activeItemViews = new List<GameObject>();
+    private List<ItemView> itemViewPool = new List<ItemView>();
 
-    void Awake()
-    {
-        Instance = this;
-        mainCanvas = GetComponentInParent<Canvas>();
-        if (inventoryManager == null) inventoryManager = InventoryManager.Instance;
-    }
-
+    void Awake() => Instance = this;
     void Start()
     {
-        CreateGrid();
-        inventoryManager.OnInventoryChanged += Redraw;
+        CreateGridAndPool();
+        InventoryManager.Instance.OnInventoryChanged += Redraw;
         Redraw();
+        // Garante que o ícone fantasma comece desligado
+        heldItemIcon.gameObject.SetActive(false);
+    }
+    private void OnDestroy() => InventoryManager.Instance.OnInventoryChanged -= Redraw;
+
+    void Update()
+    {
+        // O ícone do mouse segue o mouse
+        if (heldItemIcon.gameObject.activeInHierarchy)
+            heldItemIcon.transform.position = Input.mousePosition;
     }
 
-    private void OnDestroy()
+    void CreateGridAndPool()
     {
-        if (inventoryManager != null)
-            inventoryManager.OnInventoryChanged -= Redraw;
-    }
-
-    private void CreateGrid()
-    {
-        foreach (Transform child in backpackPanel) Destroy(child.gameObject);
-        createdSlots.Clear(); // Limpa a lista antes de recriar
-
-        for (int i = 0; i < inventoryManager.GetBackpackSize(); i++)
+        for (int i = 0; i < InventoryManager.Instance.GetSize(); i++)
         {
-            var slotGO = Instantiate(slotViewPrefab, backpackPanel);
-            var slotView = slotGO.GetComponent<SlotView>();
-            slotView.Initialize(i);
-            createdSlots.Add(slotView); // Guarda a referência do slot criado
+            var slot = Instantiate(slotPrefab, backpackPanel);
+            slot.GetComponent<SlotView>().Initialize(i);
+
+            var item = Instantiate(itemPrefab, slot.transform);
+            var itemView = item.GetComponent<ItemView>();
+            itemViewPool.Add(itemView);
         }
     }
 
-    // >> A FUNÇÃO REDRAW 100% CORRIGIDA <<
-    private void Redraw()
+    void Redraw()
     {
-        foreach (var view in activeItemViews) Destroy(view);
-        activeItemViews.Clear();
-
-        // Itera pela lista de slots GARANTIDOS que existem
-        for (int i = 0; i < createdSlots.Count; i++)
+        // 1. Redesenha a grade do inventário
+        for (int i = 0; i < itemViewPool.Count; i++)
         {
-            var data = inventoryManager.GetBackpackSlot(i);
+            var data = InventoryManager.Instance.GetSlot(i);
+            var view = itemViewPool[i];
 
-            if (data != null && data.item != null)
+            if (data.item != null)
             {
-                // Pega o transform do slot da nossa lista segura, que não tem como dar erro.
-                Transform slotTransform = createdSlots[i].transform;
-
-                // CRIA O ITEMVIEW COMO FILHO DO SLOTVIEW CORRETO
-                var itemGO = Instantiate(itemViewPrefab, slotTransform);
-                var itemView = itemGO.GetComponent<ItemView>();
-                itemView.Render(i, data.item, data.count);
-                activeItemViews.Add(itemGO);
+                view.gameObject.SetActive(true);
+                // >> CORREÇÃO: Envia o ItemSO completo, não só a sprite <<
+                view.Render(data.item, data.count);
+            }
+            else
+            {
+                view.gameObject.SetActive(false);
             }
         }
-    }
 
-    private void RedrawUI()
-    {
-        Debug.Log("--- REDRAWUI CHAMADO ---");
-
-        foreach (var view in activeItemViews) Destroy(view);
-        activeItemViews.Clear();
-
-        Debug.Log($"Total de slots de DADOS a serem verificados: {inventoryManager.GetBackpackSize()}");
-
-        for (int i = 0; i < inventoryManager.GetBackpackSize(); i++)
+        // 2. Redesenha o ícone que está no mouse
+        var heldItemData = InventoryManager.Instance.GetHeldItem();
+        bool isHoldingItem = heldItemData.item != null;
+        heldItemIcon.gameObject.SetActive(isHoldingItem);
+        if (isHoldingItem)
         {
-            var data = inventoryManager.GetBackpackSlot(i);
-
-            // >> A CONDIÇÃO SUSPEITA <<
-            if (data != null && data.item != null)
-            {
-                // SE O ITEM EXISTE, ESTA MENSAGEM TEM QUE APARECER
-                Debug.Log($"Slot {i}: ENCONTRADO ITEM! '{data.item.name}'. Tentando criar o visual...");
-
-                Transform slotTransform = createdSlots[i].transform;
-                var itemGO = Instantiate(itemViewPrefab, slotTransform);
-                var itemView = itemGO.GetComponent<ItemView>();
-                itemView.Render(i, data.item, data.count);
-                activeItemViews.Add(itemGO);
-            }
+            heldItemIcon.sprite = heldItemData.item.itemIcon;
+            heldItemCountText.text = heldItemData.count > 1 ? heldItemData.count.ToString() : "";
         }
     }
 }

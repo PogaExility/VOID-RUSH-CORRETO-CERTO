@@ -1,18 +1,14 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class SlotView : MonoBehaviour, IDropHandler
+public class SlotView : MonoBehaviour, IPointerDownHandler
 {
     public int slotIndex { get; private set; }
 
     public void Initialize(int index) => this.slotIndex = index;
 
-    public void OnDrop(PointerEventData eventData)
+    public void OnPointerDown(PointerEventData eventData)
     {
-        var itemView = eventData.pointerDrag.GetComponent<ItemView>();
-        if (itemView != null)
-        {
-            InventoryManager.Instance.SwapSlots(itemView.originSlotIndex, this.slotIndex);
-        }
+        InventoryManager.Instance.OnSlotClicked(this.slotIndex, eventData.button);
     }
 }
