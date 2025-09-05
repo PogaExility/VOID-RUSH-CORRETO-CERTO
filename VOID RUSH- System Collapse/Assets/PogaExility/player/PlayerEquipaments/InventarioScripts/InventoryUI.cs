@@ -14,27 +14,22 @@ public class InventoryUI : MonoBehaviour
 
     [HideInInspector] public Canvas mainCanvas;
 
+    // >> A LISTA SEGURA QUE VAI GUARDAR OS SLOTS CRIADOS <<
+    private List<SlotView> createdSlots = new List<SlotView>();
     private List<GameObject> activeItemViews = new List<GameObject>();
-    private bool isGridCreated = false; // Flag de segurança
 
     void Awake()
     {
         Instance = this;
         mainCanvas = GetComponentInParent<Canvas>();
-
-        // Garante que a referência ao manager existe desde o início
-        if (inventoryManager == null)
-            inventoryManager = InventoryManager.Instance;
-        if (inventoryManager == null)
-            Debug.LogError("FATAL: InventoryManager não encontrado!", this);
+        if (inventoryManager == null) inventoryManager = InventoryManager.Instance;
     }
 
     void Start()
     {
         CreateGrid();
-        // A inscrição ao evento só acontece DEPOIS que a grade está pronta.
         inventoryManager.OnInventoryChanged += Redraw;
-        Redraw(); // Primeiro desenho, agora é seguro.
+        Redraw();
     }
 
     private void OnDestroy()
@@ -45,39 +40,35 @@ public class InventoryUI : MonoBehaviour
 
     private void CreateGrid()
     {
-        // Limpa qualquer coisa que estivesse lá antes, para evitar duplicatas
-        foreach (Transform child in backpackPanel)
-        {
-            Destroy(child.gameObject);
-        }
+        foreach (Transform child in backpackPanel) Destroy(child.gameObject);
+        createdSlots.Clear(); // Limpa a lista antes de recriar
 
-        // Cria os slots de fundo
         for (int i = 0; i < inventoryManager.GetBackpackSize(); i++)
         {
             var slotGO = Instantiate(slotViewPrefab, backpackPanel);
-            slotGO.GetComponent<SlotView>().Initialize(i);
+            var slotView = slotGO.GetComponent<SlotView>();
+            slotView.Initialize(i);
+            createdSlots.Add(slotView); // Guarda a referência do slot criado
         }
-
-        isGridCreated = true; // SINAL VERDE: A grade está pronta.
     }
 
+    // >> A FUNÇÃO REDRAW 100% CORRIGIDA <<
     private void Redraw()
     {
-        // CONDIÇÃO DE SEGURANÇA: Só redesenha se a grade já foi criada.
-        if (!isGridCreated) return;
-
         foreach (var view in activeItemViews) Destroy(view);
         activeItemViews.Clear();
 
-        // Agora, este loop é seguro.
-        for (int i = 0; i < inventoryManager.GetBackpackSize(); i++)
+        // Itera pela lista de slots GARANTIDOS que existem
+        for (int i = 0; i < createdSlots.Count; i++)
         {
-            // Pega o transform do slot. Esta linha não vai mais quebrar.
-            Transform slotTransform = backpackPanel.GetChild(i);
             var data = inventoryManager.GetBackpackSlot(i);
 
             if (data != null && data.item != null)
             {
+                // Pega o transform do slot da nossa lista segura, que não tem como dar erro.
+                Transform slotTransform = createdSlots[i].transform;
+
+                // CRIA O ITEMVIEW COMO FILHO DO SLOTVIEW CORRETO
                 var itemGO = Instantiate(itemViewPrefab, slotTransform);
                 var itemView = itemGO.GetComponent<ItemView>();
                 itemView.Render(i, data.item, data.count);
@@ -86,5 +77,31 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    public void RequestRedraw() => Redraw();
+    private void RedrawUI()
+    {
+        Debug.Log("--- REDRAWUI CHAMADO ---");
+
+        foreach (var view in activeItemViews) Destroy(view);
+        activeItemViews.Clear();
+
+        Debug.Log($"Total de slots de DADOS a serem verificados: {inventoryManager.GetBackpackSize()}");
+
+        for (int i = 0; i < inventoryManager.GetBackpackSize(); i++)
+        {
+            var data = inventoryManager.GetBackpackSlot(i);
+
+            // >> A CONDIÇÃO SUSPEITA <<
+            if (data != null && data.item != null)
+            {
+                // SE O ITEM EXISTE, ESTA MENSAGEM TEM QUE APARECER
+                Debug.Log($"Slot {i}: ENCONTRADO ITEM! '{data.item.name}'. Tentando criar o visual...");
+
+                Transform slotTransform = createdSlots[i].transform;
+                var itemGO = Instantiate(itemViewPrefab, slotTransform);
+                var itemView = itemGO.GetComponent<ItemView>();
+                itemView.Render(i, data.item, data.count);
+                activeItemViews.Add(itemGO);
+            }
+        }
+    }
 }

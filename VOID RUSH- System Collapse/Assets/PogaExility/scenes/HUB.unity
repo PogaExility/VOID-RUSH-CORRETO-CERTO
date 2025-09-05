@@ -13452,6 +13452,11 @@ Tilemap:
     e31: 0
     e32: 0
     e33: 1
+--- !u!224 &326775231 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4000528787000432178, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+  m_PrefabInstance: {fileID: 1448285318}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &384576079
 GameObject:
   m_ObjectHideFlags: 0
@@ -14026,6 +14031,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1812593278397308451, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: backpackPanel
+      value: 
+      objectReference: {fileID: 326775231}
+    - target: {fileID: 1812593278397308451, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: inventoryManager
       value: 
       objectReference: {fileID: 1480605901}
@@ -14145,6 +14154,14 @@ PrefabInstance:
       propertyPath: mainCanvasTransform
       value: 
       objectReference: {fileID: 1436529041}
+    - target: {fileID: 6956942213338850998, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: startingItems.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6956942213338850998, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: 'startingItems.Array.data[0]'
+      value: 
+      objectReference: {fileID: 11400000, guid: 08df248e31a641c40b7f37536f807392, type: 2}
     - target: {fileID: 8814992339142666314, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_CellSize.x
       value: 50
