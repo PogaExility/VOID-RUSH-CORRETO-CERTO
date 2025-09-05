@@ -12,6 +12,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Referências de UI")]
     public GameObject inventoryPanel;
+    public GameObject combatHUDPanel;
     public EnergyBarController energyBar;
     public GameObject powerModeIndicator;
 
@@ -22,6 +23,7 @@ public class PlayerController : MonoBehaviour
     public CombatController combatController;
     public PlayerAttack playerAttack;
     public DefenseHandler defenseHandler;
+    public WeaponHandler weaponHandler;
 
     [Header("Skills de Movimento")]
     public SkillSO baseJumpSkill;
@@ -60,7 +62,7 @@ public class PlayerController : MonoBehaviour
         playerStats = GetComponent<PlayerStats>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         if (cursorManager == null) cursorManager = FindAnyObjectByType<CursorManager>();
-      
+        if (weaponHandler == null) weaponHandler = GetComponent<WeaponHandler>();
 
     }
 
@@ -120,7 +122,8 @@ public class PlayerController : MonoBehaviour
         // --- CHAMADAS DAS FUNÇÕES DE LÓGICA ---
         HandlePowerModeToggle();
         HandleSkillInput();
-        HandleCombatInput();      // <-- CHAMADA AQUI
+        HandleCombatInput();
+        HandleWeaponSwitching();// <-- CHAMADA AQUI
         //UpdateAimModeState();     // <-- CHAMADA AQUI
         UpdateAnimations();
         wasGroundedLastFrame = movementScript.IsGrounded();
@@ -130,33 +133,46 @@ public class PlayerController : MonoBehaviour
             movementScript.CutJump();
         }
     }
+      private void HandleWeaponSwitching()
+    {
+        // Se está no inventário ou se não há um weapon handler, não faz nada.
+        if (isInventoryOpen || weaponHandler == null) return;
 
+        // "Mouse ScrollWheel" é o nome padrão do input da rodinha do mouse na Unity.
+        float scrollInput = Input.GetAxis("Mouse ScrollWheel");
+
+        if (scrollInput > 0f) // Rodinha pra cima/frente
+        {
+            weaponHandler.CycleWeapon(true); // Diz ao chefe para ir para a PRÓXIMA arma
+        }
+        else if (scrollInput < 0f) // Rodinha pra baixo/trás
+        {
+            weaponHandler.CycleWeapon(false); // Diz ao chefe para ir para a arma ANTERIOR
+        }
+    }
     private void ToggleInventory()
     {
-        if (inventoryPanel == null) return;
         if (inventoryLocked) return;
+
         isInventoryOpen = !isInventoryOpen;
+
+        // Ativa/Desativa os painéis
         inventoryPanel.SetActive(isInventoryOpen);
+        if (combatHUDPanel != null) // Linha de segurança
+            combatHUDPanel.SetActive(!isInventoryOpen); // <<-- ADICIONE ESTA LINHA (note o "!")
+
         Time.timeScale = isInventoryOpen ? 0f : 1f;
 
         if (cursorManager != null)
         {
             if (isInventoryOpen)
-            {
                 cursorManager.SetInventoryCursor();
-            }
             else
-            {
                 cursorManager.SetDefaultCursor();
-            }
         }
-
     }
-   
 
- 
-
-private void HandleSkillInput()
+    private void HandleSkillInput()
     {
         // 1. O JOGADOR APERTOU A TECLA DO DASH?
         // Lemos a tecla do SO da skill de dash ativa.

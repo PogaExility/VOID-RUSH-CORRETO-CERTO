@@ -4,30 +4,18 @@ using TMPro;
 
 public class WeaponHUDView : MonoBehaviour
 {
-    [Header("Referências da UI")]
+    [SerializeField] private WeaponHandler weaponHandler;
     public Image weaponIcon;
     public TextMeshProUGUI ammoText;
-    public Slider cooldownSlider; // Exemplo
-
-    // >> A REFERÊNCIA CORRETA <<
-    [Header("Referências do Jogo")]
-    [SerializeField] private WeaponHandler weaponHandler;
 
     void Start()
     {
-        // Garante que a referência existe
-        if (weaponHandler == null)
-            weaponHandler = FindFirstObjectByType<WeaponHandler>();
-        if (weaponHandler == null)
+        if (weaponHandler == null) weaponHandler = FindFirstObjectByType<WeaponHandler>();
+        if (weaponHandler != null)
         {
-            Debug.LogError("WeaponHandler não encontrado na cena!", this);
-            enabled = false;
-            return;
+            weaponHandler.OnActiveWeaponChanged += UpdateView;
+            UpdateView(weaponHandler.currentWeaponIndex);
         }
-
-        // Se inscreve para ouvir quando a arma ativa muda
-        weaponHandler.OnActiveWeaponChanged += UpdateView;
-        UpdateView(weaponHandler.currentWeaponIndex); // Desenho inicial
     }
 
     private void OnDestroy()
@@ -36,35 +24,21 @@ public class WeaponHUDView : MonoBehaviour
             weaponHandler.OnActiveWeaponChanged -= UpdateView;
     }
 
-    // A função que redesenha a hotbar
     void UpdateView(int activeIndex)
     {
-        var activeWeaponSlot = weaponHandler.GetActiveWeaponSlot(); // Pede ao WeaponHandler
-
+        var activeWeaponSlot = weaponHandler.GetActiveWeaponSlot();
         if (activeWeaponSlot != null && activeWeaponSlot.item != null)
         {
             weaponIcon.enabled = true;
             weaponIcon.sprite = activeWeaponSlot.item.itemIcon;
-
-            var weapon = activeWeaponSlot.item;
-            ammoText.enabled = false;
-            cooldownSlider.gameObject.SetActive(false);
-
-            switch (weapon.weaponType)
+            if (activeWeaponSlot.item.itemType == ItemType.Weapon)
             {
-                case WeaponType.Ranger:
-                    ammoText.enabled = true;
-                    // Lógica futura virá do WeaponHandler
-                    ammoText.text = $"MUNIÇÃO: -- / {weapon.magazineSize}";
-                    break;
-                    // ... outros casos
+                ammoText.text = $"MUNIÇÃO: --/{activeWeaponSlot.item.magazineSize}";
             }
         }
         else
         {
             weaponIcon.enabled = false;
-            ammoText.enabled = false;
-            cooldownSlider.gameObject.SetActive(false);
         }
     }
 }

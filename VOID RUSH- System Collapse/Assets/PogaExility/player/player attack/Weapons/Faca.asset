@@ -9,26 +9,38 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d12d9d3d8f980d439dbe3495b977724, type: 3}
+  m_Script: {fileID: 11500000, guid: b3cfd4cacdcf90248bf7cfc44ef8bd25, type: 3}
   m_Name: Faca
   m_EditorClassIdentifier: 
   itemName: Faca
-  itemIcon: {fileID: 0}
-  width: 1
-  height: 1
-  itemType: 0
+  itemIcon: {fileID: 21300000, guid: c44229ff3bda8304aa6516d4fafe6fd9, type: 3}
+  itemType: 2
+  itemPrefab: {fileID: 6872308494124798136, guid: efe0781df1de134468e94ce0dc01e23d, type: 3}
+  worldPickupPrefab: {fileID: 6872308494124798136, guid: efe0781df1de134468e94ce0dc01e23d, type: 3}
+  equipPrefab: {fileID: 5714271926393328017, guid: d2bab78987c9bec468b6bdae87c07179, type: 3}
+  stackable: 0
+  maxStack: 999
+  acceptedAmmo: []
+  bulletDamage: 10
+  powderDamage: 2
+  powderRange: 2
+  isLostOnDeathDuringQuest: 0
   weaponType: 0
-  damage: 1
+  damage: 0
   attackRate: 0.5
   useAimMode: 0
-  comboAnimations: []
   slashEffectPrefab: {fileID: 0}
+  bulletPrefab: {fileID: 0}
+  busterShotPrefab: {fileID: 0}
+  chargedShotPrefab: {fileID: 0}
+  comboAnimations:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   magazineSize: 0
   reloadTime: 0
-  bulletPrefab: {fileID: 0}
   chargeTime: 0
   energyCostPerChargeSecond: 0
   baseEnergyCost: 0
-  busterShotPrefab: {fileID: 0}
-  chargedShotPrefab: {fileID: 0}
   chargedShotDamage: 0
+  healthToRestore: 0

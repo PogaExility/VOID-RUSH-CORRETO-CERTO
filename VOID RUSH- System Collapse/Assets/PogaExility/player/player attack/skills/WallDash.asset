@@ -13,16 +13,18 @@ MonoBehaviour:
   m_Name: WallDash
   m_EditorClassIdentifier: 
   skillName: WallDash
+  cooldownDuration: 0
   energyCost: 0
   skillClass: 0
   requiredKeys: 71000000
-  triggerKeys: 20000000
+  triggerKeys: 
   cancelIfKeysHeld: 
   actionToPerform: 6
+  combatActionToPerform: 0
   conditionGroups:
   - logicType: 0
     states: 0400000003000000
-  forbiddenStates: 0100000006000000
+  forbiddenStates: 09000000
   jumpForce: 12
   airJumps: 0
   gravityScaleOnFall: 1.6
@@ -35,9 +37,15 @@ MonoBehaviour:
   dashJump_DashSpeed: 25
   dashJump_DashDuration: 0.4
   dashJump_JumpForce: 15
+  dashJump_InputBuffer: 0.15
   dashJump_ParabolaDamping: 1
   dashJump_GravityScaleOnFall: 2.5
   wallDashJump_LaunchForceX: 25
   wallDashJump_LaunchForceY: 15
+  wallDashJump_InputBuffer: 0.15
   wallDashJump_ParabolaDamping: 0.3
   wallDashJump_GravityScaleOnFall: 2.5
+  block_ParryWindow: 0.15
+  block_DamageReduction: 0.75
+  parry_CounterDamageMultiplier: 2
+  parry_StunDuration: 1.5

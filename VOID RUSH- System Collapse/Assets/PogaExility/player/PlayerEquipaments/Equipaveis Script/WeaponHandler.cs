@@ -1,139 +1,98 @@
 ﻿using System;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class WeaponHandler : MonoBehaviour
 {
-    [Header("Referências Essenciais")]
+    public static WeaponHandler Instance;
+
+    [Header("CONFIGURAÇÃO DE DADOS")]
+    public const int NUM_WEAPON_SLOTS = 3;
+    [SerializeField] private InventorySlot[] weaponSlots = new InventorySlot[NUM_WEAPON_SLOTS];
+    public int currentWeaponIndex { get; private set; } = 0;
+
+    [Header("REFERÊNCIAS DO MUNDO")]
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private Transform weaponSocket;
 
-    [Header("Runtime - Armas Equipadas")]
-    public const int NUM_WEAPON_SLOTS = 3;
-    [SerializeField] private InventorySlot[] weaponSlots = new InventorySlot[NUM_WEAPON_SLOTS];
-    [SerializeField] public int currentWeaponIndex = 0; // TORNE-A PÚBLICA
+    [Header("REFERÊNCIAS DA UI DE COMBATE (ARRASTE AQUI)")]
+    public Transform[] equipmentSlotContainers = new Transform[NUM_WEAPON_SLOTS];
+    public Transform activeWeaponHUDContainer;
+    public GameObject weaponItemViewPrefab;
 
-    // VARIÁVEL CORRIGIDA: Usa o que já existe
-    private ItemSO activeEquippedWeapon;
-    private GameObject activeWeaponGO;
+    private List<GameObject> activeVisuals = new List<GameObject>();
 
-    // EVENTOS PARA A UI OUVIR
-    public event Action<int, ItemSO> OnEquipmentChanged;
+    // >> OS EVENTOS QUE O HUD PRECISA <<
     public event Action<int> OnActiveWeaponChanged;
 
-    // DEFINIÇÃO FALTANTE: A interface para dano
-    public interface IDamageable
-    {
-        void TakeDamage(float amount);
-    }
-    // Em WeaponHandler.cs, adicione esta função pública
-    public InventorySlot GetActiveWeaponSlot()
-    {
-        if (currentWeaponIndex < 0 || currentWeaponIndex >= weaponSlots.Length)
-            return null;
-
-        return weaponSlots[currentWeaponIndex];
-    }
     void Awake()
     {
-        if (inventoryManager == null) inventoryManager = InventoryManager.Instance;
+        Instance = this;
         for (int i = 0; i < NUM_WEAPON_SLOTS; i++)
-        {
             if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot();
-        }
-        // Equipa a primeira arma no início do jogo, se houver
-        EquipWeaponFromSlot(currentWeaponIndex);
     }
 
-    // --- LÓGICA DE EQUIPAR/TROCAR ---
+    void Start()
+    {
+        if (inventoryManager == null) inventoryManager = InventoryManager.Instance;
+        RedrawWeaponUI();
+    }
+
+    private void RedrawWeaponUI()
+    {
+        foreach (var visual in activeVisuals) Destroy(visual);
+        activeVisuals.Clear();
+
+        for (int i = 0; i < NUM_WEAPON_SLOTS; i++)
+        {
+            var data = weaponSlots[i];
+            if (data.item != null)
+            {
+                var go = Instantiate(weaponItemViewPrefab, equipmentSlotContainers[i]);
+                go.GetComponent<WeaponItemView>().Render(data.item);
+                activeVisuals.Add(go);
+            }
+        }
+
+        var activeWeaponData = weaponSlots[currentWeaponIndex];
+        if (activeWeaponData.item != null)
+        {
+            var go = Instantiate(weaponItemViewPrefab, activeWeaponHUDContainer);
+            go.GetComponent<WeaponItemView>().Render(activeWeaponData.item);
+            activeVisuals.Add(go);
+        }
+    }
 
     public void CycleWeapon(bool forward)
     {
         if (forward) currentWeaponIndex = (currentWeaponIndex + 1) % NUM_WEAPON_SLOTS;
         else currentWeaponIndex = (currentWeaponIndex - 1 + NUM_WEAPON_SLOTS) % NUM_WEAPON_SLOTS;
 
-        EquipWeaponFromSlot(currentWeaponIndex);
+        EquipToHand(weaponSlots[currentWeaponIndex].item);
+        RedrawWeaponUI();
         OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
 
     public void EquipItemFromMouse(int weaponSlotIndex)
     {
-        var itemNoMouse = inventoryManager.GetHeldItem(); // Pergunta ao InvManager o que está no mouse
+        var itemNoMouse = inventoryManager.GetHeldItem();
         var equipmentSlot = weaponSlots[weaponSlotIndex];
+        if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Weapon) return;
 
-        // Só permite a troca se o item do mouse for uma arma
-        if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Weapon)
-            return;
-
-        // Troca os DADOS: o que estava no mouse vai para o slot de arma,
-        // E o que estava no slot de arma vai para o mouse.
         (itemNoMouse.item, equipmentSlot.item) = (equipmentSlot.item, itemNoMouse.item);
         (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
 
-        // Se a arma que trocamos era a que estava ativa, atualiza a mão do jogador
+        inventoryManager.RequestRedraw(); // <<-- Usa a função pública, sem erro
+        RedrawWeaponUI();
+
         if (currentWeaponIndex == weaponSlotIndex)
         {
-            EquipWeaponFromSlot(currentWeaponIndex);
-        }
-
-        // Avisa os sistemas de UI que os dados mudaram
-        inventoryManager.RequestRedraw();
-        OnEquipmentChanged?.Invoke(weaponSlotIndex, equipmentSlot.item);
-    }
-
-    // --- LÓGICA INTERNA ---
-
-    private void EquipWeaponFromSlot(int index)
-    {
-        UnequipActiveWeapon();
-        var weaponToEquip = weaponSlots[index];
-        if (weaponToEquip == null || weaponToEquip.item == null) return;
-
-        // NOME DA VARIÁVEL CORRIGIDO
-        activeEquippedWeapon = weaponToEquip.item;
-        if (activeEquippedWeapon.equipPrefab != null && weaponSocket != null)
-        {
-            activeWeaponGO = Instantiate(activeEquippedWeapon.equipPrefab, weaponSocket);
+            EquipToHand(weaponSlots[currentWeaponIndex].item);
         }
     }
 
-    private void UnequipActiveWeapon()
-    {
-        if (activeWeaponGO != null) Destroy(activeWeaponGO);
-        activeEquippedWeapon = null;
-    }
+    private void EquipToHand(ItemSO weapon) { /* ...Lógica de Instantiate no socket... */ }
 
-    // --- LÓGICA DE COMBATE ---
-    public void Fire(Vector3 origin, Vector3 direction)
-    {
-        if (activeEquippedWeapon == null) return;
-
-        if (TryConsumeOneAmmo())
-        {
-            float dmg = activeEquippedWeapon.bulletDamage;
-            if (Physics.Raycast(origin, direction, out var hit, 200f))
-            {
-                if (hit.collider.TryGetComponent<IDamageable>(out var hp)) hp.TakeDamage(dmg);
-            }
-        }
-        else
-        {
-            float range = activeEquippedWeapon.powderRange;
-            float pdmg = activeEquippedWeapon.powderDamage;
-            if (Physics.Raycast(origin, direction, out var phit, range))
-            {
-                if (phit.collider.TryGetComponent<IDamageable>(out var hp)) hp.TakeDamage(pdmg);
-            }
-        }
-    }
-
-    private bool TryConsumeOneAmmo()
-    {
-        if (activeEquippedWeapon == null || activeEquippedWeapon.acceptedAmmo == null) return false;
-        foreach (var ammo in activeEquippedWeapon.acceptedAmmo)
-        {
-            // A lógica de consumir precisa ser refeita para o TryAddItem atual
-            // if (inventoryManager.TryConsumeItem(ammo, 1)) return true;
-        }
-        return false; // Simulação por agora
-    }
+    // >> A FUNÇÃO QUE O HUD PRECISA, COM O NOME CERTO <<
+    public InventorySlot GetActiveWeaponSlot() => weaponSlots[currentWeaponIndex];
 }
