@@ -1449,13 +1449,14 @@ MonoBehaviour:
     count: 0
   - item: {fileID: 0}
     count: 0
-  playerController: {fileID: 8298078936381974819}
-  weaponSocket: {fileID: 0}
   inventoryManager: {fileID: 6956942213338850998}
-  playerVisualsTransform: {fileID: 0}
-  headPivot: {fileID: 2886175496301029706}
-  armPivot: {fileID: 8673842369191267755}
-  IsAiming: 0
+  weaponSocket: {fileID: 0}
+  equipmentSlotContainers:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  activeWeaponHUDContainer: {fileID: 922616001985780453}
+  weaponItemViewPrefab: {fileID: 5547407535461782988, guid: abd2ed78f4b165c46bc0fde79eeb9d9f, type: 3}
 --- !u!1 &3653114368772367964
 GameObject:
   m_ObjectHideFlags: 0
@@ -8435,11 +8436,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7131340931123058250, guid: 2de920e6415fd8a44b6aa01656d10aec, type: 3}
   m_PrefabInstance: {fileID: 8105891178617484788}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &2886175496301029706 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6372637753858989246, guid: 2de920e6415fd8a44b6aa01656d10aec, type: 3}
-  m_PrefabInstance: {fileID: 8105891178617484788}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &8459015683056649564
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8516,10 +8512,5 @@ PrefabInstance:
 --- !u!4 &6398474281398656026 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3291998868621859142, guid: b52a1e2c85e96b648a9e43c20ac53ffa, type: 3}
-  m_PrefabInstance: {fileID: 8459015683056649564}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &8673842369191267755 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 953593652669319415, guid: b52a1e2c85e96b648a9e43c20ac53ffa, type: 3}
   m_PrefabInstance: {fileID: 8459015683056649564}
   m_PrefabAsset: {fileID: 0}
