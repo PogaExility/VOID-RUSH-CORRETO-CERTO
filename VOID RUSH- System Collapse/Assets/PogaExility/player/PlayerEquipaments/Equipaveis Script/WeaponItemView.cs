@@ -4,9 +4,8 @@ using TMPro;
 
 public class WeaponItemView : MonoBehaviour
 {
-    // ARRASTE AS REFERÊNCIAS DESTE PREFAB NO INSPECTOR
     [SerializeField] private Image icon;
-    [SerializeField] private TextMeshProUGUI infoText; // Para munição, etc.
+    [SerializeField] private TextMeshProUGUI infoText;
 
     public void Render(ItemSO weapon)
     {
@@ -19,7 +18,6 @@ public class WeaponItemView : MonoBehaviour
         gameObject.SetActive(true);
         icon.sprite = weapon.itemIcon;
 
-        // Lógica para mostrar a informação certa
         switch (weapon.weaponType)
         {
             case WeaponType.Ranger:

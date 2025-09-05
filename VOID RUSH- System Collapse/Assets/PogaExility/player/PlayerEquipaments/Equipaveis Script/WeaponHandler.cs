@@ -2,54 +2,95 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(PlayerStats))]
 public class WeaponHandler : MonoBehaviour
 {
     public static WeaponHandler Instance;
 
-    [Header("CONFIGURAÇÃO DE EQUIPAMENTO")]
+    [Header("CONFIGURAÇÃO DE DADOS")]
     public const int NUM_WEAPON_SLOTS = 3;
     [SerializeField] private InventorySlot[] weaponSlots = new InventorySlot[NUM_WEAPON_SLOTS];
     public int currentWeaponIndex { get; private set; } = 0;
 
-    [Header("REFERÊNCIAS")]
+    [Header("REFERÊNCIAS DO MUNDO")]
     [SerializeField] private InventoryManager inventoryManager;
-    [SerializeField] private Transform weaponSocket; // Ponto na mão do jogador
-    [SerializeField] private PlayerStats playerStats; // Referência para os stats
+    [SerializeField] private Transform weaponSocket;
 
-    [Header("UI DE COMBATE (OPCIONAL)")]
+    [Header("REFERÊNCIAS DA UI DE COMBATE (ARRASTE AQUI)")]
     public Transform[] equipmentSlotContainers = new Transform[NUM_WEAPON_SLOTS];
     public Transform activeWeaponHUDContainer;
-    public GameObject weaponItemViewPrefab;
+    public GameObject weaponItemViewPrefab; // <<-- O PREFAB VISUAL DA ARMA
 
-    // Eventos que a UI ouve
-    public event Action<int, ItemSO> OnEquipmentChanged;
-    public event Action<int> OnActiveWeaponChanged;
-
-    // Estado interno do combate
+    private List<GameObject> activeVisuals = new List<GameObject>();
     private ItemSO activeWeapon;
     private GameObject activeWeaponGO;
-    private float lastAttackTime = -999f;
-    private int meleeComboCount = 0;
-    private const float COMBO_RESET_TIME = 1.2f;
+    public event Action<int> OnActiveWeaponChanged;
+    public InventorySlot GetActiveWeaponSlot() => weaponSlots[currentWeaponIndex];
+
 
     void Awake()
     {
         Instance = this;
-        // Pega referências, se não foram arrastadas
-        if (inventoryManager == null) inventoryManager = InventoryManager.Instance;
-        if (playerStats == null) playerStats = GetComponent<PlayerStats>();
-
-        // Inicializa os slots
         for (int i = 0; i < NUM_WEAPON_SLOTS; i++)
             if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot();
     }
+    public void EquipItemFromMouse(int weaponSlotIndex)
+    {
+        var itemNoMouse = inventoryManager.GetHeldItem();
+        var equipmentSlot = weaponSlots[weaponSlotIndex];
 
+        if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Weapon)
+            return;
+
+        (itemNoMouse.item, equipmentSlot.item) = (equipmentSlot.item, itemNoMouse.item);
+        (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
+
+        inventoryManager.RequestRedraw();
+        // RedrawWeaponUI(); // Você ainda precisa de uma função para desenhar a UI de armas
+
+        if (currentWeaponIndex == weaponSlotIndex)
+        {
+            // >> A CORREÇÃO ESTÁ AQUI <<
+            // A gente já tem uma função pra isso, não precisa de outra.
+            EquipToHand(weaponSlots[currentWeaponIndex].item);
+            OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
+        }
+    }
     void Start()
     {
-        EquipToHand(weaponSlots[currentWeaponIndex].item);
-        // A UI de armas agora vai ter seu próprio script dedicado.
+        if (inventoryManager == null) inventoryManager = InventoryManager.Instance;
+        RedrawWeaponUI();
     }
+
+    // A FUNÇÃO QUE CRIA A PORRA DOS ITENS VISUAIS ONDE DEVEM ESTAR
+    private void RedrawWeaponUI()
+    {
+        // 1. Destrói todos os visuais antigos para evitar duplicação.
+        foreach (var visual in activeVisuals) Destroy(visual);
+        activeVisuals.Clear();
+
+        // 2. Cria os visuais para os 3 slots no INVENTÁRIO.
+        for (int i = 0; i < NUM_WEAPON_SLOTS; i++)
+        {
+            var data = weaponSlots[i];
+            if (data.item != null)
+            {
+                var go = Instantiate(weaponItemViewPrefab, equipmentSlotContainers[i]);
+                go.GetComponent<WeaponItemView>().Render(data.item);
+                activeVisuals.Add(go);
+            }
+        }
+
+        // 3. Cria o visual para a arma ATIVA na HOTBAR.
+        var activeWeaponData = weaponSlots[currentWeaponIndex];
+        if (activeWeaponData.item != null)
+        {
+            var go = Instantiate(weaponItemViewPrefab, activeWeaponHUDContainer);
+            go.GetComponent<WeaponItemView>().Render(activeWeaponData.item);
+            activeVisuals.Add(go);
+        }
+    }
+
+    // --- LÓGICA DE INTERAÇÃO ---
 
     public void CycleWeapon(bool forward)
     {
@@ -57,57 +98,24 @@ public class WeaponHandler : MonoBehaviour
         else currentWeaponIndex = (currentWeaponIndex - 1 + NUM_WEAPON_SLOTS) % NUM_WEAPON_SLOTS;
 
         EquipToHand(weaponSlots[currentWeaponIndex].item);
-    
-        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
+        RedrawWeaponUI();
     }
 
-    public void EquipItemFromMouse(int weaponSlotIndex)
+    public void EquipItemFromBackpack(int backpackSlotIndex, int weaponSlotIndex)
     {
-        var itemNoMouse = inventoryManager.GetHeldItem();
-        var equipmentSlot = weaponSlots[weaponSlotIndex];
-        if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Weapon) return;
+        var backpackSlot = inventoryManager.GetBackpackSlot(backpackSlotIndex);
+        if (backpackSlot.item != null && backpackSlot.item.itemType != ItemType.Weapon) return;
 
-        (itemNoMouse.item, equipmentSlot.item) = (equipmentSlot.item, itemNoMouse.item);
-        (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
+        (backpackSlot.item, weaponSlots[weaponSlotIndex].item) = (weaponSlots[weaponSlotIndex].item, backpackSlot.item);
+        (backpackSlot.count, weaponSlots[weaponSlotIndex].count) = (weaponSlots[weaponSlotIndex].count, backpackSlot.count);
 
-        inventoryManager.RequestRedraw(); // <<-- Usa a função pública, sem erro
-      
+        inventoryManager.RequestRedraw();
+        RedrawWeaponUI();
 
         if (currentWeaponIndex == weaponSlotIndex)
         {
             EquipToHand(weaponSlots[currentWeaponIndex].item);
         }
-    }
-
-    // >> NOVA LÓGICA DE ATAQUE (DO ANTIGO PLAYERATTACK) <<
-    public void HandleAttackInput(Vector3 aimDirection)
-    {
-        if (activeWeapon == null) return; // Não ataca se não tiver arma
-        if (Time.time < lastAttackTime + activeWeapon.attackRate) return; // Respeita a cadência
-
-        switch (activeWeapon.weaponType)
-        {
-            case WeaponType.Melee:
-                // Lógica de combo
-                if (Time.time > lastAttackTime + COMBO_RESET_TIME) meleeComboCount = 0;
-                int animationIndex = meleeComboCount % activeWeapon.comboAnimations.Length;
-                Debug.Log($"Ataque Melee Combo {animationIndex + 1}");
-                // TODO: Chamar animação: animator.Play(activeWeapon.comboAnimations[animationIndex].name);
-                meleeComboCount++;
-                break;
-
-            case WeaponType.Ranger:
-                Debug.Log("Atirou com Ranger!");
-                // TODO: Chamar animação de tiro e instanciar `activeWeapon.bulletPrefab`
-                break;
-
-            case WeaponType.Buster:
-                Debug.Log("Atirou com Buster!");
-                // TODO: Lógica de carga e tiro do buster
-                break;
-        }
-
-        lastAttackTime = Time.time;
     }
 
     private void EquipToHand(ItemSO weapon)
@@ -118,8 +126,7 @@ public class WeaponHandler : MonoBehaviour
         {
             activeWeaponGO = Instantiate(activeWeapon.equipPrefab, weaponSocket);
         }
+        // UpdateAimState(); // Se tiver, mantenha aqui
     }
 
-    // --- Funções Helper ---
-    public InventorySlot GetActiveWeaponSlot() => weaponSlots[currentWeaponIndex];
 }

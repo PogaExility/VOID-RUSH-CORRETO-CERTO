@@ -45,7 +45,6 @@ public class PlayerController : MonoBehaviour
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
     private bool isInAimMode = false;
-    private bool isAimModeLocked = false;
     private PlayerStats playerStats;
     public bool inventoryLocked = false;
 
@@ -77,35 +76,14 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Adicione esta corotina em qualquer lugar dentro da classe PlayerController
-    // Em PlayerController.cs
-
-
-    // Em PlayerController.cs
+    public void SetAimingState(bool isNowAiming)
+    {
+        isInAimMode = isNowAiming; // A variável agora é controlada externamente
+    }
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
-        
-
-        // Trava do modo de mira
-        if (Input.GetKeyDown(KeyCode.CapsLock))
-        {
-            isAimModeLocked = !isAimModeLocked; // Inverte o estado da trava
-
-            if (isAimModeLocked)
-            {
-                // Força a postura para Firearm (ou Buster) para ativar a mira
-                combatController.activeStance = WeaponType.Ranger;
-            }
-            else
-            {
-                // --- A CORREÇÃO ESTÁ AQUI ---
-                // Força a postura de volta para Melee para DESATIVAR a mira
-                combatController.activeStance = WeaponType.Melee;
-            }
-
-        }
-
+ 
         float horizontalInput = 0;
         if (!isInventoryOpen)
         {
@@ -120,7 +98,7 @@ public class PlayerController : MonoBehaviour
         HandleSkillInput();
         HandleCombatInput();
         HandleWeaponSwitching();// <-- CHAMADA AQUI
-        //UpdateAimModeState();     // <-- CHAMADA AQUI
+       
         UpdateAnimations();
         wasGroundedLastFrame = movementScript.IsGrounded();
 
@@ -194,7 +172,7 @@ public class PlayerController : MonoBehaviour
         if (Input.GetButtonDown("Fire1")) // "Fire1" é o clique esquerdo do mouse por padrão
         {
             Vector3 aimDir = (Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position).normalized;
-            weaponHandler.HandleAttackInput(aimDir);
+            //weaponHandler.HandleAttackInput(aimDir);
         }
 
         // A lógica de defesa continua a mesma
@@ -208,36 +186,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    /* private void UpdateAimModeState()
-     {
-         bool shouldAim = isAimModeLocked ||
-                         ((combatController.activeStance == WeaponType.Ranger || combatController.activeStance == WeaponType.Buster)
-                          && !movementScript.IsDashing() && !isLanding);
-
-         // A checagem de mudança de estado já existe e é perfeita para isso
-         if (isInAimMode != shouldAim)
-         {
-             isInAimMode = shouldAim;
-             playerAttack.SetAiming(isInAimMode); // Isso já ativa/desativa os prefabs
-
-             // --- ADICIONE ESTE BLOCO ---
-             // Atualiza o cursor do mouse com base no novo estado
-             if (cursorManager != null)
-             {
-                 if (isInAimMode)
-                 {
-                     cursorManager.SetAimCursor();
-                 }
-                 else
-                 {
-                     cursorManager.SetDefaultCursor();
-                 }
-             }
-             // --- FIM DO BLOCO ---
-         }*/
-
-
-    // Em PlayerController.cs
+   
     private void UpdateAnimations()
     {
         // --- HIERARQUIA DE PRIORIDADE ---

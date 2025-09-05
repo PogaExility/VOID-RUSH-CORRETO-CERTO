@@ -90,7 +90,7 @@ public class ItemSOEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("attackRate"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("useAimMode"));
 
-        if (item.weaponType == WeaponType.Melee)
+        if (item.weaponType == WeaponType.Meelee)
         {
             EditorGUILayout.PropertyField(serializedObject.FindProperty("comboAnimations"), true);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("slashEffectPrefab"));

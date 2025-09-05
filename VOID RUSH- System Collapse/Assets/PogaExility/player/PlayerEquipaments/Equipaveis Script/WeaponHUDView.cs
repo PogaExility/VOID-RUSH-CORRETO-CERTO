@@ -4,9 +4,13 @@ using TMPro;
 
 public class WeaponHUDView : MonoBehaviour
 {
-    [SerializeField] private WeaponHandler weaponHandler;
+    [Header("REFERÊNCIAS DA UI")]
     public Image weaponIcon;
     public TextMeshProUGUI ammoText;
+    public Slider cooldownSlider;
+
+    [Header("REFERÊNCIAS DO JOGO")]
+    [SerializeField] private WeaponHandler weaponHandler;
 
     void Start()
     {
@@ -17,28 +21,41 @@ public class WeaponHUDView : MonoBehaviour
             UpdateView(weaponHandler.currentWeaponIndex);
         }
     }
-
     private void OnDestroy()
     {
         if (weaponHandler != null)
             weaponHandler.OnActiveWeaponChanged -= UpdateView;
     }
 
+    // A FUNÇÃO COMPLETA E CORRETA
     void UpdateView(int activeIndex)
     {
+        if (weaponIcon == null) return;
+
         var activeWeaponSlot = weaponHandler.GetActiveWeaponSlot();
         if (activeWeaponSlot != null && activeWeaponSlot.item != null)
         {
             weaponIcon.enabled = true;
             weaponIcon.sprite = activeWeaponSlot.item.itemIcon;
-            if (activeWeaponSlot.item.itemType == ItemType.Weapon)
+
+            // Garante que o texto de munição exista antes de usá-lo
+            if (ammoText != null)
             {
-                ammoText.text = $"MUNIÇÃO: --/{activeWeaponSlot.item.magazineSize}";
+                if (activeWeaponSlot.item.itemType == ItemType.Weapon && activeWeaponSlot.item.weaponType == WeaponType.Ranger)
+                {
+                    ammoText.enabled = true;
+                    ammoText.text = $"MUNIÇÃO: --/{activeWeaponSlot.item.magazineSize}";
+                }
+                else
+                {
+                    ammoText.enabled = false;
+                }
             }
         }
         else
         {
             weaponIcon.enabled = false;
+            if (ammoText != null) ammoText.enabled = false;
         }
     }
 }

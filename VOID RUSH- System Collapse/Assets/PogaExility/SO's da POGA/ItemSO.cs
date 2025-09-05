@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 public enum ItemType { Consumable, KeyItem, Weapon, Ammo, Material, Utility }
-public enum WeaponType { Melee, Ranger, Buster }
+public enum WeaponType { Meelee, Ranger, Buster }
 
 [CreateAssetMenu(fileName = "NewItem", menuName = "NEXUS/Itens/Novo Item", order = 0)]
 public class ItemSO : ScriptableObject
@@ -42,7 +42,7 @@ public class ItemSO : ScriptableObject
     public GameObject busterShotPrefab;
     public GameObject chargedShotPrefab;
 
-    [Header("Melee")]
+    [Header("Meelee")]
     public AnimationClip[] comboAnimations;
 
     [Header("Ranger")]
