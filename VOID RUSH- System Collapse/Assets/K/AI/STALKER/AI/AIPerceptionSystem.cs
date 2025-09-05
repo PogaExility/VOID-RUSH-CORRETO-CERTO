@@ -4,6 +4,7 @@ using UnityEditor;
 public class AIPerceptionSystem : MonoBehaviour
 {
     #region Estados e Configurações
+    public enum GazeMode { Idle, TargetTracking, InvestigatingDanger }
     public enum AwarenessState { DORMANT, PATROLLING, SUSPICIOUS, ALERT, HUNTING }
 
     [Header("▶ Estado Atual")]
@@ -17,47 +18,40 @@ public class AIPerceptionSystem : MonoBehaviour
     [Header("▶ Atributos da Visão")]
     public float visionRange = 15f;
     [Range(0, 360)] public float visionAngle = 90f;
-    public float eyeRotationSpeed = 8f;
-    [Tooltip("Raio da 'bolha' pessoal. Se a LKP estiver dentro deste raio, ativa o modo de previsão.")]
-    public float lkpSafeZoneRadius = 1.5f; // NOVO: A Zona Anti-Flicker
+    public float eyeRotationSpeed = 5f;
+    public float lkpSafeZoneRadius = 1.5f;
+
+    [Header("▶ Gaze de Patrulha")]
+    public float dangerInvestigationDuration = 2.0f;
 
     [Header("▶ Atributos de Alerta")]
     public float inertiaDuration = 0.5f;
     public float searchScanSpeed = 90f;
     public float searchScanAngle = 60f;
-
-    [Header("▶ Timers")]
-    public float suspicionDuration = 3f;
     public float memoryDuration = 10f;
 
-    // Variáveis de Estado Internas
+    private GazeMode _currentGazeMode = GazeMode.Idle;
+    private float _gazeTimer;
+    private Vector3 _dangerFocusPoint;
     public Vector3 LastKnownPlayerPosition { get; private set; }
     public bool IsAwareOfPlayer => currentAwareness == AwarenessState.ALERT || currentAwareness == AwarenessState.HUNTING;
     private float _awarenessTimer = 0f;
-    private Vector3 _initialEyesPosition;
     private Quaternion _targetEyeRotation = Quaternion.identity;
     private Vector3 _lastKnownPlayerVelocity;
     private float _currentSearchAngle;
 
     private Transform _player;
     private Rigidbody2D _playerRb;
-    private AIPlatformerMotor _motor;
+    private AINavigationSystem _navigation;
     #endregion
 
-    #region Ciclo de Vida do Unity
+    #region Ciclo de Vida e Deteção
     void Start()
     {
         _player = AIManager.Instance.playerTarget;
         _playerRb = _player.GetComponent<Rigidbody2D>();
-        _motor = GetComponent<AIPlatformerMotor>();
-
-        if (eyes == null)
-        {
-            Debug.LogError($"[AIPerceptionSystem] FATAL: O Transform 'Eyes' não foi atribuído no Inspector de {gameObject.name}!");
-            this.enabled = false;
-            return;
-        }
-        _initialEyesPosition = eyes.localPosition;
+        _navigation = GetComponent<AINavigationSystem>();
+        if (eyes == null) { this.enabled = false; return; }
     }
 
     void Update()
@@ -65,74 +59,63 @@ public class AIPerceptionSystem : MonoBehaviour
         HandleAwareness();
         UpdateEyeTarget();
         UpdateEyeRotation();
-        AnimateEyesJiggle();
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (!IsAwareOfPlayer && other.CompareTag("Player"))
-        {
-            ChangeAwareness(AwarenessState.HUNTING);
-        }
+        if (!IsAwareOfPlayer && other.CompareTag("Player")) { ChangeAwareness(AwarenessState.HUNTING); }
     }
     #endregion
 
-    #region Lógica Central de Mira dos Olhos (REFEITA COM PREVISÃO)
+    #region Lógica Central de Mira dos Olhos
     private void UpdateEyeTarget()
     {
         Vector3 directionToTarget;
 
-        switch (currentAwareness)
+        if (currentAwareness == AwarenessState.HUNTING || currentAwareness == AwarenessState.ALERT)
         {
-            case AwarenessState.HUNTING:
-                directionToTarget = (_player.position - eyes.position).normalized;
-                _targetEyeRotation = Quaternion.LookRotation(Vector3.forward, directionToTarget);
-                break;
+            _currentGazeMode = GazeMode.TargetTracking;
+        }
+        else
+        {
+            if (_navigation.DetectTerrainDanger(out _dangerFocusPoint) && _currentGazeMode != GazeMode.InvestigatingDanger)
+            {
+                _currentGazeMode = GazeMode.InvestigatingDanger;
+                _gazeTimer = dangerInvestigationDuration;
+            }
+            if (_currentGazeMode == GazeMode.InvestigatingDanger)
+            {
+                _gazeTimer -= Time.deltaTime;
+                if (_gazeTimer <= 0) { _currentGazeMode = GazeMode.Idle; }
+            }
+        }
 
-            case AwarenessState.ALERT:
-                float distanceToLKP = Vector3.Distance(eyes.position, LastKnownPlayerPosition);
-
-                // --- A NOVA LÓGICA DE PREVISÃO ---
-                if (distanceToLKP < lkpSafeZoneRadius)
-                {
-                    // LKP está perto demais! Ativar modo de previsão.
-                    // Olha na direção da última velocidade conhecida do jogador.
-                    if (_lastKnownPlayerVelocity.sqrMagnitude > 0.01f)
-                    {
-                        directionToTarget = _lastKnownPlayerVelocity.normalized;
-                    }
-                    else // Failsafe: se o jogador estava parado, olha para a frente.
-                    {
-                        directionToTarget = _motor.isFacingRight ? Vector3.right : Vector3.left;
-                    }
-                }
+        switch (_currentGazeMode)
+        {
+            case GazeMode.TargetTracking:
+                if (currentAwareness == AwarenessState.HUNTING) { directionToTarget = (_player.position - eyes.position).normalized; }
                 else
                 {
-                    // LKP está a uma distância segura. Usa a lógica normal de inércia/busca.
-                    float timeSinceLostSight = memoryDuration - _awarenessTimer;
-                    if (timeSinceLostSight < inertiaDuration)
-                    {
-                        Vector3 predictedPosition = LastKnownPlayerPosition + (_lastKnownPlayerVelocity * timeSinceLostSight);
-                        directionToTarget = (predictedPosition - eyes.position).normalized;
-                    }
+                    if (Vector3.Distance(eyes.position, LastKnownPlayerPosition) < lkpSafeZoneRadius) { directionToTarget = _lastKnownPlayerVelocity.normalized.magnitude > 0.1f ? _lastKnownPlayerVelocity.normalized : transform.right; }
                     else
                     {
-                        _currentSearchAngle += Time.deltaTime * searchScanSpeed;
-                        Quaternion scanRotation = Quaternion.AngleAxis(Mathf.Sin(_currentSearchAngle * Mathf.Deg2Rad) * searchScanAngle, Vector3.forward);
-                        directionToTarget = scanRotation * (LastKnownPlayerPosition - eyes.position).normalized;
+                        float timeSinceLostSight = memoryDuration - _awarenessTimer;
+                        if (timeSinceLostSight < inertiaDuration) { Vector3 predictedPosition = LastKnownPlayerPosition + (_lastKnownPlayerVelocity * timeSinceLostSight); directionToTarget = (predictedPosition - eyes.position).normalized; }
+                        else { _currentSearchAngle += Time.deltaTime * searchScanSpeed; Quaternion scanRotation = Quaternion.AngleAxis(Mathf.Sin(_currentSearchAngle * Mathf.Deg2Rad) * searchScanAngle, Vector3.forward); directionToTarget = scanRotation * (LastKnownPlayerPosition - eyes.position).normalized; }
                     }
                 }
-                _targetEyeRotation = Quaternion.LookRotation(Vector3.forward, directionToTarget);
                 break;
 
+            case GazeMode.InvestigatingDanger:
+                directionToTarget = (_dangerFocusPoint - eyes.position).normalized;
+                break;
+
+            case GazeMode.Idle:
             default:
-                Vector3 forwardDir = _motor.isFacingRight ? Vector3.right : Vector3.left;
-                RaycastHit2D hit = Physics2D.Raycast(eyes.position + forwardDir * 0.5f, Vector2.down, 5f, visionBlockers);
-                Vector3 lookTarget = hit.collider ? hit.point : eyes.position + forwardDir;
-                directionToTarget = (lookTarget - eyes.position).normalized;
-                _targetEyeRotation = Quaternion.LookRotation(Vector3.forward, directionToTarget);
+                directionToTarget = transform.right;
                 break;
         }
+        _targetEyeRotation = Quaternion.LookRotation(Vector3.forward, directionToTarget);
     }
 
     private void UpdateEyeRotation()
@@ -141,86 +124,42 @@ public class AIPerceptionSystem : MonoBehaviour
     }
     #endregion
 
-    #region Lógica de Estados
+    #region Lógica de Estados e Percepção
     private void HandleAwareness()
     {
-        if (CanSeePlayer())
-        {
-            ChangeAwareness(AwarenessState.HUNTING);
-        }
+        if (CanSeePlayer()) { ChangeAwareness(AwarenessState.HUNTING); }
         else
         {
-            if (currentAwareness == AwarenessState.HUNTING)
-            {
-                ChangeAwareness(AwarenessState.ALERT);
-            }
-            else if (currentAwareness == AwarenessState.ALERT)
-            {
-                _awarenessTimer -= Time.deltaTime;
-                if (_awarenessTimer <= 0) ChangeAwareness(AwarenessState.PATROLLING);
-            }
+            if (currentAwareness == AwarenessState.HUNTING) { ChangeAwareness(AwarenessState.ALERT); }
+            else if (currentAwareness == AwarenessState.ALERT) { _awarenessTimer -= Time.deltaTime; if (_awarenessTimer <= 0) ChangeAwareness(AwarenessState.PATROLLING); }
         }
     }
-
     private void ChangeAwareness(AwarenessState newState)
     {
         if (currentAwareness == newState) return;
-
         var oldState = currentAwareness;
         currentAwareness = newState;
+        if (newState == AwarenessState.PATROLLING) { _currentGazeMode = GazeMode.Idle; }
 
-        // Atualiza a informação CRÍTICA no momento em que o estado muda.
-        if (newState == AwarenessState.HUNTING)
-        {
-            LastKnownPlayerPosition = _player.position;
-            if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity;
-            _awarenessTimer = memoryDuration;
-        }
-
-        if (oldState == AwarenessState.HUNTING && newState == AwarenessState.ALERT)
-        {
-            // Captura os dados FINAIS no instante em que perdeu o alvo.
-            LastKnownPlayerPosition = _player.position;
-            if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity;
-
-            Debug.Log("[AIPerceptionSystem] Alvo perdido! Última velocidade: " + _lastKnownPlayerVelocity);
-            _currentSearchAngle = 0f;
-        }
+        // AQUI ESTÁ A MELHORIA DE PRECISÃO
+        if (newState == AwarenessState.HUNTING) { LastKnownPlayerPosition = _player.position; if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity; _awarenessTimer = memoryDuration; }
+        if (oldState == AwarenessState.HUNTING && newState == AwarenessState.ALERT) { LastKnownPlayerPosition = _player.position; if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity; _currentSearchAngle = 0f; }
     }
-    #endregion
-
-    #region Percepção e Animação
     public bool CanSeePlayer()
     {
         if (_player == null) return false;
         Vector2 directionToPlayer = (_player.position - eyes.position).normalized;
         float distanceToPlayer = Vector2.Distance(eyes.position, _player.position);
         if (distanceToPlayer > visionRange) return false;
-
         RaycastHit2D hit = Physics2D.Raycast(eyes.position, directionToPlayer, distanceToPlayer, visionBlockers);
         if (hit.collider != null) return false;
-
         Vector2 eyeForward = eyes.transform.up;
         float angleToPlayer = Vector2.Angle(eyeForward, directionToPlayer);
         return angleToPlayer < visionAngle / 2f;
     }
-
-    private void AnimateEyesJiggle()
-    {
-        if (eyes == null) return;
-        if (currentAwareness == AwarenessState.SUSPICIOUS)
-        {
-            Vector3 jiggleOffset = new Vector3(Mathf.Sin(Time.time * 30f) * 0.05f, Mathf.Cos(Time.time * 25f) * 0.05f, 0);
-            eyes.localPosition = _initialEyesPosition + jiggleOffset;
-        }
-        else
-        {
-            eyes.localPosition = _initialEyesPosition;
-        }
-    }
     #endregion
 
-    #region Gizmos (ATUALIZADO COM O RAIO DE PREVISÃO)
+    #region Gizmos
     void OnDrawGizmosSelected()
     {
         if (eyes == null) return;
@@ -235,21 +174,8 @@ public class AIPerceptionSystem : MonoBehaviour
             if (hit.collider != null) Gizmos.DrawLine(eyes.position, hit.point);
             else Gizmos.DrawLine(eyes.position, eyes.position + direction * visionRange);
         }
-
-        if (Application.isPlaying && currentAwareness == AwarenessState.ALERT)
-        {
-            // Gizmo para a Zona de Segurança (Anti-Flicker)
-            Handles.color = new Color(1, 0.5f, 0, 0.05f); // Laranja transparente
-            Handles.DrawSolidDisc(eyes.position, Vector3.forward, lkpSafeZoneRadius);
-
-            // Gizmo para LKP (Vermelho)
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(LastKnownPlayerPosition, 1f);
-
-            // Gizmo de Predição (ROSA/MAGENTA)
-            Gizmos.color = Color.magenta;
-            Gizmos.DrawRay(LastKnownPlayerPosition, _lastKnownPlayerVelocity.normalized * 3f); // Desenha um raio de 3 unidades na direção da previsão
-        }
+        if (Application.isPlaying && _currentGazeMode == GazeMode.InvestigatingDanger) { Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(_dangerFocusPoint, 0.5f); Gizmos.DrawLine(eyes.position, _dangerFocusPoint); }
+        if (Application.isPlaying && currentAwareness == AwarenessState.ALERT) { Handles.color = new Color(1, 0.5f, 0, 0.05f); Handles.DrawSolidDisc(eyes.position, Vector3.forward, lkpSafeZoneRadius); Gizmos.color = Color.red; Gizmos.DrawWireSphere(LastKnownPlayerPosition, 1f); Gizmos.color = Color.magenta; Gizmos.DrawRay(LastKnownPlayerPosition, _lastKnownPlayerVelocity.normalized * 3f); }
     }
     #endregion
 }

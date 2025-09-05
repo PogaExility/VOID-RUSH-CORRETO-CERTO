@@ -24,6 +24,14 @@ public class AIMotor_Basic : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
     }
 
+    // EM: AIMotor_Basic.cs, #region Comandos de Ação (Músculos)
+
+    public void ApplyKnockback(Vector2 force)
+    {
+        // Zera a velocidade atual para garantir que o knockback seja consistente.
+        rb.linearVelocity = Vector2.zero;
+        rb.AddForce(force, ForceMode2D.Impulse);
+    }
     // --- COMANDOS DE MOVIMENTO ---
     public void Move(float direction, float speed) { rb.linearVelocity = new Vector2(direction * speed, rb.linearVelocity.y); }
     public void Stop() { rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); }

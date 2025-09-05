@@ -1,151 +1,109 @@
 ﻿using UnityEngine;
 using BehaviorTree;
+using System.Collections;
 using System.Collections.Generic;
 
-// CORREÇÃO: Um atributo [RequireComponent] para cada tipo.
-[RequireComponent(typeof(AIPerceptionSystem))]
-[RequireComponent(typeof(AIPlatformerMotor))]
-[RequireComponent(typeof(AINavigationSystem))]
-[RequireComponent(typeof(AIThreatAdaptationModule))]
+[RequireComponent(typeof(AIPerceptionSystem), typeof(AIPlatformerMotor), typeof(AINavigationSystem))]
 public class AIController_Stalker : MonoBehaviour
 {
-    #region REFERENCES
     private Node _rootNode;
     private AIPerceptionSystem _perception;
     private AIPlatformerMotor _motor;
     private AINavigationSystem _navigation;
-    private AIThreatAdaptationModule _adaptation;
-    #endregion
+    private Transform _player;
 
-    #region CONFIGURATION
     [Header("▶ Configuração de Combate")]
     public float moveSpeed = 4f;
     public float huntSpeed = 6f;
     public float jumpForce = 15f;
     public float attackRange = 1.5f;
-    #endregion
+
+    [Header("▶ Lógica de Patrulha")]
+    public float flipCooldown = 0.5f;
+    private bool _canFlip = true;
 
     void Start()
     {
         _perception = GetComponent<AIPerceptionSystem>();
         _motor = GetComponent<AIPlatformerMotor>();
         _navigation = GetComponent<AINavigationSystem>();
-        _adaptation = GetComponent<AIThreatAdaptationModule>();
+        _player = AIManager.Instance.playerTarget;
 
-        // --- CONSTRUÇÃO DA ÁRVORE DE COMPORTAMENTO MESTRA ---
         _rootNode = new Selector(new List<Node>
         {
-            // --- Ramo de Combate Tático (Prioridade Máxima) ---
             new Sequence(new List<Node>
             {
-                new ActionNode(CheckIfAwareOfPlayer), // A IA só combate se estiver ciente do jogador
-                new Selector(new List<Node> // A IA escolherá UMA destas ações de combate
+                new ActionNode(CheckIfAwareOfPlayer),
+                new Selector(new List<Node>
                 {
-                    // Lógica de ataque corpo a corpo
                     new Sequence(new List<Node>
                     {
                         new ActionNode(CheckIfInAttackRange),
                         new ActionNode(PerformAttack)
                     }),
-                    // Lógica de caça
                     new ActionNode(HuntPlayer)
                 })
             }),
-
-            // --- Ramo de Investigação (Prioridade Média) ---
-            new Sequence(new List<Node>
-            {
-                new ActionNode(CheckIfSuspicious),
-                new ActionNode(InvestigateLocation)
-            }),
-
-            // --- Comportamento Padrão de Patrulha (Prioridade Mínima) ---
             new ActionNode(Patrol)
         });
     }
 
     void Update()
     {
-        if (_rootNode != null)
-        {
-            _rootNode.Evaluate();
-        }
+        _rootNode?.Evaluate();
     }
 
-    #region BEHAVIOR TREE NODES (Checks / Conditionals)
-
-    private NodeState CheckIfAwareOfPlayer()
-    {
-        return _perception.IsAwareOfPlayer ? NodeState.SUCCESS : NodeState.FAILURE;
-    }
-
-    private NodeState CheckIfInAttackRange()
-    {
-        // Usa a posição real do jogador se estiver caçando, para um ataque mais preciso
-        Vector3 targetPosition = AIManager.Instance.playerTarget.position;
-        float distance = Vector2.Distance(transform.position, targetPosition);
-        return distance <= attackRange ? NodeState.SUCCESS : NodeState.FAILURE;
-    }
-
-    private NodeState CheckIfSuspicious()
-    {
-        return _perception.currentAwareness == AIPerceptionSystem.AwarenessState.SUSPICIOUS ? NodeState.SUCCESS : NodeState.FAILURE;
-    }
-
-    #endregion
-
-    #region BEHAVIOR TREE NODES (Actions)
+    #region Nós da Árvore de Comportamento
+    private NodeState CheckIfAwareOfPlayer() => _perception.IsAwareOfPlayer ? NodeState.SUCCESS : NodeState.FAILURE;
+    private NodeState CheckIfInAttackRange() => Vector2.Distance(transform.position, _player.position) <= attackRange ? NodeState.SUCCESS : NodeState.FAILURE;
 
     private NodeState PerformAttack()
     {
+        FaceTarget(_player.position);
         _motor.Stop();
-        _motor.FaceTarget(AIManager.Instance.playerTarget.position);
-        Debug.Log("STALKER: Atacando!");
-        // --- Chame aqui a sua lógica de ataque ---
         return NodeState.SUCCESS;
     }
 
-    // --- MÉTODO ATUALIZADO ---
     private NodeState HuntPlayer()
     {
-        // ADICIONADO: Garante que o Stalker sempre encare o alvo enquanto caça.
-        _motor.FaceTarget(_perception.LastKnownPlayerPosition);
-
-        // A lógica de navegação continua a mesma.
-        _navigation.NavigateTowards(_perception.LastKnownPlayerPosition, huntSpeed, jumpForce);
-
-        return NodeState.RUNNING; // A caçada é uma ação contínua.
-    }
-
-    private NodeState InvestigateLocation()
-    {
-        float distanceToLKP = Vector2.Distance(transform.position, _perception.LastKnownPlayerPosition);
-
-        // Se chegou perto o suficiente do ponto de suspeita
-        if (distanceToLKP < 1f)
-        {
-            _motor.Stop();
-            // --- Lógica de "procurar" no local ---
-            // Ex: animator.SetTrigger("LookAround");
-            // Por enquanto, ele apenas para e a awareness vai diminuir com o tempo.
-            return NodeState.SUCCESS; // A ação de "investigar o ponto" foi concluída
-        }
-
-        // Se ainda não chegou, continua se movendo
-        _navigation.NavigateTowards(_perception.LastKnownPlayerPosition, moveSpeed, jumpForce);
-        return NodeState.RUNNING; // RUNNING porque a ação de se mover leva tempo
+        FaceTarget(_player.position);
+        _navigation.Navigate(huntSpeed, jumpForce);
+        return NodeState.RUNNING;
     }
 
     private NodeState Patrol()
     {
-        // Lógica de patrulha simples baseada em "bater e virar"
-        if (_navigation.IsPathBlocked() || _navigation.IsFacingEdge())
+        // A CORREÇÃO CRÍTICA ESTÁ AQUI.
+        // A decisão de virar-se e a de mover-se estão agora no mesmo fluxo.
+        if (_canFlip && (_navigation.IsPathBlocked() || _navigation.IsFacingEdge()))
         {
             _motor.Flip();
+            StartCoroutine(FlipCooldownRoutine());
+            // Após se virar, ele não para de pensar. Ele prossegue.
         }
-        _motor.Move(moveSpeed);
-        return NodeState.RUNNING; // RUNNING porque patrulhar é uma ação contínua
+
+        // Independentemente de se ter virado ou não, a sua ação padrão é navegar.
+        _navigation.Navigate(moveSpeed, jumpForce);
+        return NodeState.RUNNING; // Patrulhar é sempre uma ação contínua.
+    }
+    #endregion
+
+    #region Lógica de "Flip" e Cooldown
+    private void FaceTarget(Vector3 targetPosition)
+    {
+        float dotProduct = Vector2.Dot((targetPosition - transform.position).normalized, transform.right);
+        if (_canFlip && dotProduct < -0.5f)
+        {
+            _motor.Flip();
+            StartCoroutine(FlipCooldownRoutine());
+        }
     }
 
+    private IEnumerator FlipCooldownRoutine()
+    {
+        _canFlip = false;
+        yield return new WaitForSeconds(flipCooldown);
+        _canFlip = true;
+    }
     #endregion
 }
