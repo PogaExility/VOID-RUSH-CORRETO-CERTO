@@ -194,8 +194,14 @@ public class PlayerController : MonoBehaviour
     }
     private void HandleCombatInput()
     {
-        //combatController.ProcessCombatInput();
+        // Se o botão de ataque for pressionado, manda o WeaponHandler atacar
+        if (Input.GetButtonDown("Fire1")) // "Fire1" é o clique esquerdo do mouse por padrão
+        {
+            Vector3 aimDir = (Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position).normalized;
+            weaponHandler.HandleAttackInput(aimDir);
+        }
 
+        // A lógica de defesa continua a mesma
         if (Input.GetKeyDown(KeyCode.F))
         {
             defenseHandler.StartBlock(blockSkill);
@@ -206,35 +212,35 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-   /* private void UpdateAimModeState()
-    {
-        bool shouldAim = isAimModeLocked ||
-                        ((combatController.activeStance == WeaponType.Ranger || combatController.activeStance == WeaponType.Buster)
-                         && !movementScript.IsDashing() && !isLanding);
+    /* private void UpdateAimModeState()
+     {
+         bool shouldAim = isAimModeLocked ||
+                         ((combatController.activeStance == WeaponType.Ranger || combatController.activeStance == WeaponType.Buster)
+                          && !movementScript.IsDashing() && !isLanding);
 
-        // A checagem de mudança de estado já existe e é perfeita para isso
-        if (isInAimMode != shouldAim)
-        {
-            isInAimMode = shouldAim;
-            playerAttack.SetAiming(isInAimMode); // Isso já ativa/desativa os prefabs
+         // A checagem de mudança de estado já existe e é perfeita para isso
+         if (isInAimMode != shouldAim)
+         {
+             isInAimMode = shouldAim;
+             playerAttack.SetAiming(isInAimMode); // Isso já ativa/desativa os prefabs
 
-            // --- ADICIONE ESTE BLOCO ---
-            // Atualiza o cursor do mouse com base no novo estado
-            if (cursorManager != null)
-            {
-                if (isInAimMode)
-                {
-                    cursorManager.SetAimCursor();
-                }
-                else
-                {
-                    cursorManager.SetDefaultCursor();
-                }
-            }
-            // --- FIM DO BLOCO ---
-        }*/
+             // --- ADICIONE ESTE BLOCO ---
+             // Atualiza o cursor do mouse com base no novo estado
+             if (cursorManager != null)
+             {
+                 if (isInAimMode)
+                 {
+                     cursorManager.SetAimCursor();
+                 }
+                 else
+                 {
+                     cursorManager.SetDefaultCursor();
+                 }
+             }
+             // --- FIM DO BLOCO ---
+         }*/
 
-    
+
     // Em PlayerController.cs
     private void UpdateAnimations()
     {

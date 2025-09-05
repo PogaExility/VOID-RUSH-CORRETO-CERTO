@@ -1105,7 +1105,6 @@ GameObject:
   - component: {fileID: 5749790382507345129}
   - component: {fileID: 5724797426537036902}
   - component: {fileID: 4435209774238947116}
-  - component: {fileID: 2518731559796220278}
   - component: {fileID: 1720038249475775308}
   - component: {fileID: 480668888183648268}
   - component: {fileID: 2215104731333047473}
@@ -1345,8 +1344,9 @@ MonoBehaviour:
   movementScript: {fileID: 6754565164538936117}
   animatorController: {fileID: 4961355594823665309}
   combatController: {fileID: 0}
-  playerAttack: {fileID: 2518731559796220278}
+  playerAttack: {fileID: 0}
   defenseHandler: {fileID: 1720038249475775308}
+  weaponHandler: {fileID: 0}
   baseJumpSkill: {fileID: 11400000, guid: 33bdc072d22c0d948a8b4fda27d947a0, type: 2}
   baseDashSkill: {fileID: 11400000, guid: b39e077050357654ab0fdaaf2cd24349, type: 2}
   dashJumpSkill: {fileID: 11400000, guid: 5f11cbffc7ca4804dadd1ed7b7727ed2, type: 2}
@@ -1406,22 +1406,6 @@ MonoBehaviour:
   maxEnergy: 100
   energyRegenPerSecond: 20
   regenDelay: 1.5
---- !u!114 &2518731559796220278
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3345193402010468786}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a45442aafcf69fa4c82bfe4f9e4cfabc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  headPivotObject: {fileID: 6372637753858989246, guid: 2de920e6415fd8a44b6aa01656d10aec, type: 3}
-  rightArmPivotObject: {fileID: 953593652669319415, guid: b52a1e2c85e96b648a9e43c20ac53ffa, type: 3}
-  fullBodySprite: {fileID: 0}
-  torsoOnlySprite: {fileID: 0}
 --- !u!114 &1720038249475775308
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1469,6 +1453,7 @@ MonoBehaviour:
     count: 0
   inventoryManager: {fileID: 6956942213338850998}
   weaponSocket: {fileID: 0}
+  playerStats: {fileID: 5724797426537036902}
   equipmentSlotContainers:
   - {fileID: 5286634741024939710}
   - {fileID: 1210255261416230911}
@@ -7321,7 +7306,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.0000076293945}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.49999973, y: 0.5000001}
 --- !u!222 &5753093520581191531
