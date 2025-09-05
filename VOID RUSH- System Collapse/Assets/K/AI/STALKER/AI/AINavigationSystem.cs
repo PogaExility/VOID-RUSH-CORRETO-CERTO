@@ -3,10 +3,10 @@
 public class AINavigationSystem : MonoBehaviour
 {
     #region CONFIGURATION
-    [Header("▶ Configuração de Navegação")]
-    public float groundProbeDistance = 1f;
+    [Header("▶ Configuração de Sondas")]
     public float wallProbeDistance = 0.8f;
-    public float jumpCheckDistance = 3f;
+    public float groundProbeDistance = 1.2f;
+    public float dangerDropHeight = 1.0f;
     public LayerMask groundLayer;
     #endregion
 
@@ -19,33 +19,48 @@ public class AINavigationSystem : MonoBehaviour
         _motor = GetComponent<AIPlatformerMotor>();
     }
 
-    #region PUBLIC API
+    #region Sondas
     public bool IsPathBlocked()
     {
-        return Physics2D.Raycast(transform.position, Vector2.right * _motor.currentFacingDirection, wallProbeDistance, groundLayer);
+        return Physics2D.Raycast(transform.position, transform.right, wallProbeDistance, groundLayer);
     }
 
     public bool IsFacingEdge()
     {
-        Vector2 probeOrigin = (Vector2)transform.position + new Vector2(groundProbeDistance * _motor.currentFacingDirection, 0);
-        return !Physics2D.Raycast(probeOrigin, Vector2.down, 2f, groundLayer);
+        Vector2 probeOrigin = (Vector2)transform.position + (Vector2)transform.right * 0.5f;
+        return !Physics2D.Raycast(probeOrigin, Vector2.down, 1.5f, groundLayer);
     }
 
-    // Uma função mais complexa para decidir o que fazer ao se mover para um alvo
-    public void NavigateTowards(Vector3 targetPosition, float moveSpeed, float jumpForce)
+    public bool DetectTerrainDanger(out Vector3 dangerPoint)
     {
-        _motor.FaceTarget(targetPosition);
+        dangerPoint = Vector3.zero;
+        if (!_motor.IsGrounded()) return false;
+        Vector2 probeOrigin = (Vector2)transform.position + (Vector2)transform.right * groundProbeDistance;
+        RaycastHit2D hit = Physics2D.Raycast(probeOrigin, Vector2.down, dangerDropHeight, groundLayer);
+        if (!hit.collider)
+        {
+            dangerPoint = probeOrigin;
+            return true;
+        }
+        return false;
+    }
+    #endregion
 
+    #region NAVEGAÇÃO UNIFICADA (RESTAURADO)
+    /// <summary>
+    /// O único método que controla o movimento. Ele reage a obstáculos.
+    /// É chamado tanto pela Patrulha como pela Caça.
+    /// </summary>
+    public void Navigate(float moveSpeed, float jumpForce)
+    {
         if (IsPathBlocked())
         {
-            // Tenta pular sobre o obstáculo
-            _motor.Jump(jumpForce);
+            _motor.Jump(jumpForce); // Tenta saltar sobre obstáculos
         }
         else if (IsFacingEdge())
         {
-            // Decide se deve pular o vão
-            // Lógica mais complexa de análise de pulo iria aqui
-            _motor.Stop(); // Por enquanto, para.
+            // Para na beira. O Controller decidirá quando se virar.
+            _motor.Stop();
         }
         else
         {
@@ -57,16 +72,14 @@ public class AINavigationSystem : MonoBehaviour
     #region GIZMOS
     void OnDrawGizmosSelected()
     {
-        if (!Application.isPlaying) return;
-
-        // Wall Probe
-        Gizmos.color = Color.blue;
-        Gizmos.DrawLine(transform.position, transform.position + (Vector3.right * _motor.currentFacingDirection * wallProbeDistance));
-
-        // Ground Ahead Probe
-        Gizmos.color = Color.green;
-        Vector2 probeOrigin = (Vector2)transform.position + new Vector2(groundProbeDistance * _motor.currentFacingDirection, 0);
-        Gizmos.DrawLine(probeOrigin, probeOrigin + (Vector2.down * 2f));
+        if (_motor == null)
+        {
+            if (Application.isPlaying) _motor = GetComponent<AIPlatformerMotor>();
+            if (_motor == null) return;
+        }
+        Vector2 probeOrigin = (Vector2)transform.position + (Vector2)transform.right * groundProbeDistance;
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(probeOrigin, probeOrigin + Vector2.down * dangerDropHeight);
     }
     #endregion
 }

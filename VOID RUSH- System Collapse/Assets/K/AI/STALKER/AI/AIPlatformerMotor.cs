@@ -3,27 +3,23 @@
 [RequireComponent(typeof(Rigidbody2D))]
 public class AIPlatformerMotor : MonoBehaviour
 {
-    #region REFERENCES
     private Rigidbody2D _rb;
-    #endregion
-
-    #region STATE
     [HideInInspector] public float currentFacingDirection = 1f;
     [HideInInspector] public bool isFacingRight = true;
-    #endregion
 
-    #region CONFIGURATION
-    [Header("▶ Configuração de Movimento")]
+    [Header("▶ Configuração de Sensores Físicos")]
     public float groundCheckDistance = 0.5f;
     public LayerMask groundLayer;
-    #endregion
 
     void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
+        // Garante que o estado inicial corresponde à orientação visual do prefab
+        isFacingRight = transform.localScale.x > 0;
+        currentFacingDirection = isFacingRight ? 1 : -1;
     }
 
-    #region PUBLIC API (Commands)
+    // --- API DE COMANDOS ---
     public void Move(float speed)
     {
         _rb.linearVelocity = new Vector2(currentFacingDirection * speed, _rb.linearVelocity.y);
@@ -42,37 +38,18 @@ public class AIPlatformerMotor : MonoBehaviour
         }
     }
 
-    public void Climb(float climbSpeed)
-    {
-        _rb.linearVelocity = new Vector2(0, climbSpeed);
-        _rb.gravityScale = 0; // Desativa a gravidade ao escalar
-    }
-
-    public void StopClimbing()
-    {
-        _rb.gravityScale = 1; // Reativa a gravidade
-    }
-
+    // A ÚNICA função que altera a orientação. É chamada pelo Controller.
     public void Flip()
     {
         isFacingRight = !isFacingRight;
         currentFacingDirection *= -1;
+        // Usamos a rotação em vez da escala para compatibilidade com a rotação dos olhos
         transform.Rotate(0f, 180f, 0f);
     }
 
-    public void FaceTarget(Vector3 targetPosition)
-    {
-        if ((targetPosition.x > transform.position.x && !isFacingRight) || (targetPosition.x < transform.position.x && isFacingRight))
-        {
-            Flip();
-        }
-    }
-    #endregion
-
-    #region PUBLIC API (Queries)
     public bool IsGrounded()
     {
-        return Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, groundLayer);
+        // Usa a posição do Rigidbody para ser mais preciso fisicamente
+        return Physics2D.Raycast(_rb.position, Vector2.down, groundCheckDistance, groundLayer);
     }
-    #endregion
 }

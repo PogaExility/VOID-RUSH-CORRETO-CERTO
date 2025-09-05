@@ -3,28 +3,25 @@ using System.Collections.Generic;
 
 public class AIThreatAdaptationModule : MonoBehaviour
 {
-    // Classe para armazenar as tendências de comportamento da IA
     public class AIBiases
     {
-        public float aggression = 0.5f; // 0 = passivo, 1 = agressivo
-        public float coverPreference = 0.3f; // 0 = nunca usa cover, 1 = sempre tenta usar
+        public float aggression = 0.5f;
+        public float coverPreference = 0.3f;
         public float preferredEngagementDistance = 10f;
     }
 
     public AIBiases Biases { get; private set; }
 
-    // Dicionário para registrar ações do jogador
-    private Dictionary<string, int> _playerActionLog = new Dictionary<string, int>();
+    private Dictionary<string, int> _playerActionLog;
     private float _analysisTimer = 0f;
-    private const float ANALYSIS_INTERVAL = 10f; // Analisa o comportamento do jogador a cada 10s
+    private const float ANALYSIS_INTERVAL = 10f;
 
     void Awake()
     {
         Biases = new AIBiases();
-        // Inicializa o log de ações
-        _playerActionLog["RangedAttack"] = 0;
-        _playerActionLog["MeleeAttack"] = 0;
-        _playerActionLog["UsedCover"] = 0;
+
+        // CORREÇÃO: Inicializa o dicionário de forma explícita e robusta.
+        InitializeActionLog();
     }
 
     void Update()
@@ -37,11 +34,9 @@ public class AIThreatAdaptationModule : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Outros sistemas chamam esta função para registrar as ações do jogador.
-    /// </summary>
     public void LogPlayerAction(string actionKey)
     {
+        // Esta função já é segura, pois verifica se a chave existe.
         if (_playerActionLog.ContainsKey(actionKey))
         {
             _playerActionLog[actionKey]++;
@@ -52,17 +47,17 @@ public class AIThreatAdaptationModule : MonoBehaviour
     {
         Debug.Log("[ADAPTATION] Analisando perfil do jogador...");
 
-        int totalRanged = _playerActionLog["RangedAttack"];
-        int totalMelee = _playerActionLog["MeleeAttack"];
+        // CORREÇÃO: Usamos TryGetValue para obter os valores de forma segura.
+        // Se a chave "RangedAttack" não existir, totalRanged será 0, em vez de causar um erro.
+        _playerActionLog.TryGetValue("RangedAttack", out int totalRanged);
+        _playerActionLog.TryGetValue("MeleeAttack", out int totalMelee);
 
-        // Se o jogador ataca mais de longe, a IA fica mais cautelosa e prefere cobertura.
         if (totalRanged > totalMelee * 1.5f)
         {
             Biases.coverPreference = Mathf.Clamp(Biases.coverPreference + 0.1f, 0.1f, 0.9f);
             Biases.aggression = Mathf.Clamp(Biases.aggression - 0.05f, 0.2f, 1f);
             Debug.Log("[ADAPTATION] Perfil: Sniper. Aumentando preferência por cobertura.");
         }
-        // Se o jogador é mais agressivo, a IA também se torna mais agressiva.
         else if (totalMelee > totalRanged * 1.5f)
         {
             Biases.aggression = Mathf.Clamp(Biases.aggression + 0.1f, 0.2f, 1f);
@@ -70,9 +65,21 @@ public class AIThreatAdaptationModule : MonoBehaviour
             Debug.Log("[ADAPTATION] Perfil: Rusher. Aumentando agressividade.");
         }
 
-        // Reseta o log para o próximo ciclo de análise
-        _playerActionLog["RangedAttack"] = 0;
-        _playerActionLog["MeleeAttack"] = 0;
-        _playerActionLog["UsedCover"] = 0;
+        // CORREÇÃO: Em vez de assumir que as chaves existem, reinicializamos o dicionário.
+        // Isto limpa-o e recria-o, garantindo um estado limpo para o próximo ciclo.
+        InitializeActionLog();
+    }
+
+    /// <summary>
+    /// Limpa e inicializa o dicionário com os valores padrão.
+    /// </summary>
+    private void InitializeActionLog()
+    {
+        _playerActionLog = new Dictionary<string, int>
+        {
+            { "RangedAttack", 0 },
+            { "MeleeAttack", 0 },
+            { "UsedCover", 0 }
+        };
     }
 }
