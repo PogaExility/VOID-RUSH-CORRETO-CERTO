@@ -54,7 +54,7 @@ public class InventoryUI : MonoBehaviour
         // 1. Redesenha a grade do inventário
         for (int i = 0; i < itemViewPool.Count; i++)
         {
-            var data = InventoryManager.Instance.GetSlot(i);
+            var data = InventoryManager.Instance.GetBackpackSlot(i);
             var view = itemViewPool[i];
 
             if (data.item != null)
