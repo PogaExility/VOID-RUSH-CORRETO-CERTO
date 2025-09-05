@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4965495695305903041}
   - component: {fileID: 4337368803317166511}
   m_Layer: 5
-  m_Name: Image
+  m_Name: WeaponSlotPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -33,10 +33,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchorMin: {x: 0.38184044, y: 0.39342698}
+  m_AnchorMax: {x: 0.61673933, y: 0.606427}
+  m_AnchoredPosition: {x: 0.5000076, y: 0}
+  m_SizeDelta: {x: 0.7124939, y: -0.027702332}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1506663854218337998
 CanvasRenderer:
@@ -88,3 +88,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3a994e77cee0b246a6e8918ee7873dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  weaponSlotIndex: 0
