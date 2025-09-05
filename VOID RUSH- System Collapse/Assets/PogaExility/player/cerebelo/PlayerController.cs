@@ -20,8 +20,6 @@ public class PlayerController : MonoBehaviour
     public SkillRelease skillRelease;
     public AdvancedPlayerMovement2D movementScript;
     public PlayerAnimatorController animatorController;
-    public CombatController combatController;
-    public PlayerAttack playerAttack;
     public DefenseHandler defenseHandler;
     public WeaponHandler weaponHandler;
 
@@ -56,8 +54,6 @@ public class PlayerController : MonoBehaviour
        
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
         skillRelease = GetComponent<SkillRelease>();
-        combatController = GetComponent<CombatController>();
-        playerAttack = GetComponent<PlayerAttack>();
         defenseHandler = GetComponent<DefenseHandler>();
         playerStats = GetComponent<PlayerStats>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();

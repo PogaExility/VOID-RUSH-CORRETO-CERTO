@@ -57,7 +57,7 @@ public class WeaponHandler : MonoBehaviour
         else currentWeaponIndex = (currentWeaponIndex - 1 + NUM_WEAPON_SLOTS) % NUM_WEAPON_SLOTS;
 
         EquipToHand(weaponSlots[currentWeaponIndex].item);
-        RedrawWeaponUI();
+    
         OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
 
@@ -71,7 +71,7 @@ public class WeaponHandler : MonoBehaviour
         (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
 
         inventoryManager.RequestRedraw(); // <<-- Usa a função pública, sem erro
-        RedrawWeaponUI();
+      
 
         if (currentWeaponIndex == weaponSlotIndex)
         {
