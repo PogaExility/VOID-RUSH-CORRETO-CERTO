@@ -168,14 +168,17 @@ public class PlayerController : MonoBehaviour
     }
     private void HandleCombatInput()
     {
-        // Se o botão de ataque for pressionado, manda o WeaponHandler atacar
-        if (Input.GetButtonDown("Fire1")) // "Fire1" é o clique esquerdo do mouse por padrão
+        if (Input.GetButton("Fire1")) // Para clicar ou segurar
         {
-            Vector3 aimDir = (Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position).normalized;
-            //weaponHandler.HandleAttackInput(aimDir);
+            weaponHandler.HandleAttackInput();
         }
 
-        // A lógica de defesa continua a mesma
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            weaponHandler.HandleReloadInput();
+        }
+
+        // Defesa continua igual
         if (Input.GetKeyDown(KeyCode.F))
         {
             defenseHandler.StartBlock(blockSkill);
@@ -185,8 +188,6 @@ public class PlayerController : MonoBehaviour
             defenseHandler.EndBlock();
         }
     }
-
-   
     private void UpdateAnimations()
     {
         // --- HIERARQUIA DE PRIORIDADE ---

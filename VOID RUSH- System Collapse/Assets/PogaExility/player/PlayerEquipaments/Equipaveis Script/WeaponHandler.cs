@@ -1,6 +1,7 @@
 ﻿using System;
-using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class WeaponHandler : MonoBehaviour
 {
@@ -15,6 +16,20 @@ public class WeaponHandler : MonoBehaviour
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private Transform weaponSocket;
 
+    [Header("REFERÊNCIAS DE COMBATE")]
+    [SerializeField] private PlayerController playerController;
+    [SerializeField] private Transform playerVisualsTransform; // O Sprite do Player
+    [SerializeField] private GameObject headPivot;
+    [SerializeField] private GameObject armPivot;
+
+    [Header("ESTADO DE COMBATE")]
+    [SerializeField] private bool isInAimMode = false;
+    private int currentAmmo;
+    private bool isReloading = false;
+    private float lastAttackTime = -999f;
+    private int meleeComboCount = 0;
+    private const float COMBO_RESET_TIME = 1.2f;
+
     [Header("REFERÊNCIAS DA UI DE COMBATE (ARRASTE AQUI)")]
     public Transform[] equipmentSlotContainers = new Transform[NUM_WEAPON_SLOTS];
     public Transform activeWeaponHUDContainer;
@@ -26,7 +41,32 @@ public class WeaponHandler : MonoBehaviour
     public event Action<int> OnActiveWeaponChanged;
     public InventorySlot GetActiveWeaponSlot() => weaponSlots[currentWeaponIndex];
 
+    void Update()
+    {
+        if (isInAimMode)
+        {
+            AimLogic();
+        }
+    }
 
+    // Adicione esta nova função
+    private void AimLogic()
+    {
+        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        Vector3 aimDirection = (mouseWorldPos - transform.position).normalized;
+        float angle = Mathf.Atan2(aimDirection.y, aimDirection.x) * Mathf.Rad2Deg;
+
+        if (headPivot != null) headPivot.transform.rotation = Quaternion.Euler(0, 0, angle);
+        if (armPivot != null) armPivot.transform.rotation = Quaternion.Euler(0, 0, angle);
+
+        if (playerVisualsTransform != null)
+        {
+            if (mouseWorldPos.x < transform.position.x)
+                playerVisualsTransform.localScale = new Vector3(-1, 1, 1);
+            else
+                playerVisualsTransform.localScale = new Vector3(1, 1, 1);
+        }
+    }
     void Awake()
     {
         Instance = this;
@@ -136,11 +176,76 @@ public class WeaponHandler : MonoBehaviour
     {
         if (activeWeaponGO != null) Destroy(activeWeaponGO);
         activeWeapon = weapon;
+
+        bool shouldAim = activeWeapon != null && activeWeapon.useAimMode;
+        SetAimMode(shouldAim);
+
         if (activeWeapon != null && activeWeapon.equipPrefab != null && weaponSocket != null)
         {
             activeWeaponGO = Instantiate(activeWeapon.equipPrefab, weaponSocket);
         }
-        // UpdateAimState(); // Se tiver, mantenha aqui
+
+        // Reseta o estado da arma
+        if (activeWeapon != null && activeWeapon.itemType == ItemType.Weapon)
+        {
+            currentAmmo = activeWeapon.magazineSize;
+            isReloading = false;
+        }
+
+        // Avisa a hotbar
+        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
 
+    // Adicione esta nova função
+    private void SetAimMode(bool shouldBeAiming)
+    {
+        isInAimMode = shouldBeAiming;
+        if (playerController != null) playerController.SetAimingState(isInAimMode);
+
+        if (headPivot != null) headPivot.SetActive(isInAimMode);
+        if (armPivot != null) armPivot.SetActive(isInAimMode);
+
+        if (playerController.cursorManager != null)
+        {
+            if (isInAimMode) playerController.cursorManager.SetAimCursor();
+            else playerController.cursorManager.SetDefaultCursor();
+        }
+    }
+    public void HandleAttackInput()
+    {
+        if (activeWeapon == null || isReloading || Time.time < lastAttackTime + activeWeapon.attackRate) return;
+
+        if (activeWeapon.weaponType == WeaponType.Ranger)
+        {
+            if (currentAmmo > 0) FireBullet();
+            else FirePowder();
+        }
+
+        lastAttackTime = Time.time;
+    }
+
+    private void FireBullet()
+    {
+        currentAmmo--;
+        Debug.Log("TIRO! Munição: " + currentAmmo);
+        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
+    }
+    private void FirePowder() => Debug.Log("TIRO DE PÓLVORA!");
+
+    public void HandleReloadInput()
+    {
+        if (activeWeapon == null || activeWeapon.weaponType != WeaponType.Ranger || isReloading) return;
+        StartCoroutine(ReloadRoutine());
+    }
+
+    private IEnumerator ReloadRoutine()
+    {
+        isReloading = true;
+        Debug.Log("Recarregando...");
+        yield return new WaitForSeconds(activeWeapon.reloadTime);
+        currentAmmo = activeWeapon.magazineSize;
+        isReloading = false;
+        Debug.Log("Recarga completa!");
+        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
+    }
 }

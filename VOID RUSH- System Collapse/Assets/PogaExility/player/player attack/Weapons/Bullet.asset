@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b3cfd4cacdcf90248bf7cfc44ef8bd25, type: 3}
-  m_Name: Coiso
+  m_Name: Bullet
   m_EditorClassIdentifier: 
-  itemName: 
-  itemIcon: {fileID: -1077358520582270867, guid: f807f49f77db94b4ca497d3bc4cb21cd, type: 3}
-  itemType: 4
-  itemPrefab: {fileID: 6872308494124798136, guid: ca00de3e5d267964986150ae8b91eec4, type: 3}
-  worldPickupPrefab: {fileID: 6872308494124798136, guid: ca00de3e5d267964986150ae8b91eec4, type: 3}
+  itemName: Bullet
+  itemIcon: {fileID: 21300000, guid: e75bfaf6167240f42b9e6d704a3486d4, type: 3}
+  itemType: 3
+  itemPrefab: {fileID: 6872308494124798136, guid: 7568e3df2d38e7c4aac09f972217b635, type: 3}
+  worldPickupPrefab: {fileID: 6872308494124798136, guid: 7568e3df2d38e7c4aac09f972217b635, type: 3}
   equipPrefab: {fileID: 0}
   stackable: 1
   maxStack: 999

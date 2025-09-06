@@ -20,7 +20,8 @@ MonoBehaviour:
   equipPrefab: {fileID: 5714271926393328017, guid: 66c925f41377b1646819ba7e7b5bc8eb, type: 3}
   stackable: 0
   maxStack: 1
-  acceptedAmmo: []
+  acceptedAmmo:
+  - {fileID: 11400000, guid: 0121d8d5195f0124da361bb77420f161, type: 2}
   bulletDamage: 10
   powderDamage: 2
   powderRange: 1.8
@@ -30,7 +31,7 @@ MonoBehaviour:
   attackRate: 0.5
   useAimMode: 1
   slashEffectPrefab: {fileID: 0}
-  bulletPrefab: {fileID: 0}
+  bulletPrefab: {fileID: 6872308494124798136, guid: 7568e3df2d38e7c4aac09f972217b635, type: 3}
   busterShotPrefab: {fileID: 0}
   chargedShotPrefab: {fileID: 0}
   comboAnimations: []
