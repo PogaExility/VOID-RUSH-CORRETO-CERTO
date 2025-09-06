@@ -41,13 +41,7 @@ public class WeaponHandler : MonoBehaviour
     public event Action<int> OnActiveWeaponChanged;
     public InventorySlot GetActiveWeaponSlot() => weaponSlots[currentWeaponIndex];
 
-    void Update()
-    {
-        if (isInAimMode)
-        {
-            AimLogic();
-        }
-    }
+   
 
     // Adicione esta nova função
     private void AimLogic()
@@ -70,9 +64,20 @@ public class WeaponHandler : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        if (playerController == null) playerController = GetComponent<PlayerController>();
+        if (inventoryManager == null) inventoryManager = InventoryManager.Instance;
         for (int i = 0; i < NUM_WEAPON_SLOTS; i++)
             if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot();
     }
+
+    void Start() => EquipToHand(weaponSlots[currentWeaponIndex].item);
+
+    void Update()
+    {
+        UpdateAimState();
+        if (isInAimMode) AimLogic();
+    }
+
     public void EquipItemFromMouse(int weaponSlotIndex)
     {
         var itemNoMouse = inventoryManager.GetHeldItem();
@@ -95,11 +100,7 @@ public class WeaponHandler : MonoBehaviour
             OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
         }
     }
-    void Start()
-    {
-        if (inventoryManager == null) inventoryManager = InventoryManager.Instance;
-        RedrawWeaponUI();
-    }
+   
 
     // A FUNÇÃO QUE CRIA A PORRA DOS ITENS VISUAIS ONDE DEVEM ESTAR
     private void RedrawWeaponUI()
@@ -171,46 +172,69 @@ public class WeaponHandler : MonoBehaviour
             EquipToHand(weaponSlots[currentWeaponIndex].item);
         }
     }
-
-    private void EquipToHand(ItemSO weapon)
+    private void UpdateAimState()
     {
-        if (activeWeaponGO != null) Destroy(activeWeaponGO);
-        activeWeapon = weapon;
-
         bool shouldAim = activeWeapon != null && activeWeapon.useAimMode;
-        SetAimMode(shouldAim);
-
-        if (activeWeapon != null && activeWeapon.equipPrefab != null && weaponSocket != null)
+        if (isInAimMode != shouldAim)
         {
-            activeWeaponGO = Instantiate(activeWeapon.equipPrefab, weaponSocket);
+            SetAimMode(shouldAim);
         }
-
-        // Reseta o estado da arma
-        if (activeWeapon != null && activeWeapon.itemType == ItemType.Weapon)
-        {
-            currentAmmo = activeWeapon.magazineSize;
-            isReloading = false;
-        }
-
-        // Avisa a hotbar
-        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
 
-    // Adicione esta nova função
     private void SetAimMode(bool shouldBeAiming)
     {
         isInAimMode = shouldBeAiming;
-        if (playerController != null) playerController.SetAimingState(isInAimMode);
+
+        if (playerController != null)
+            playerController.SetAimingState(isInAimMode);
 
         if (headPivot != null) headPivot.SetActive(isInAimMode);
         if (armPivot != null) armPivot.SetActive(isInAimMode);
 
-        if (playerController.cursorManager != null)
+        var cursorManager = playerController?.cursorManager;
+        if (cursorManager != null)
         {
-            if (isInAimMode) playerController.cursorManager.SetAimCursor();
-            else playerController.cursorManager.SetDefaultCursor();
+            if (isInAimMode)
+                cursorManager.SetAimCursor();
+            else
+                cursorManager.SetDefaultCursor();
         }
     }
+
+    private void EquipToHand(ItemSO weapon)
+    {
+        // Limpa a arma antiga
+        if (activeWeaponGO != null) Destroy(activeWeaponGO);
+        activeWeapon = weapon;
+
+        // Se não tiver arma para equipar, para aqui.
+        if (activeWeapon == null)
+        {
+            UpdateAimState(); // Garante que saia do modo mira se desequipou.
+            return;
+        }
+
+        // Se a arma existe, mas não tem prefab ou não há onde encaixar, para aqui.
+        if (activeWeapon.equipPrefab == null || weaponSocket == null)
+        {
+            UpdateAimState();
+            return;
+        }
+
+        // 1. CRIA a arma como filha do socket.
+        activeWeaponGO = Instantiate(activeWeapon.equipPrefab, weaponSocket);
+
+        // 2. FORÇA a posição, rotação e escala para valores neutros.
+        activeWeaponGO.transform.localPosition = Vector3.zero;
+        activeWeaponGO.transform.localRotation = Quaternion.identity;
+        activeWeaponGO.transform.localScale = Vector3.one;
+
+        // 3. ATUALIZA o estado de mira.
+        UpdateAimState();
+    }
+
+    // Adicione esta nova função
+   
     public void HandleAttackInput()
     {
         if (activeWeapon == null || isReloading || Time.time < lastAttackTime + activeWeapon.attackRate) return;
