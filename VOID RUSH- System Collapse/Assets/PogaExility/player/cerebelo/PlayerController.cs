@@ -107,21 +107,21 @@ public class PlayerController : MonoBehaviour
             movementScript.CutJump();
         }
     }
-      private void HandleWeaponSwitching()
+    private void HandleWeaponSwitching()
     {
-        // Se está no inventário ou se não há um weapon handler, não faz nada.
         if (isInventoryOpen || weaponHandler == null) return;
-
-        // "Mouse ScrollWheel" é o nome padrão do input da rodinha do mouse na Unity.
         float scrollInput = Input.GetAxis("Mouse ScrollWheel");
 
-        if (scrollInput > 0f) // Rodinha pra cima/frente
+        // Apenas UMA função é chamada, sem argumento.
+        if (scrollInput > 0f)
         {
-            weaponHandler.CycleWeapon(true); // Diz ao chefe para ir para a PRÓXIMA arma
+            weaponHandler.CycleWeapon(); // <<-- CORREÇÃO
         }
-        else if (scrollInput < 0f) // Rodinha pra baixo/trás
+        // Opcional: Para rodar pra trás, precisaria de outra função.
+        // Por agora, qualquer scroll roda pra frente.
+        else if (scrollInput < 0f)
         {
-            weaponHandler.CycleWeapon(false); // Diz ao chefe para ir para a arma ANTERIOR
+            weaponHandler.CycleWeapon(); // <<-- CORREÇÃO
         }
     }
     private void ToggleInventory()
