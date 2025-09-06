@@ -45,7 +45,7 @@ public class WeaponHandler : MonoBehaviour
         (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
 
         inventoryManager.RequestRedraw();
-        // RedrawWeaponUI(); // Você ainda precisa de uma função para desenhar a UI de armas
+        RedrawWeaponUI();
 
         if (currentWeaponIndex == weaponSlotIndex)
         {
@@ -64,13 +64,19 @@ public class WeaponHandler : MonoBehaviour
     // A FUNÇÃO QUE CRIA A PORRA DOS ITENS VISUAIS ONDE DEVEM ESTAR
     private void RedrawWeaponUI()
     {
-        // 1. Destrói todos os visuais antigos para evitar duplicação.
         foreach (var visual in activeVisuals) Destroy(visual);
         activeVisuals.Clear();
 
-        // 2. Cria os visuais para os 3 slots no INVENTÁRIO.
+        // 1. Redesenha os 3 slots no inventário
         for (int i = 0; i < NUM_WEAPON_SLOTS; i++)
         {
+            // >> LINHA DE SEGURANÇA <<
+            if (equipmentSlotContainers[i] == null)
+            {
+                Debug.LogError($"FATAL: O 'Equipment Slot Container' de índice {i} está faltando no Inspector do WeaponHandler!", this);
+                continue; // Pula para o próximo para não quebrar tudo
+            }
+
             var data = weaponSlots[i];
             if (data.item != null)
             {
@@ -80,13 +86,21 @@ public class WeaponHandler : MonoBehaviour
             }
         }
 
-        // 3. Cria o visual para a arma ATIVA na HOTBAR.
-        var activeWeaponData = weaponSlots[currentWeaponIndex];
-        if (activeWeaponData.item != null)
+        // 2. Redesenha a hotbar
+        // >> LINHA DE SEGURANÇA <<
+        if (activeWeaponHUDContainer == null)
         {
-            var go = Instantiate(weaponItemViewPrefab, activeWeaponHUDContainer);
-            go.GetComponent<WeaponItemView>().Render(activeWeaponData.item);
-            activeVisuals.Add(go);
+            Debug.LogError("FATAL: O 'Active Weapon HUD Container' está faltando no Inspector do WeaponHandler!", this);    
+        }
+        else
+        {
+            var activeWeaponData = weaponSlots[currentWeaponIndex];
+            if (activeWeaponData.item != null)
+            {
+                var go = Instantiate(weaponItemViewPrefab, activeWeaponHUDContainer);
+                go.GetComponent<WeaponItemView>().Render(activeWeaponData.item);
+                activeVisuals.Add(go);
+            }
         }
     }
 

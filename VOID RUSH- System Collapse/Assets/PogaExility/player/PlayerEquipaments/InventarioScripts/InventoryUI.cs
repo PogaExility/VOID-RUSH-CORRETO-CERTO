@@ -38,13 +38,23 @@ public class InventoryUI : MonoBehaviour
 
     void CreateGridAndPool()
     {
+        // >> LINHA DE SEGURANÇA <<
+        if (backpackPanel == null)
+        {
+            Debug.LogError("FATAL: A referência 'Backpack Panel' está faltando no Inspector do InventoryUI!", this);
+            return; // Impede a execução e a quebra do jogo.
+        }
+
         for (int i = 0; i < InventoryManager.Instance.GetSize(); i++)
         {
+            // O 'backpackPanel' agora está garantido de não ser nulo.
             var slot = Instantiate(slotPrefab, backpackPanel);
-            slot.GetComponent<SlotView>().Initialize(i);
+            var slotView = slot.GetComponent<SlotView>();
+            slotView.Initialize(i);
 
             var item = Instantiate(itemPrefab, slot.transform);
             var itemView = item.GetComponent<ItemView>();
+            itemView.Initialize(i);
             itemViewPool.Add(itemView);
         }
     }
