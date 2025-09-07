@@ -27,14 +27,28 @@ public class RangedWeapon : WeaponBase
         lastAttackTime = Time.time;
     }
 
+    // EM RangedWeapon.cs
+
     private void FireBullet()
     {
         CurrentAmmo--;
+        RaiseOnWeaponStateChanged(); // Mova o Raise para o início para a UI atualizar instantaneamente.
+
         if (weaponData.bulletPrefab != null && muzzlePoint != null)
         {
-            Instantiate(weaponData.bulletPrefab, muzzlePoint.position, muzzlePoint.rotation);
+            // 1. Cria o projétil.
+            GameObject projectileGO = Instantiate(weaponData.bulletPrefab, muzzlePoint.position, muzzlePoint.rotation);
+
+            // 2. Pega o script do projétil recém-criado.
+            Projectile projectileScript = projectileGO.GetComponent<Projectile>();
+
+            // 3. Se o script existir, entrega a ele o dano que está no ItemSO.
+            if (projectileScript != null)
+            {
+                // O dano vem da "ficha técnica" da arma (ItemSO).
+                projectileScript.Initialize(weaponData.bulletDamage);
+            }
         }
-        RaiseOnWeaponStateChanged();
     }
 
     private void FirePowder()
@@ -48,7 +62,6 @@ public class RangedWeapon : WeaponBase
         return weaponData.magazineSize - CurrentAmmo;
     }
 
-    // NOVO: Ordem que o Handler dá
     public void StartReload(int ammoToLoad)
     {
         if (isReloading) return;
@@ -58,14 +71,13 @@ public class RangedWeapon : WeaponBase
     private IEnumerator ReloadTimerCoroutine(int ammoToLoad)
     {
         isReloading = true;
-        Debug.Log("Iniciando timer de recarga...");
-
+        Debug.Log("Recarregando...");
         yield return new WaitForSeconds(weaponData.reloadTime);
 
         CurrentAmmo += ammoToLoad;
         isReloading = false;
 
-        Debug.Log($"Recarga finalizada! Pente com {CurrentAmmo} balas.");
-        RaiseOnWeaponStateChanged();
+        Debug.Log($"Recarga Completa! Pente com {CurrentAmmo} balas.");
+        RaiseOnWeaponStateChanged(); // Avisa a HUD para atualizar
     }
 }

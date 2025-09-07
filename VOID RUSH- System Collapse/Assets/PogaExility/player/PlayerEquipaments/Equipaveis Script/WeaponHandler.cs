@@ -1,5 +1,4 @@
-﻿// WeaponHandler.cs - VERSÃO CORRIGIDA
-using System;
+﻿using System;
 using System.Linq;
 using UnityEngine;
 
@@ -14,34 +13,30 @@ public class WeaponHandler : MonoBehaviour
     [Header("MUNIÇÃO")]
     [SerializeField] private InventorySlot[] ammoSlots = new InventorySlot[4];
 
-    public int currentWeaponIndex { get; private set; } = 0;
-    private WeaponBase activeWeaponInstance;
-
-    [Header("REFERÊNCIAS")]
+    [Header("REFERÊNCIAS ESSENCIAIS")]
     [SerializeField] private PlayerController playerController;
     [SerializeField] private InventoryManager inventoryManager;
-    [SerializeField] private Transform weaponSocket;
-    [SerializeField] private GameObject armPivot;
+    [SerializeField] private Transform weaponSocket; // A "mão" onde a arma é criada.
 
-
-    private bool isInAimMode = false;
-    private Vector3 initialWeaponSocketScale;
-    public bool allowMovementFlip = true;
-
-    public event Action<int> OnActiveWeaponChanged;
+    // A instância da arma ativa em cena.
+    private WeaponBase activeWeaponInstance;
+    // O renderer da arma ativa, para controle de camadas.
     private SpriteRenderer activeWeaponRenderer;
+
+    public int currentWeaponIndex { get; private set; } = 0;
+    private bool isInAimMode = false;
+
+    // Eventos para a UI se atualizar.
+    public event Action<int> OnActiveWeaponChanged;
     public event Action OnAmmoSlotsChanged;
     public event Action OnWeaponSlotsChanged;
-
-    // A PARTIR DAQUI, O CÓDIGO É O CORRETO, SEM AS FUNÇÕES ABSTRATAS
-    // QUE CAUSARAM O ERRO.
 
     void Awake()
     {
         Instance = this;
-        initialWeaponSocketScale = weaponSocket.localScale;
         if (playerController == null) playerController = GetComponent<PlayerController>();
 
+        // Inicializa os slots para evitar erros.
         for (int i = 0; i < weaponSlots.Length; i++)
         {
             if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot();
@@ -59,37 +54,37 @@ public class WeaponHandler : MonoBehaviour
 
     void Update()
     {
+        // A lógica de mira só é executada se o jogador tiver uma arma que usa mira.
         var activeWeaponData = GetActiveWeaponSlot()?.item;
-        if (activeWeaponData != null && activeWeaponData.useAimMode)
+        if (isInAimMode && activeWeaponData != null && activeWeaponData.useAimMode)
         {
             AimLogic();
         }
     }
 
-    // EM WeaponHandler.cs
-
     private void AimLogic()
     {
-        if (activeWeaponInstance == null || playerController == null) return;
+        if (activeWeaponInstance == null) return;
 
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        // PASSO 1: DAR A ORDEM PARA VIRAR
+        // 1. DÁ A ORDEM PARA VIRAR: O Handler pede, o Movement executa.
         playerController.movementScript.FaceTowardsPoint(mouseWorldPos);
 
-        // PASSO 2: PERGUNTAR A DIREÇÃO ATUAL
+        // 2. PERGUNTA A DIREÇÃO ATUAL: Pega a direção correta APÓS o flip.
         bool isFacingRight = playerController.movementScript.IsFacingRight();
         float currentDirectionX = isFacingRight ? 1f : -1f;
 
-        // PASSO 3: CÁLCULO DO ÂNGULO DO BRAÇO/ARMA
+        // 3. CALCULA O ÂNGULO DA ARMA: Usa a direção correta como referência.
         Vector2 playerForwardDirection = new Vector2(currentDirectionX, 0);
         Vector2 directionToMouse = (mouseWorldPos - weaponSocket.position);
         float armAngle = Vector2.SignedAngle(playerForwardDirection, directionToMouse);
         float clampedArmAngle = Mathf.Clamp(armAngle, -90f, 90f);
 
-        // Aplica a rotação local apenas no braço/mão.
+        // 4. APLICA A ROTAÇÃO: A mira é aplicada localmente no braço.
         weaponSocket.localRotation = Quaternion.Euler(0, 0, clampedArmAngle);
     }
+
     public void HandleAttackInput()
     {
         if (activeWeaponInstance != null)
@@ -103,7 +98,7 @@ public class WeaponHandler : MonoBehaviour
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
         {
             int ammoNeeded = rangedWeapon.GetAmmoNeeded();
-            if (ammoNeeded <= 0) return;
+            if (ammoNeeded <= 0) return; // Pente cheio
 
             int ammoFound = FindAndConsumeAmmo(ammoNeeded);
 
@@ -128,15 +123,10 @@ public class WeaponHandler : MonoBehaviour
             if (weaponData.acceptedAmmo.Contains(ammoSlot.item))
             {
                 int amountToConsume = Mathf.Min(maxAmountNeeded - totalConsumed, ammoSlot.count);
-
                 ammoSlot.count -= amountToConsume;
                 totalConsumed += amountToConsume;
 
-                if (ammoSlot.count <= 0)
-                {
-                    ammoSlot.Clear();
-                }
-
+                if (ammoSlot.count <= 0) ammoSlot.Clear();
                 if (totalConsumed >= maxAmountNeeded) break;
             }
         }
@@ -145,13 +135,11 @@ public class WeaponHandler : MonoBehaviour
         {
             OnAmmoSlotsChanged?.Invoke();
         }
-
         return totalConsumed;
     }
 
     public void EquipToHand(ItemSO weaponData)
     {
-        // 1. Limpeza
         if (activeWeaponInstance != null)
         {
             activeWeaponInstance.OnWeaponStateChanged -= HandleWeaponStateChange;
@@ -160,7 +148,6 @@ public class WeaponHandler : MonoBehaviour
             activeWeaponRenderer = null;
         }
 
-        // 2. Verificação
         if (weaponData == null || weaponData.equipPrefab == null)
         {
             SetAimMode(false);
@@ -168,14 +155,12 @@ public class WeaponHandler : MonoBehaviour
             return;
         }
 
-        // 3. Criação e Posição
         GameObject weaponGO = Instantiate(weaponData.equipPrefab, weaponSocket);
         weaponGO.transform.localPosition = Vector3.zero;
         weaponGO.transform.localRotation = Quaternion.identity;
 
-        // 4. Renderização (CORRIGIDO)
+        // CORREÇÃO: Pega o renderer do Player a partir da referência do PlayerController.
         activeWeaponRenderer = weaponGO.GetComponentInChildren<SpriteRenderer>();
-        // Pega o renderer do mesmo objeto que tem o PlayerController, que é o correto.
         var playerRenderer = playerController.GetComponent<SpriteRenderer>();
 
         if (activeWeaponRenderer != null && playerRenderer != null)
@@ -184,7 +169,6 @@ public class WeaponHandler : MonoBehaviour
             activeWeaponRenderer.sortingOrder = playerRenderer.sortingOrder + 1;
         }
 
-        // 5. Inicialização
         activeWeaponInstance = weaponGO.GetComponent<WeaponBase>();
         if (activeWeaponInstance != null)
         {
@@ -198,7 +182,6 @@ public class WeaponHandler : MonoBehaviour
             return;
         }
 
-        // 6. Finalização
         SetAimMode(weaponData.useAimMode);
         OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
@@ -220,67 +203,52 @@ public class WeaponHandler : MonoBehaviour
         var equipmentSlot = weaponSlots[weaponSlotIndex];
         if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Weapon) return;
 
-        (itemNoMouse.item, equipmentSlot.item) = (equipmentSlot.item, itemNoMouse.item);
-        (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
+        ItemSO tempItem = equipmentSlot.item;
+        int tempCount = equipmentSlot.count;
+        equipmentSlot.Set(itemNoMouse.item, itemNoMouse.count);
+        itemNoMouse.Set(tempItem, tempCount);
 
         inventoryManager.RequestRedraw();
+        OnWeaponSlotsChanged?.Invoke();
 
         if (currentWeaponIndex == weaponSlotIndex)
         {
             EquipToHand(weaponSlots[currentWeaponIndex].item);
         }
-
-        OnWeaponSlotsChanged?.Invoke(); // DISPARA O NOVO EVENTO
     }
 
     public void EquipAmmoFromMouse(int ammoSlotIndex)
     {
-        // Pega o slot de dados que está no mouse.
         var itemOnMouse = inventoryManager.GetHeldItem();
-        // Pega o slot de dados de munição que foi clicado.
         var ammoSlot = ammoSlots[ammoSlotIndex];
+        if (itemOnMouse.item != null && itemOnMouse.item.itemType != ItemType.Ammo) return;
 
-        // VALIDAÇÃO: Se o item no mouse não for do tipo 'Ammo', a função para.
-        // (Permite pegar um item do slot se o mouse estiver vazio).
-        if (itemOnMouse.item != null && itemOnMouse.item.itemType != ItemType.Ammo)
-        {
-            return;
-        }
-
-        // LÓGICA DE TROCA (SWAP) - O JEITO CLÁSSICO E SEGURO:
-
-        // 1. Guarda o que está no slot de munição em variáveis temporárias.
         ItemSO tempItem = ammoSlot.item;
         int tempCount = ammoSlot.count;
-
-        // 2. Coloca o item do mouse no slot de munição.
         ammoSlot.Set(itemOnMouse.item, itemOnMouse.count);
-
-        // 3. Coloca o que estava guardado (o conteúdo original do slot) no mouse.
         itemOnMouse.Set(tempItem, tempCount);
 
-        // 4. Avisa as UIs para se redesenharem com os novos dados.
-        inventoryManager.RequestRedraw(); // Redesenha o inventário e o ícone do mouse.
-        OnAmmoSlotsChanged?.Invoke();   // Redesenha os slots de munição.
+        inventoryManager.RequestRedraw();
+        OnAmmoSlotsChanged?.Invoke();
     }
 
     private void SetAimMode(bool shouldBeAiming)
     {
         isInAimMode = shouldBeAiming;
-
         if (playerController != null)
+        {
             playerController.SetAimingState(isInAimMode);
+        }
 
-     
-        if (armPivot != null) armPivot.SetActive(isInAimMode);
+        // A visibilidade do braço (armPivot) agora deve ser controlada pelo Animator,
+        // com base no estado 'isInAimMode' que o PlayerController define.
+        // Removido: armPivot.SetActive(isInAimMode);
 
         var cursorManager = playerController?.cursorManager;
         if (cursorManager != null)
         {
-            if (isInAimMode)
-                cursorManager.SetAimCursor();
-            else
-                cursorManager.SetDefaultCursor();
+            if (isInAimMode) cursorManager.SetAimCursor();
+            else cursorManager.SetDefaultCursor();
         }
 
         if (shouldBeAiming)
@@ -288,8 +256,10 @@ public class WeaponHandler : MonoBehaviour
             AimLogic();
         }
     }
+
+    // Funções de Acesso para a UI
     public InventorySlot GetActiveWeaponSlot() => weaponSlots[currentWeaponIndex];
-    public InventorySlot GetWeaponSlot(int index) => weaponSlots[index]; // NOVA FUNÇÃO
+    public InventorySlot GetWeaponSlot(int index) => weaponSlots[index];
     public InventorySlot GetAmmoSlot(int index) => ammoSlots[index];
 
     public bool TryGetActiveWeaponAmmo(out int currentAmmo, out int maxAmmo)

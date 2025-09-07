@@ -18,7 +18,9 @@ public enum PlayerAnimState
     morrendo,         
     poucaVidaParado,  
     paradoCotoco,     
-    andarCotoco       
+    andarCotoco,
+    pulandoCotoco
+       
 }
 
 
@@ -50,6 +52,7 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int PoucaVidaParadoHash = Animator.StringToHash("poucaVidaParado");
     private static readonly int ParadoCotocoHash = Animator.StringToHash("paradoCotoco");
     private static readonly int AndarCotocoHash = Animator.StringToHash("andarCotoco");
+    private static readonly int PulandoCotocoHash = Animator.StringToHash("pulandoCotoco");
 
     [Tooltip("Duração da transição suave entre animações.")]
     public float crossFadeDuration = 0.1f;
@@ -93,6 +96,7 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.poucaVidaParado: return PoucaVidaParadoHash;
             case PlayerAnimState.paradoCotoco: return ParadoCotocoHash;
             case PlayerAnimState.andarCotoco: return AndarCotocoHash;
+            case PlayerAnimState.pulandoCotoco: return PulandoCotocoHash;
             default: return ParadoHash;
         }
 

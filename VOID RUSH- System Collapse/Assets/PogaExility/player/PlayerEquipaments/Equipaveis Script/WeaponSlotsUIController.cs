@@ -1,41 +1,28 @@
-// ARQUIVO NOVO: WeaponSlotsUIController.cs
+// WeaponSlotsUIController.cs - VERSÃO CORRETA E SIMPLIFICADA
 using System.Collections.Generic;
 using UnityEngine;
 
 public class WeaponSlotsUIController : MonoBehaviour
 {
-    [Header("Referências")]
-    [Tooltip("Arraste aqui os 3 objetos FILHOS que contêm o script ItemView dos seus slots de arma.")]
-    [SerializeField] private List<ItemView> weaponItemViews;
-
+    [SerializeField] private List<WeaponItemView> weaponItemViews;
     private WeaponHandler weaponHandler;
 
     void Start()
     {
         weaponHandler = WeaponHandler.Instance;
-        if (weaponHandler == null)
-        {
-            Debug.LogError("WeaponSlotsUIController não encontrou o WeaponHandler!");
-            return;
-        }
+        if (weaponHandler == null) return;
 
-        // Inscreve-se nos eventos para saber quando redesenhar
+        // Se inscreve nos eventos corretos.
         weaponHandler.OnWeaponSlotsChanged += Redraw;
-        InventoryManager.Instance.OnInventoryChanged += Redraw; // Para redesenhar ao pegar/soltar
-
-        Redraw(); // Desenho inicial
+        weaponHandler.OnActiveWeaponChanged += (index) => Redraw();
+        Redraw();
     }
 
     private void OnDestroy()
     {
-        if (weaponHandler != null)
-        {
-            weaponHandler.OnWeaponSlotsChanged -= Redraw;
-        }
-        if (InventoryManager.Instance != null)
-        {
-            InventoryManager.Instance.OnInventoryChanged -= Redraw;
-        }
+        if (weaponHandler == null) return;
+        weaponHandler.OnWeaponSlotsChanged -= Redraw;
+        weaponHandler.OnActiveWeaponChanged -= (index) => Redraw();
     }
 
     private void Redraw()
@@ -43,16 +30,24 @@ public class WeaponSlotsUIController : MonoBehaviour
         for (int i = 0; i < weaponItemViews.Count; i++)
         {
             InventorySlot slotData = weaponHandler.GetWeaponSlot(i);
-            ItemView view = weaponItemViews[i];
+            WeaponItemView view = weaponItemViews[i];
+            if (view == null) continue;
 
-            if (slotData != null && slotData.item != null)
+            // Se o slot não tem item, manda null para o Render esconder tudo.
+            if (slotData == null || slotData.item == null)
             {
-                view.gameObject.SetActive(true);
-                view.Render(slotData.item, slotData.count);
+                view.Render(null, -1);
+                continue;
             }
-            else
+
+            // Se o slot (i) é o da arma ATIVA, pede a munição real.
+            if (i == weaponHandler.currentWeaponIndex && weaponHandler.TryGetActiveWeaponAmmo(out int current, out int max))
             {
-                view.gameObject.SetActive(false);
+                view.Render(slotData.item, current);
+            }
+            else // Senão, é arma inativa. Manda -1.
+            {
+                view.Render(slotData.item, -1);
             }
         }
     }

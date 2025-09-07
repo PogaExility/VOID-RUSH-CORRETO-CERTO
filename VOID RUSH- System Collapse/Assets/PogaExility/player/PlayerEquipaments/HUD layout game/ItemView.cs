@@ -1,22 +1,36 @@
+// ItemView.cs - VERSÃO SIMPLES E CORRETA (PARA O INVENTÁRIO)
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 public class ItemView : MonoBehaviour
 {
-    public Image icon;
-    public TextMeshProUGUI countText;
+    [SerializeField] private Image icon;
+    [SerializeField] private TextMeshProUGUI countText;
 
-    // >> A FUNÇÃO QUE FALTAVA <<
-    public void Initialize(int index)
-    {
-        // Se precisarmos do índice no futuro, ele estará aqui.
-        // Por agora, ela só precisa existir para o código compilar.
-    }
+    public void Initialize(int index) { }
 
+    // Esta função SÓ se preocupa com a contagem de stack.
     public void Render(ItemSO itemData, int count)
     {
+        if (itemData == null)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
+        gameObject.SetActive(true);
         icon.sprite = itemData.itemIcon;
-        countText.text = count > 1 ? count.ToString() : "";
+
+        // Mostra a contagem apenas se for maior que 1.
+        if (count > 1)
+        {
+            countText.enabled = true;
+            countText.text = count.ToString();
+        }
+        else
+        {
+            countText.enabled = false;
+        }
     }
 }

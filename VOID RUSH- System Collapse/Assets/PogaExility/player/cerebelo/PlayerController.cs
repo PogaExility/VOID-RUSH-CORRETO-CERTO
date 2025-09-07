@@ -192,81 +192,55 @@ public class PlayerController : MonoBehaviour
             defenseHandler.EndBlock();
         }
     }
+    // EM PlayerController.cs
+
     private void UpdateAnimations()
     {
-        // --- HIERARQUIA DE PRIORIDADE ---
-        // A primeira condição que for verdadeira, define a animação e a função termina.
+        // --- PARTE 1: INFORMAR O ANIMATOR ---
+        // O script agora apenas envia os "fatos" para o Animator a cada frame.
+        // O Animator, com suas transições, fará todo o trabalho de escolher a animação.
+        Animator anim = animatorController.GetAnimator();
+        anim.SetBool("IsAiming", isInAimMode);
+        anim.SetBool("IsGrounded", movementScript.IsGrounded());
+        anim.SetFloat("VerticalVelocity", movementScript.GetVerticalVelocity());
+        anim.SetBool("IsMoving", movementScript.IsMoving());
+        anim.SetBool("IsWallSliding", movementScript.IsWallSliding());
+        anim.SetBool("IsDashing", movementScript.IsDashing());
 
-        // PRIORIDADE MÁXIMA: Animação de Morte
-        if (playerStats.IsDead()) // (Você precisará de uma função como esta no PlayerStats)
+        // --- PARTE 2: LIDAR COM ESTADOS DE ALTA PRIORIDADE (OVERRIDE) ---
+        // Estas são exceções que precisam FORÇAR uma animação, pois são eventos únicos.
+
+        // PRIORIDADE MÁXIMA: Morte - para tudo e toca a animação de morte.
+        if (playerStats.IsDead())
         {
             animatorController.PlayState(PlayerAnimState.morrendo);
-             return;
-         }
-
-        // PRIORIDADE 2: Animação de Pouso
-        if (isLanding)
-        {
-            // Se já estamos no processo de pouso, a animação 'pousando' já foi chamada.
-            // Não fazemos nada e deixamos ela terminar. O evento de animação vai limpar 'isLanding'.
             return;
         }
-        // Lógica para INICIAR o pouso
+
+        // PRIORIDADE 2: Pouso - se a animação de pouso já está tocando, não a interrompa.
+        if (isLanding)
+        {
+            return;
+        }
+        // Se o jogador ACABOU de pousar, força a animação de pouso.
         if (!wasGroundedLastFrame && movementScript.IsGrounded())
         {
             isLanding = true;
             movementScript.OnLandingStart();
             animatorController.PlayState(PlayerAnimState.pousando);
-            return; // Animação de pouso definida. Fim.
+            return;
         }
 
-        // PRIORIDADE 3: Animação de Dano
-        // (A chamada para a animação de dano já está no PlayerStats.cs, o que é bom.
-        // Mas precisamos impedir que as animações de movimento a substituam imediatamente).
-         if (animatorController.GetCurrentAnimatorStateInfo(0).IsName("dano"))
-         {
-             return; // Deixa a animação de dano terminar.
-         }
-
-        // PRIORIDADE 4: Modo de Mira ("Cotoco")
-        if (isInAimMode)
+        // PRIORIDADE 3: Dano - se a animação de dano está tocando, não a interrompa.
+        if (animatorController.GetCurrentAnimatorStateInfo(0).IsName("dano"))
         {
-            if (movementScript.IsMoving())
-            {
-                animatorController.PlayState(PlayerAnimState.andarCotoco);
-            }
-            else
-            {
-                animatorController.PlayState(PlayerAnimState.paradoCotoco);
-            }
-            return; // Animação de mira definida. Fim.
+            return;
         }
 
-        // PRIORIDADE 5: Ações Aéreas e de Parede (Movimento)
-        if (!movementScript.IsGrounded())
-        {
-            if (movementScript.IsWallSliding())
-            {
-                animatorController.PlayState(PlayerAnimState.derrapagem);
-            }
-            else if (movementScript.IsInParabolaArc())
-            {
-                animatorController.PlayState(PlayerAnimState.dashAereo);
-            }
-            else if (movementScript.IsDashing())
-            {
-                animatorController.PlayState(PlayerAnimState.dashAereo);
-            }
-            else if (movementScript.GetVerticalVelocity() > 0.1f)
-            {
-                animatorController.PlayState(PlayerAnimState.pulando);
-            }
-            else
-            {
-                animatorController.PlayState(PlayerAnimState.falling);
-            }
-            return; // Animação aérea definida. Fim.
-        }
+        // Com o novo sistema, o resto da lógica de `if/else` para escolher animações
+        // de movimento (parado, andando, pulando, cotoco, etc.) foi completamente removido
+        // e agora é gerenciado pelo Animator Controller, o que resolve os bugs.
+    
 
         // PRIORIDADE 6: Ações no Chão (Movimento)
         if (movementScript.IsDashing())
