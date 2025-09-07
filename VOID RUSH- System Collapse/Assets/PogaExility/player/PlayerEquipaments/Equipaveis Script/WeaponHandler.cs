@@ -21,7 +21,6 @@ public class WeaponHandler : MonoBehaviour
     [SerializeField] private PlayerController playerController;
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private Transform weaponSocket;
-    [SerializeField] private GameObject headPivot;
     [SerializeField] private GameObject armPivot;
 
 
@@ -75,30 +74,21 @@ public class WeaponHandler : MonoBehaviour
 
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        // --- PASSO 1: DAR A ORDEM PARA VIRAR ---
-        // O WeaponHandler agora só pede para o script de movimento fazer o flip.
+        // PASSO 1: DAR A ORDEM PARA VIRAR
         playerController.movementScript.FaceTowardsPoint(mouseWorldPos);
 
-        // --- PASSO 2: PERGUNTAR A DIREÇÃO ATUAL ---
-        // Depois que o personagem JÁ virou, perguntamos qual é a direção dele agora.
+        // PASSO 2: PERGUNTAR A DIREÇÃO ATUAL
         bool isFacingRight = playerController.movementScript.IsFacingRight();
         float currentDirectionX = isFacingRight ? 1f : -1f;
 
-        // --- PASSO 3: CÁLCULO DO ÂNGULO DA ARMA ---
+        // PASSO 3: CÁLCULO DO ÂNGULO DO BRAÇO/ARMA
         Vector2 playerForwardDirection = new Vector2(currentDirectionX, 0);
         Vector2 directionToMouse = (mouseWorldPos - weaponSocket.position);
         float armAngle = Vector2.SignedAngle(playerForwardDirection, directionToMouse);
         float clampedArmAngle = Mathf.Clamp(armAngle, -90f, 90f);
 
-        // A rotação é aplicada LOCALMENTE, o SignedAngle já faz o trabalho de inversão.
+        // Aplica a rotação local apenas no braço/mão.
         weaponSocket.localRotation = Quaternion.Euler(0, 0, clampedArmAngle);
-
-        // --- PASSO 4: CÁLCULO E TRAVA DO ÂNGULO DA CABEÇA ---
-        if (headPivot != null)
-        {
-            float headAngle = Mathf.Clamp(armAngle, -45, 45);
-            headPivot.transform.localRotation = Quaternion.Euler(0, 0, headAngle);
-        }
     }
     public void HandleAttackInput()
     {
@@ -245,16 +235,33 @@ public class WeaponHandler : MonoBehaviour
 
     public void EquipAmmoFromMouse(int ammoSlotIndex)
     {
-        var itemNoMouse = inventoryManager.GetHeldItem();
-        var equipmentSlot = ammoSlots[ammoSlotIndex];
+        // Pega o slot de dados que está no mouse.
+        var itemOnMouse = inventoryManager.GetHeldItem();
+        // Pega o slot de dados de munição que foi clicado.
+        var ammoSlot = ammoSlots[ammoSlotIndex];
 
-        if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Ammo) return;
+        // VALIDAÇÃO: Se o item no mouse não for do tipo 'Ammo', a função para.
+        // (Permite pegar um item do slot se o mouse estiver vazio).
+        if (itemOnMouse.item != null && itemOnMouse.item.itemType != ItemType.Ammo)
+        {
+            return;
+        }
 
-        (itemNoMouse.item, equipmentSlot.item) = (equipmentSlot.item, itemNoMouse.item);
-        (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
+        // LÓGICA DE TROCA (SWAP) - O JEITO CLÁSSICO E SEGURO:
 
-        inventoryManager.RequestRedraw();
-        OnAmmoSlotsChanged?.Invoke();
+        // 1. Guarda o que está no slot de munição em variáveis temporárias.
+        ItemSO tempItem = ammoSlot.item;
+        int tempCount = ammoSlot.count;
+
+        // 2. Coloca o item do mouse no slot de munição.
+        ammoSlot.Set(itemOnMouse.item, itemOnMouse.count);
+
+        // 3. Coloca o que estava guardado (o conteúdo original do slot) no mouse.
+        itemOnMouse.Set(tempItem, tempCount);
+
+        // 4. Avisa as UIs para se redesenharem com os novos dados.
+        inventoryManager.RequestRedraw(); // Redesenha o inventário e o ícone do mouse.
+        OnAmmoSlotsChanged?.Invoke();   // Redesenha os slots de munição.
     }
 
     private void SetAimMode(bool shouldBeAiming)
@@ -264,9 +271,8 @@ public class WeaponHandler : MonoBehaviour
         if (playerController != null)
             playerController.SetAimingState(isInAimMode);
 
-        // APAGUE OU COMENTE ESTAS DUAS LINHAS:
-        // if (headPivot != null) headPivot.SetActive(isInAimMode);
-        // if (armPivot != null) armPivot.SetActive(isInAimMode);
+     
+        if (armPivot != null) armPivot.SetActive(isInAimMode);
 
         var cursorManager = playerController?.cursorManager;
         if (cursorManager != null)

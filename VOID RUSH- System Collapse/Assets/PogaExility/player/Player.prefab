@@ -589,6 +589,7 @@ GameObject:
   - component: {fileID: 5477743466925957718}
   - component: {fileID: 6750551910522425168}
   - component: {fileID: 61997551872123317}
+  - component: {fileID: 7537496853959141389}
   m_Layer: 5
   m_Name: Slot_ammo (2)
   m_TagString: Untagged
@@ -678,6 +679,19 @@ MonoBehaviour:
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 0
   m_ConstraintCount: 2
+--- !u!114 &7537496853959141389
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1716972016447992620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5719335ae80adcd479e5754308fab2f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ammoSlotIndex: 2
 --- !u!1 &2097949846876250144
 GameObject:
   m_ObjectHideFlags: 0
@@ -1250,7 +1264,6 @@ RectTransform:
   m_Children:
   - {fileID: 4000528787000432178}
   - {fileID: 5924701776747328186}
-  - {fileID: 666888784610736895}
   - {fileID: 2869954903092542797}
   m_Father: {fileID: 2789439997850842196}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1673,8 +1686,6 @@ MonoBehaviour:
   playerController: {fileID: 8298078936381974819}
   inventoryManager: {fileID: 6956942213338850998}
   weaponSocket: {fileID: 6398474281398656026}
-  playerVisualsTransform: {fileID: 0}
-  headPivot: {fileID: 2886175496301029706}
   armPivot: {fileID: 8673842369191267755}
   allowMovementFlip: 1
 --- !u!1 &3653114368772367964
@@ -1703,12 +1714,12 @@ Transform:
   m_GameObject: {fileID: 3653114368772367964}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -54.078144, y: -21.901316, z: -0.039758608}
+  m_LocalPosition: {x: -602.9496, y: -255.33728, z: -0.039758608}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6538815972875227305}
-  m_Father: {fileID: 6475456776236552968}
+  m_Father: {fileID: 7952627578460200178}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1812593278397308451
 MonoBehaviour:
@@ -1785,6 +1796,7 @@ GameObject:
   - component: {fileID: 789499801094886909}
   - component: {fileID: 808503264228871257}
   - component: {fileID: 5955645870420464532}
+  - component: {fileID: 9203602900232408831}
   m_Layer: 5
   m_Name: Slot_ammo (3)
   m_TagString: Untagged
@@ -1874,6 +1886,19 @@ MonoBehaviour:
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 0
   m_ConstraintCount: 2
+--- !u!114 &9203602900232408831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4690181002273328556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5719335ae80adcd479e5754308fab2f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ammoSlotIndex: 3
 --- !u!1 &4836207828356912287
 GameObject:
   m_ObjectHideFlags: 0
@@ -2445,6 +2470,7 @@ RectTransform:
   - {fileID: 7154474007236188759}
   - {fileID: 7017348770224261494}
   - {fileID: 3003304405719505649}
+  - {fileID: 666888784610736895}
   m_Father: {fileID: 4708386788519731153}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -7738,6 +7764,7 @@ GameObject:
   - component: {fileID: 4768740476227685216}
   - component: {fileID: 5528508905585774332}
   - component: {fileID: 1201617961733970656}
+  - component: {fileID: 8562749693675790892}
   m_Layer: 5
   m_Name: Slot_ammo
   m_TagString: Untagged
@@ -7827,6 +7854,19 @@ MonoBehaviour:
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 0
   m_ConstraintCount: 2
+--- !u!114 &8562749693675790892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6953080608234614776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5719335ae80adcd479e5754308fab2f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ammoSlotIndex: 0
 --- !u!1 &7085269387423094012
 GameObject:
   m_ObjectHideFlags: 0
@@ -8729,6 +8769,7 @@ GameObject:
   - component: {fileID: 3056223131963353490}
   - component: {fileID: 5236602796952459043}
   - component: {fileID: 8264398982143117420}
+  - component: {fileID: 2459110265245084796}
   m_Layer: 5
   m_Name: Slot_ammo (1)
   m_TagString: Untagged
@@ -8818,6 +8859,19 @@ MonoBehaviour:
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 0
   m_ConstraintCount: 2
+--- !u!114 &2459110265245084796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9122507436390841162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5719335ae80adcd479e5754308fab2f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ammoSlotIndex: 1
 --- !u!1001 &975161639161371173
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9765,11 +9819,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7131340931123058250, guid: 2de920e6415fd8a44b6aa01656d10aec, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 0.003
       objectReference: {fileID: 0}
     - target: {fileID: 7131340931123058250, guid: 2de920e6415fd8a44b6aa01656d10aec, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.355
+      value: -0.396
       objectReference: {fileID: 0}
     - target: {fileID: 7131340931123058250, guid: 2de920e6415fd8a44b6aa01656d10aec, type: 3}
       propertyPath: m_LocalPosition.z
@@ -9811,11 +9865,6 @@ PrefabInstance:
 --- !u!4 &1336009842702984126 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7131340931123058250, guid: 2de920e6415fd8a44b6aa01656d10aec, type: 3}
-  m_PrefabInstance: {fileID: 8105891178617484788}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &2886175496301029706 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6372637753858989246, guid: 2de920e6415fd8a44b6aa01656d10aec, type: 3}
   m_PrefabInstance: {fileID: 8105891178617484788}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &8459015683056649564
