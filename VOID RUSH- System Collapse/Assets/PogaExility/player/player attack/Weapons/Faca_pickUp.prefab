@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 837026417494587103}
   - component: {fileID: 8243755277895405615}
   - component: {fileID: 2086914237210623806}
+  - component: {fileID: 547758969359532688}
   m_Layer: 7
   m_Name: Faca_pickUp
   m_TagString: Item
@@ -155,7 +156,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 4.8, y: 12.8}
+    oldSize: {x: 0.48, y: 1.28}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -177,3 +178,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemData: {fileID: 11400000, guid: b6f1f2c39925b6643ac93c7b7ac3fe02, type: 2}
   amount: 1
+--- !u!114 &547758969359532688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6872308494124798136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 579112f293e365143b5370f7f89612b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

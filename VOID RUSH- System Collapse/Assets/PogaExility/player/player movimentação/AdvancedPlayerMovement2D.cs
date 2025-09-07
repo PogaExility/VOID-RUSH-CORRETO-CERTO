@@ -30,6 +30,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     [Header("Física do WallDashJump")]
 
+    [Header("Controle de Lógica Externa")]
+    [Tooltip("Permite que outros scripts (como o PlayerController) travem o flip por movimento.")]
+    public bool allowMovementFlip = true;
+
     [Header("Física da Parábola")]
     public float parabolaSteeringForce = 5f;
 
@@ -40,7 +44,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public float parabolaAirDrag = 0.98f;
     private bool physicsControlDisabled = false;
     private float currentGravityScaleOnFall;
-    
+
 
 
     [Header("Física de Dano")]
@@ -86,6 +90,17 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         physicsControlDisabled = false;
     }
 
+    public void Flip()
+    {
+        // A trava "if (!allowMovementFlip) return;" foi REMOVIDA daqui.
+        isFacingRight = !isFacingRight;
+        transform.Rotate(0f, 180f, 0f);
+    }
+
+
+    // 3. SUA FUNÇÃO FaceDirection() NÃO PRECISA DE MUDANÇAS
+    // -----------------------------------------------------------------
+    // Apenas garanta que ela esteja chamando a nova função Flip() protegida.
     public void FaceDirection(int direction)
     {
         if (direction > 0 && !isFacingRight)
@@ -93,6 +108,38 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             Flip();
         }
         else if (direction < 0 && isFacingRight)
+        {
+            Flip();
+        }
+    }
+    public void FaceTowards(Vector3 worldPoint)
+    {
+        // A trava de flip normal não se aplica aqui, pois a mira tem prioridade.
+        // No entanto, a lógica de flip do movimento (A/D) já está bloqueada pelo PlayerController.
+
+        bool shouldFaceRight = (worldPoint.x > transform.position.x);
+
+        if (shouldFaceRight && !isFacingRight) 
+        { 
+        
+        Flip();
+        }
+          else if (!shouldFaceRight && isFacingRight)
+          {
+              Flip();
+          }
+     }
+    public void FaceTowardsPoint(Vector3 worldPoint)
+    {
+        // Determina se o ponto está à direita ou à esquerda do jogador.
+        bool shouldFaceRight = (worldPoint.x > transform.position.x);
+
+        // Compara com a direção atual e chama a função Flip() se for necessário.
+        if (shouldFaceRight && !isFacingRight)
+        {
+            Flip();
+        }
+        else if (!shouldFaceRight && isFacingRight)
         {
             Flip();
         }
@@ -337,19 +384,14 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
         isWallJumping = false;
     }
-    public void Flip() { isFacingRight = !isFacingRight; transform.Rotate(0f, 180f, 0f); }
+
     // Em AdvancedPlayerMovement2D.cs
     private void HandleFlipLogic()
     {
-        // --- ADICIONE ESTA CONDIÇÃO ---
-        // Se a imunidade ao input estiver ativa, não faça nada.
-        if (isIgnoringSteeringInput)
-        {
-            return;
-        }
-        // --- FIM DA ADIÇÃO ---
+        // Se o flip por movimento (A/D) estiver travado, a função para aqui.
+        if (!allowMovementFlip) return;
 
-        // A lógica original continua aqui
+        // A lógica original de ler o moveInput continua aqui.
         if (moveInput > 0.01f && !isFacingRight) Flip();
         else if (moveInput < -0.01f && isFacingRight) Flip();
     }

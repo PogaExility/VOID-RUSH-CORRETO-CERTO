@@ -1,51 +1,40 @@
+// RangedWeapon.cs - VERSÃO SIMPLIFICADA
+using System.Collections;
 using UnityEngine;
 
 public class RangedWeapon : WeaponBase
 {
     [Header("CONFIGURAÇÃO DO PREFAB")]
-    [Tooltip("O ponto exato de onde o projétil sai.")]
     [SerializeField] private Transform muzzlePoint;
 
-    private int currentAmmo;
+    public int CurrentAmmo { get; private set; }
     private float lastAttackTime = -999f;
     private bool isReloading = false;
 
-    void Start()
+    protected override void InternalInitialize()
     {
-        // Ao ser criada, já carrega a arma com a munição máxima
-        currentAmmo = weaponData.magazineSize;
+        CurrentAmmo = weaponData.magazineSize;
     }
 
-    // A "ASSINATURA" do contrato. É aqui que a mágica acontece.
     public override void Attack()
     {
-        // 1. Checa a cadência de tiro
         if (Time.time < lastAttackTime + weaponData.attackRate) return;
         if (isReloading) return;
 
-        // 2. Checa a munição
-        if (currentAmmo > 0)
-        {
-            FireBullet();
-        }
-        else
-        {
-            FirePowder();
-        }
+        if (CurrentAmmo > 0) FireBullet();
+        else FirePowder();
 
         lastAttackTime = Time.time;
     }
 
     private void FireBullet()
     {
-        currentAmmo--;
-        Debug.Log($"TIRO! Munição: {currentAmmo}");
-
+        CurrentAmmo--;
         if (weaponData.bulletPrefab != null && muzzlePoint != null)
         {
-            // Cria o projétil no ponto certo, com a rotação certa.
             Instantiate(weaponData.bulletPrefab, muzzlePoint.position, muzzlePoint.rotation);
         }
+        RaiseOnWeaponStateChanged();
     }
 
     private void FirePowder()
@@ -53,5 +42,30 @@ public class RangedWeapon : WeaponBase
         Debug.Log("Fagulha. Sem munição.");
     }
 
-    // TODO: Adicionar uma função Reload() que pode ser chamada pelo WeaponHandler
+    // NOVO: Pergunta que o Handler faz
+    public int GetAmmoNeeded()
+    {
+        return weaponData.magazineSize - CurrentAmmo;
+    }
+
+    // NOVO: Ordem que o Handler dá
+    public void StartReload(int ammoToLoad)
+    {
+        if (isReloading) return;
+        StartCoroutine(ReloadTimerCoroutine(ammoToLoad));
+    }
+
+    private IEnumerator ReloadTimerCoroutine(int ammoToLoad)
+    {
+        isReloading = true;
+        Debug.Log("Iniciando timer de recarga...");
+
+        yield return new WaitForSeconds(weaponData.reloadTime);
+
+        CurrentAmmo += ammoToLoad;
+        isReloading = false;
+
+        Debug.Log($"Recarga finalizada! Pente com {CurrentAmmo} balas.");
+        RaiseOnWeaponStateChanged();
+    }
 }

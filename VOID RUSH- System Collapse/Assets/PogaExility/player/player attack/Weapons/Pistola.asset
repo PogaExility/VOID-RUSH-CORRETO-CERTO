@@ -15,9 +15,9 @@ MonoBehaviour:
   itemName: Pistola
   itemIcon: {fileID: 21300000, guid: 5919f5b9459751d4a87d64c54db99ec9, type: 3}
   itemType: 2
-  itemPrefab: {fileID: 6872308494124798136, guid: 71e2bf77410f6814c9a1c76472cd4418, type: 3}
+  itemPrefab: {fileID: 6872308494124798136, guid: 8f5d814a1764dac4cadb4e30567e48f1, type: 3}
   worldPickupPrefab: {fileID: 6872308494124798136, guid: 71e2bf77410f6814c9a1c76472cd4418, type: 3}
-  equipPrefab: {fileID: 5714271926393328017, guid: 66c925f41377b1646819ba7e7b5bc8eb, type: 3}
+  equipPrefab: {fileID: 6872308494124798136, guid: 8f5d814a1764dac4cadb4e30567e48f1, type: 3}
   stackable: 0
   maxStack: 1
   acceptedAmmo:

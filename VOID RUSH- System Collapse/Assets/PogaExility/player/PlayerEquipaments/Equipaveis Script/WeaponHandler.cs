@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿// WeaponHandler.cs - VERSÃO CORRIGIDA
+using System;
+using System.Linq;
 using UnityEngine;
 
 public class WeaponHandler : MonoBehaviour
@@ -11,6 +11,9 @@ public class WeaponHandler : MonoBehaviour
     public const int NUM_WEAPON_SLOTS = 3;
     [SerializeField] private InventorySlot[] weaponSlots = new InventorySlot[3];
 
+    [Header("MUNIÇÃO")]
+    [SerializeField] private InventorySlot[] ammoSlots = new InventorySlot[4];
+
     public int currentWeaponIndex { get; private set; } = 0;
     private WeaponBase activeWeaponInstance;
 
@@ -18,89 +21,209 @@ public class WeaponHandler : MonoBehaviour
     [SerializeField] private PlayerController playerController;
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private Transform weaponSocket;
-    [SerializeField] private Transform playerVisualsTransform;
     [SerializeField] private GameObject headPivot;
     [SerializeField] private GameObject armPivot;
 
-    [Header("ESTADO DE COMBATE")]
+
     private bool isInAimMode = false;
+    private Vector3 initialWeaponSocketScale;
+    public bool allowMovementFlip = true;
 
-    // >> O EVENTO ESTÁ AQUI <<
     public event Action<int> OnActiveWeaponChanged;
+    private SpriteRenderer activeWeaponRenderer;
+    public event Action OnAmmoSlotsChanged;
+    public event Action OnWeaponSlotsChanged;
 
-    private ItemSO activeWeapon;
-    private GameObject activeWeaponGO;
-    private int currentAmmo;
-    private bool isReloading = false;
-    private float lastAttackTime = -999f;
-
+    // A PARTIR DAQUI, O CÓDIGO É O CORRETO, SEM AS FUNÇÕES ABSTRATAS
+    // QUE CAUSARAM O ERRO.
 
     void Awake()
     {
-        // Se a referência não foi arrastada, tenta pegar
+        Instance = this;
+        initialWeaponSocketScale = weaponSocket.localScale;
         if (playerController == null) playerController = GetComponent<PlayerController>();
 
-        // Inicializa os slots para evitar erros de nulo
         for (int i = 0; i < weaponSlots.Length; i++)
         {
             if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot();
         }
+        for (int i = 0; i < ammoSlots.Length; i++)
+        {
+            if (ammoSlots[i] == null) ammoSlots[i] = new InventorySlot();
+        }
     }
+
+    void Start()
+    {
+        EquipToHand(weaponSlots[currentWeaponIndex].item);
+    }
+
     void Update()
     {
-        // Pega a arma ativa DOS DADOS.
         var activeWeaponData = GetActiveWeaponSlot()?.item;
-
-        // Se tem uma arma e ela usa mira, o AimLogic é chamado.
         if (activeWeaponData != null && activeWeaponData.useAimMode)
         {
             AimLogic();
         }
     }
-    void Start()
-    {
-        EquipToHand(weaponSlots[currentWeaponIndex].item);
-    }
+
+    // EM WeaponHandler.cs
+
     private void AimLogic()
     {
+        if (activeWeaponInstance == null || playerController == null) return;
+
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        if (playerVisualsTransform != null)
+
+        // --- PASSO 1: DAR A ORDEM PARA VIRAR ---
+        // O WeaponHandler agora só pede para o script de movimento fazer o flip.
+        playerController.movementScript.FaceTowardsPoint(mouseWorldPos);
+
+        // --- PASSO 2: PERGUNTAR A DIREÇÃO ATUAL ---
+        // Depois que o personagem JÁ virou, perguntamos qual é a direção dele agora.
+        bool isFacingRight = playerController.movementScript.IsFacingRight();
+        float currentDirectionX = isFacingRight ? 1f : -1f;
+
+        // --- PASSO 3: CÁLCULO DO ÂNGULO DA ARMA ---
+        Vector2 playerForwardDirection = new Vector2(currentDirectionX, 0);
+        Vector2 directionToMouse = (mouseWorldPos - weaponSocket.position);
+        float armAngle = Vector2.SignedAngle(playerForwardDirection, directionToMouse);
+        float clampedArmAngle = Mathf.Clamp(armAngle, -90f, 90f);
+
+        // A rotação é aplicada LOCALMENTE, o SignedAngle já faz o trabalho de inversão.
+        weaponSocket.localRotation = Quaternion.Euler(0, 0, clampedArmAngle);
+
+        // --- PASSO 4: CÁLCULO E TRAVA DO ÂNGULO DA CABEÇA ---
+        if (headPivot != null)
         {
-            playerVisualsTransform.localScale = new Vector3(Mathf.Sign(mouseWorldPos.x - transform.position.x), 1, 1);
+            float headAngle = Mathf.Clamp(armAngle, -45, 45);
+            headPivot.transform.localRotation = Quaternion.Euler(0, 0, headAngle);
+        }
+    }
+    public void HandleAttackInput()
+    {
+        if (activeWeaponInstance != null)
+        {
+            activeWeaponInstance.Attack();
         }
     }
 
-    public void EquipWeapon(ItemSO weapon)
+    public void HandleReloadInput()
     {
-        // 1. Destrói a instância da arma antiga
-        if (activeWeaponInstance != null) Destroy(activeWeaponInstance.gameObject);
+        if (activeWeaponInstance is RangedWeapon rangedWeapon)
+        {
+            int ammoNeeded = rangedWeapon.GetAmmoNeeded();
+            if (ammoNeeded <= 0) return;
 
-        // 2. Se não tem arma nova ou prefab, para aqui
-        if (weapon == null || weapon.equipPrefab == null) { SetAimMode(false); return; }
+            int ammoFound = FindAndConsumeAmmo(ammoNeeded);
 
-        // 3. Cria o NOVO prefab da arma no socket
-        GameObject weaponGO = Instantiate(weapon.equipPrefab, weaponSocket);
+            if (ammoFound > 0)
+            {
+                rangedWeapon.StartReload(ammoFound);
+            }
+        }
+    }
+
+    private int FindAndConsumeAmmo(int maxAmountNeeded)
+    {
+        var weaponData = GetActiveWeaponSlot()?.item;
+        if (weaponData == null || weaponData.acceptedAmmo == null || weaponData.acceptedAmmo.Length == 0) return 0;
+
+        int totalConsumed = 0;
+        for (int i = 0; i < ammoSlots.Length; i++)
+        {
+            var ammoSlot = ammoSlots[i];
+            if (ammoSlot.item == null) continue;
+
+            if (weaponData.acceptedAmmo.Contains(ammoSlot.item))
+            {
+                int amountToConsume = Mathf.Min(maxAmountNeeded - totalConsumed, ammoSlot.count);
+
+                ammoSlot.count -= amountToConsume;
+                totalConsumed += amountToConsume;
+
+                if (ammoSlot.count <= 0)
+                {
+                    ammoSlot.Clear();
+                }
+
+                if (totalConsumed >= maxAmountNeeded) break;
+            }
+        }
+
+        if (totalConsumed > 0)
+        {
+            OnAmmoSlotsChanged?.Invoke();
+        }
+
+        return totalConsumed;
+    }
+
+    public void EquipToHand(ItemSO weaponData)
+    {
+        // 1. Limpeza
+        if (activeWeaponInstance != null)
+        {
+            activeWeaponInstance.OnWeaponStateChanged -= HandleWeaponStateChange;
+            Destroy(activeWeaponInstance.gameObject);
+            activeWeaponInstance = null;
+            activeWeaponRenderer = null;
+        }
+
+        // 2. Verificação
+        if (weaponData == null || weaponData.equipPrefab == null)
+        {
+            SetAimMode(false);
+            OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
+            return;
+        }
+
+        // 3. Criação e Posição
+        GameObject weaponGO = Instantiate(weaponData.equipPrefab, weaponSocket);
         weaponGO.transform.localPosition = Vector3.zero;
         weaponGO.transform.localRotation = Quaternion.identity;
-        weaponGO.transform.localScale = Vector3.one;
 
-        // 4. Pega o SCRIPT da arma e dá a identidade a ela
+        // 4. Renderização (CORRIGIDO)
+        activeWeaponRenderer = weaponGO.GetComponentInChildren<SpriteRenderer>();
+        // Pega o renderer do mesmo objeto que tem o PlayerController, que é o correto.
+        var playerRenderer = playerController.GetComponent<SpriteRenderer>();
+
+        if (activeWeaponRenderer != null && playerRenderer != null)
+        {
+            activeWeaponRenderer.sortingLayerName = playerRenderer.sortingLayerName;
+            activeWeaponRenderer.sortingOrder = playerRenderer.sortingOrder + 1;
+        }
+
+        // 5. Inicialização
         activeWeaponInstance = weaponGO.GetComponent<WeaponBase>();
         if (activeWeaponInstance != null)
         {
-            activeWeaponInstance.Initialize(weapon);
+            activeWeaponInstance.Initialize(weaponData);
+            activeWeaponInstance.OnWeaponStateChanged += HandleWeaponStateChange;
+        }
+        else
+        {
+            Debug.LogError($"Prefab '{weaponData.name}' não tem script derivado de WeaponBase!");
+            Destroy(weaponGO);
+            return;
         }
 
-        // 5. Atualiza o modo mira
-        SetAimMode(weapon.useAimMode);
+        // 6. Finalização
+        SetAimMode(weaponData.useAimMode);
+        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
+    }
+
+    private void HandleWeaponStateChange()
+    {
+        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
 
     public void CycleWeapon()
     {
         currentWeaponIndex = (currentWeaponIndex + 1) % weaponSlots.Length;
         EquipToHand(weaponSlots[currentWeaponIndex].item);
-        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
+
     public void EquipItemFromMouse(int weaponSlotIndex)
     {
         var itemNoMouse = inventoryManager.GetHeldItem();
@@ -115,72 +238,25 @@ public class WeaponHandler : MonoBehaviour
         if (currentWeaponIndex == weaponSlotIndex)
         {
             EquipToHand(weaponSlots[currentWeaponIndex].item);
-            OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
         }
+
+        OnWeaponSlotsChanged?.Invoke(); // DISPARA O NOVO EVENTO
     }
-    // Em WeaponHandler.cs
-    private void FireBullet()
+
+    public void EquipAmmoFromMouse(int ammoSlotIndex)
     {
-        currentAmmo--;
-        Debug.Log("TIRO! Munição: " + currentAmmo);
-        // TODO: Instanciar o prefab da bala: Instantiate(activeWeapon.bulletPrefab, ...);
+        var itemNoMouse = inventoryManager.GetHeldItem();
+        var equipmentSlot = ammoSlots[ammoSlotIndex];
 
-        // Avisa a UI que a munição mudou
-        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
+        if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Ammo) return;
+
+        (itemNoMouse.item, equipmentSlot.item) = (equipmentSlot.item, itemNoMouse.item);
+        (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
+
+        inventoryManager.RequestRedraw();
+        OnAmmoSlotsChanged?.Invoke();
     }
 
-    private void FirePowder()
-    {
-        Debug.Log("TIRO DE PÓLVORA! (Curto alcance)");
-        // TODO: Lógica de dano de perto com OverlapCircle
-    }
-    // Em WeaponHandler.cs
-    private IEnumerator ReloadRoutine()
-    {
-        isReloading = true;
-        Debug.Log("Recarregando...");
-
-        // TODO: Chamar animação de recarga aqui
-
-        yield return new WaitForSeconds(activeWeapon.reloadTime);
-
-        // Lógica para pegar munição do inventário viria aqui.
-        // Por agora, apenas enche o pente.
-        currentAmmo = activeWeapon.magazineSize;
-
-        isReloading = false;
-        Debug.Log("Recarga Completa! Munição: " + currentAmmo);
-
-        // Avisa a UI que a munição mudou
-        OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
-    }
-
-    public void HandleAttackInput()
-    {
-        if (activeWeaponInstance != null)
-        {
-            activeWeaponInstance.Attack();
-        }
-    }
-
-    public void HandleReloadInput()
-    {
-        if (activeWeaponInstance != null && activeWeaponInstance is RangedWeapon rangedWeapon)
-        {
-            // rangedWeapon.Reload();
-        }
-    }
-
-    private void UpdateAimState()
-    {
-        bool shouldAim = activeWeapon != null && activeWeapon.useAimMode;
-        if (isInAimMode != shouldAim)
-        {
-            SetAimMode(shouldAim);
-        }
-    }
-
-    // A função auxiliar que ele precisa
     private void SetAimMode(bool shouldBeAiming)
     {
         isInAimMode = shouldBeAiming;
@@ -188,8 +264,9 @@ public class WeaponHandler : MonoBehaviour
         if (playerController != null)
             playerController.SetAimingState(isInAimMode);
 
-        if (headPivot != null) headPivot.SetActive(isInAimMode);
-        if (armPivot != null) armPivot.SetActive(isInAimMode);
+        // APAGUE OU COMENTE ESTAS DUAS LINHAS:
+        // if (headPivot != null) headPivot.SetActive(isInAimMode);
+        // if (armPivot != null) armPivot.SetActive(isInAimMode);
 
         var cursorManager = playerController?.cursorManager;
         if (cursorManager != null)
@@ -199,35 +276,30 @@ public class WeaponHandler : MonoBehaviour
             else
                 cursorManager.SetDefaultCursor();
         }
-    }
-    public void EquipToHand(ItemSO weaponData)
-    {
-        // Destrói a arma antiga
-        if (activeWeaponInstance != null)
-        {
-            Destroy(activeWeaponInstance.gameObject);
-        }
 
-        // Se não tiver arma para equipar, para aqui.
-        if (weaponData == null || weaponData.equipPrefab == null)
+        if (shouldBeAiming)
         {
-            activeWeaponInstance = null;
-            return;
-        }
-
-        // Cria a nova arma, posiciona e inicializa
-        GameObject weaponGO = Instantiate(weaponData.equipPrefab, weaponSocket);
-        weaponGO.transform.localPosition = Vector3.zero;
-        weaponGO.transform.localRotation = Quaternion.identity;
-        weaponGO.transform.localScale = Vector3.one;
-
-        activeWeaponInstance = weaponGO.GetComponent<WeaponBase>();
-        if (activeWeaponInstance != null)
-        {
-            activeWeaponInstance.Initialize(weaponData);
+            AimLogic();
         }
     }
-
-    // >> A FUNÇÃO ESTÁ AQUI <<
     public InventorySlot GetActiveWeaponSlot() => weaponSlots[currentWeaponIndex];
+    public InventorySlot GetWeaponSlot(int index) => weaponSlots[index]; // NOVA FUNÇÃO
+    public InventorySlot GetAmmoSlot(int index) => ammoSlots[index];
+
+    public bool TryGetActiveWeaponAmmo(out int currentAmmo, out int maxAmmo)
+    {
+        currentAmmo = 0;
+        maxAmmo = 0;
+        if (activeWeaponInstance is RangedWeapon rangedWeapon)
+        {
+            var data = GetActiveWeaponSlot()?.item;
+            if (data != null)
+            {
+                currentAmmo = rangedWeapon.CurrentAmmo;
+                maxAmmo = data.magazineSize;
+                return true;
+            }
+        }
+        return false;
+    }
 }

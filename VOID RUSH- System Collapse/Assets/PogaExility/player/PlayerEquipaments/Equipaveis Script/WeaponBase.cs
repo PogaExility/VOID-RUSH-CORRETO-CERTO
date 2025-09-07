@@ -1,17 +1,28 @@
+// WeaponBase.cs - VERSÃO CORRETA E COMPLETA
+using System;
 using UnityEngine;
 
-// Esta é uma classe "abstrata". Ela é um contrato.
-// Toda arma no seu jogo DEVE ter estas funções.
 public abstract class WeaponBase : MonoBehaviour
 {
-    protected ItemSO weaponData; // A "identidade" da arma (dano, cadência, etc.)
+    protected ItemSO weaponData;
 
-    // O WeaponHandler vai chamar esta função para dar a identidade à arma
+    public event Action OnWeaponStateChanged;
+
     public void Initialize(ItemSO data)
     {
         weaponData = data;
+        InternalInitialize();
     }
 
-    // A única ordem que o WeaponHandler vai dar.
     public abstract void Attack();
+
+    protected void RaiseOnWeaponStateChanged()
+    {
+        OnWeaponStateChanged?.Invoke();
+    }
+
+    protected virtual void InternalInitialize()
+    {
+        // Implementação base vazia para as classes filhas sobrescreverem (override)
+    }
 }

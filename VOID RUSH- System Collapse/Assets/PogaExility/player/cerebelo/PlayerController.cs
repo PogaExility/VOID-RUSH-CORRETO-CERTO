@@ -78,7 +78,11 @@ public class PlayerController : MonoBehaviour
 
     public void SetAimingState(bool isNowAiming)
     {
-        isInAimMode = isNowAiming; // A variável agora é controlada externamente
+        isInAimMode = isNowAiming;
+
+        // --- ADICIONE ESTA LINHA ---
+        // Trava ou destrava o flip por movimento com base no estado de mira.
+        movementScript.allowMovementFlip = !isNowAiming;
     }
     void Update()
     {
