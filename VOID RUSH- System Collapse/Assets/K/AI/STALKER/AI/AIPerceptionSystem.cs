@@ -3,8 +3,9 @@ using UnityEditor;
 
 public class AIPerceptionSystem : MonoBehaviour
 {
+    // ... (todo o código até aos Gizmos permanece igual à versão anterior) ...
     #region Estados e Configurações
-    public enum GazeMode { Idle, TargetTracking, InvestigatingDanger }
+    public enum GazeMode { Idle, TargetTracking }
     public enum AwarenessState { DORMANT, PATROLLING, SUSPICIOUS, ALERT, HUNTING }
 
     [Header("▶ Estado Atual")]
@@ -18,11 +19,8 @@ public class AIPerceptionSystem : MonoBehaviour
     [Header("▶ Atributos da Visão")]
     public float visionRange = 15f;
     [Range(0, 360)] public float visionAngle = 90f;
-    public float eyeRotationSpeed = 5f;
+    public float eyeRotationSpeed = 8f;
     public float lkpSafeZoneRadius = 1.5f;
-
-    [Header("▶ Gaze de Patrulha")]
-    public float dangerInvestigationDuration = 2.0f;
 
     [Header("▶ Atributos de Alerta")]
     public float inertiaDuration = 0.5f;
@@ -30,9 +28,10 @@ public class AIPerceptionSystem : MonoBehaviour
     public float searchScanAngle = 60f;
     public float memoryDuration = 10f;
 
+    [Header("▶ Depuração Visual")]
+    public bool showDebugGizmos = true;
+
     private GazeMode _currentGazeMode = GazeMode.Idle;
-    private float _gazeTimer;
-    private Vector3 _dangerFocusPoint;
     public Vector3 LastKnownPlayerPosition { get; private set; }
     public bool IsAwareOfPlayer => currentAwareness == AwarenessState.ALERT || currentAwareness == AwarenessState.HUNTING;
     private float _awarenessTimer = 0f;
@@ -42,15 +41,13 @@ public class AIPerceptionSystem : MonoBehaviour
 
     private Transform _player;
     private Rigidbody2D _playerRb;
-    private AINavigationSystem _navigation;
     #endregion
 
-    #region Ciclo de Vida e Deteção
+    #region Ciclo de Vida e Lógica
     void Start()
     {
         _player = AIManager.Instance.playerTarget;
         _playerRb = _player.GetComponent<Rigidbody2D>();
-        _navigation = GetComponent<AINavigationSystem>();
         if (eyes == null) { this.enabled = false; return; }
     }
 
@@ -65,30 +62,12 @@ public class AIPerceptionSystem : MonoBehaviour
     {
         if (!IsAwareOfPlayer && other.CompareTag("Player")) { ChangeAwareness(AwarenessState.HUNTING); }
     }
-    #endregion
 
-    #region Lógica Central de Mira dos Olhos
     private void UpdateEyeTarget()
     {
         Vector3 directionToTarget;
-
-        if (currentAwareness == AwarenessState.HUNTING || currentAwareness == AwarenessState.ALERT)
-        {
-            _currentGazeMode = GazeMode.TargetTracking;
-        }
-        else
-        {
-            if (_navigation.DetectTerrainDanger(out _dangerFocusPoint) && _currentGazeMode != GazeMode.InvestigatingDanger)
-            {
-                _currentGazeMode = GazeMode.InvestigatingDanger;
-                _gazeTimer = dangerInvestigationDuration;
-            }
-            if (_currentGazeMode == GazeMode.InvestigatingDanger)
-            {
-                _gazeTimer -= Time.deltaTime;
-                if (_gazeTimer <= 0) { _currentGazeMode = GazeMode.Idle; }
-            }
-        }
+        if (currentAwareness == AwarenessState.HUNTING || currentAwareness == AwarenessState.ALERT) { _currentGazeMode = GazeMode.TargetTracking; }
+        else { _currentGazeMode = GazeMode.Idle; }
 
         switch (_currentGazeMode)
         {
@@ -105,12 +84,6 @@ public class AIPerceptionSystem : MonoBehaviour
                     }
                 }
                 break;
-
-            case GazeMode.InvestigatingDanger:
-                directionToTarget = (_dangerFocusPoint - eyes.position).normalized;
-                break;
-
-            case GazeMode.Idle:
             default:
                 directionToTarget = transform.right;
                 break;
@@ -122,9 +95,7 @@ public class AIPerceptionSystem : MonoBehaviour
     {
         eyes.rotation = Quaternion.Slerp(eyes.rotation, _targetEyeRotation, Time.deltaTime * eyeRotationSpeed);
     }
-    #endregion
 
-    #region Lógica de Estados e Percepção
     private void HandleAwareness()
     {
         if (CanSeePlayer()) { ChangeAwareness(AwarenessState.HUNTING); }
@@ -134,17 +105,17 @@ public class AIPerceptionSystem : MonoBehaviour
             else if (currentAwareness == AwarenessState.ALERT) { _awarenessTimer -= Time.deltaTime; if (_awarenessTimer <= 0) ChangeAwareness(AwarenessState.PATROLLING); }
         }
     }
+
     private void ChangeAwareness(AwarenessState newState)
     {
         if (currentAwareness == newState) return;
         var oldState = currentAwareness;
         currentAwareness = newState;
         if (newState == AwarenessState.PATROLLING) { _currentGazeMode = GazeMode.Idle; }
-
-        // AQUI ESTÁ A MELHORIA DE PRECISÃO
         if (newState == AwarenessState.HUNTING) { LastKnownPlayerPosition = _player.position; if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity; _awarenessTimer = memoryDuration; }
         if (oldState == AwarenessState.HUNTING && newState == AwarenessState.ALERT) { LastKnownPlayerPosition = _player.position; if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity; _currentSearchAngle = 0f; }
     }
+
     public bool CanSeePlayer()
     {
         if (_player == null) return false;
@@ -159,23 +130,44 @@ public class AIPerceptionSystem : MonoBehaviour
     }
     #endregion
 
-    #region Gizmos
+    #region Visualização Neural Direta
     void OnDrawGizmosSelected()
     {
-        if (eyes == null) return;
+        if (!showDebugGizmos || eyes == null) return;
+
         Vector3 forward = eyes.transform.up;
-        Gizmos.color = new Color(1, 1, 0, 0.25f);
-        float stepAngle = 5f;
+        float stepAngle = 5f; // A "resolução" da visão
+
+        // O leque de visão JÁ É uma visualização direta de múltiplos raycasts que fazemos para a deteção.
+        // CanSeePlayer() apenas dispara um raio, mas para dar a noção de "área", o gizmo dispara vários.
+        // Isto está em conformidade com a nova regra.
         for (float angle = -visionAngle / 2; angle < visionAngle / 2; angle += stepAngle)
         {
             Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.forward);
             Vector3 direction = rotation * forward;
             RaycastHit2D hit = Physics2D.Raycast(eyes.position, direction, visionRange, visionBlockers);
-            if (hit.collider != null) Gizmos.DrawLine(eyes.position, hit.point);
-            else Gizmos.DrawLine(eyes.position, eyes.position + direction * visionRange);
+
+            if (hit.collider != null)
+            {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawLine(eyes.position, hit.point);
+            }
+            else
+            {
+                Gizmos.color = Color.gray;
+                Gizmos.DrawLine(eyes.position, eyes.position + direction * visionRange);
+            }
         }
-        if (Application.isPlaying && _currentGazeMode == GazeMode.InvestigatingDanger) { Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(_dangerFocusPoint, 0.5f); Gizmos.DrawLine(eyes.position, _dangerFocusPoint); }
-        if (Application.isPlaying && currentAwareness == AwarenessState.ALERT) { Handles.color = new Color(1, 0.5f, 0, 0.05f); Handles.DrawSolidDisc(eyes.position, Vector3.forward, lkpSafeZoneRadius); Gizmos.color = Color.red; Gizmos.DrawWireSphere(LastKnownPlayerPosition, 1f); Gizmos.color = Color.magenta; Gizmos.DrawRay(LastKnownPlayerPosition, _lastKnownPlayerVelocity.normalized * 3f); }
+
+        if (Application.isPlaying && currentAwareness == AwarenessState.ALERT)
+        {
+            Handles.color = new Color(1, 0.5f, 0, 0.05f);
+            Handles.DrawSolidDisc(eyes.position, Vector3.forward, lkpSafeZoneRadius);
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(LastKnownPlayerPosition, 1f);
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawRay(LastKnownPlayerPosition, _lastKnownPlayerVelocity.normalized * 3f);
+        }
     }
     #endregion
 }

@@ -34,17 +34,9 @@ public class AIController_Stalker : MonoBehaviour
             new Sequence(new List<Node>
             {
                 new ActionNode(CheckIfAwareOfPlayer),
-                new Selector(new List<Node>
-                {
-                    new Sequence(new List<Node>
-                    {
-                        new ActionNode(CheckIfInAttackRange),
-                        new ActionNode(PerformAttack)
-                    }),
-                    new ActionNode(HuntPlayer)
-                })
+                new ActionNode(ProcessCombatLogic)
             }),
-            new ActionNode(Patrol)
+            new ActionNode(ProcessPatrolLogic)
         });
     }
 
@@ -53,40 +45,44 @@ public class AIController_Stalker : MonoBehaviour
         _rootNode?.Evaluate();
     }
 
-    #region Nós da Árvore de Comportamento
     private NodeState CheckIfAwareOfPlayer() => _perception.IsAwareOfPlayer ? NodeState.SUCCESS : NodeState.FAILURE;
-    private NodeState CheckIfInAttackRange() => Vector2.Distance(transform.position, _player.position) <= attackRange ? NodeState.SUCCESS : NodeState.FAILURE;
 
-    private NodeState PerformAttack()
+    // CORRIGIDO: Agora usa a nova estrutura QueryEnvironment
+    private NodeState ProcessCombatLogic()
     {
         FaceTarget(_player.position);
-        _motor.Stop();
-        return NodeState.SUCCESS;
-    }
 
-    private NodeState HuntPlayer()
-    {
-        FaceTarget(_player.position);
-        _navigation.Navigate(huntSpeed, jumpForce);
+        if (Vector2.Distance(transform.position, _player.position) <= attackRange)
+        {
+            _motor.Stop();
+        }
+        else
+        {
+            var query = _navigation.QueryEnvironment();
+            if (query.wallAhead || query.jumpablePlatformAhead) _motor.Jump(jumpForce);
+            else if (query.holeAhead) _motor.Stop();
+            else _motor.Move(huntSpeed);
+        }
         return NodeState.RUNNING;
     }
 
-    private NodeState Patrol()
+    // CORRIGIDO: Agora usa a nova estrutura QueryEnvironment
+    private NodeState ProcessPatrolLogic()
     {
-        // A CORREÇÃO CRÍTICA ESTÁ AQUI.
-        // A decisão de virar-se e a de mover-se estão agora no mesmo fluxo.
-        if (_canFlip && (_navigation.IsPathBlocked() || _navigation.IsFacingEdge()))
+        var query = _navigation.QueryEnvironment();
+
+        if (query.ceilingAhead && !_motor.IsCrouching) _motor.StartCrouch();
+        else if (!query.ceilingAhead && _motor.IsCrouching) _motor.StopCrouch();
+
+        if (_canFlip && (query.wallAhead || query.holeAhead))
         {
             _motor.Flip();
             StartCoroutine(FlipCooldownRoutine());
-            // Após se virar, ele não para de pensar. Ele prossegue.
         }
 
-        // Independentemente de se ter virado ou não, a sua ação padrão é navegar.
-        _navigation.Navigate(moveSpeed, jumpForce);
-        return NodeState.RUNNING; // Patrulhar é sempre uma ação contínua.
+        _motor.Move(moveSpeed);
+        return NodeState.RUNNING;
     }
-    #endregion
 
     #region Lógica de "Flip" e Cooldown
     private void FaceTarget(Vector3 targetPosition)

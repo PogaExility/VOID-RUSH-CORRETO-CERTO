@@ -31,6 +31,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 3675850213332784283}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5080552058605241393
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 659590194444773872}
+  m_Layer: 0
+  m_Name: Ground
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &659590194444773872
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5080552058605241393}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.5, z: 0}
+  m_LocalScale: {x: 1, y: 0, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3675850213332784283}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6661398253481518625
 GameObject:
   m_ObjectHideFlags: 0
@@ -65,10 +96,11 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -1.47, y: 0.5016, z: 1.2408022}
-  m_LocalScale: {x: 1, y: 2.9945774, z: 1}
+  m_LocalScale: {x: 1, y: 3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 210489685686077488}
+  - {fileID: 659590194444773872}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &7589668237929059689
@@ -212,8 +244,11 @@ MonoBehaviour:
     m_Bits: 64
   visionRange: 15
   visionAngle: 90
-  peripheralVisionAngle: 180
-  suspicionDuration: 3
+  eyeRotationSpeed: 8
+  lkpSafeZoneRadius: 1.5
+  inertiaDuration: 0.5
+  searchScanSpeed: 90
+  searchScanAngle: 60
   memoryDuration: 10
 --- !u!114 &1527414196305383638
 MonoBehaviour:
@@ -229,10 +264,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentFacingDirection: 1
   isFacingRight: 1
-  groundCheckDistance: 0.5
+  acceleration: 2.5
+  deceleration: 4
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
+  groundCheck: {fileID: 659590194444773872}
+  groundCheckDistance: 0.5
 --- !u!114 &1141719551376467767
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -245,12 +283,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7362f68f1429b394fb7b178be75424ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  groundProbeDistance: 1
-  wallProbeDistance: 0.8
-  jumpCheckDistance: 3
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
+  wallProbeDistance: 0.8
+  ceilingProbeHeight: 1
+  holeProbeOffset: {x: 1.2, y: 1}
+  holeProbeLength: 1.5
+  jumpProbeOffset: {x: 0.5, y: 1}
+  maxJumpHeight: 2.5
+  safeDropDepth: 3
 --- !u!114 &208760096713734105
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -279,3 +321,4 @@ MonoBehaviour:
   huntSpeed: 6
   jumpForce: 15
   attackRange: 1.5
+  flipCooldown: 0.5
