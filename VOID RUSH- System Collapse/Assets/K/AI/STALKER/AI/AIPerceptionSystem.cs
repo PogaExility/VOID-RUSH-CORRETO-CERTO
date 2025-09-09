@@ -3,7 +3,7 @@ using UnityEditor;
 
 public class AIPerceptionSystem : MonoBehaviour
 {
-    // ... (todo o código até aos Gizmos permanece igual à versão anterior) ...
+    // ... (todo o código até ChangeAwareness permanece igual) ...
     #region Estados e Configurações
     public enum GazeMode { Idle, TargetTracking }
     public enum AwarenessState { DORMANT, PATROLLING, SUSPICIOUS, ALERT, HUNTING }
@@ -109,6 +109,9 @@ public class AIPerceptionSystem : MonoBehaviour
     private void ChangeAwareness(AwarenessState newState)
     {
         if (currentAwareness == newState) return;
+
+        Debug.Log($"[AIPerceptionSystem] MUDANÇA DE ESTADO: De {currentAwareness} para {newState}.");
+
         var oldState = currentAwareness;
         currentAwareness = newState;
         if (newState == AwarenessState.PATROLLING) { _currentGazeMode = GazeMode.Idle; }
@@ -118,6 +121,7 @@ public class AIPerceptionSystem : MonoBehaviour
 
     public bool CanSeePlayer()
     {
+        // ... (código igual) ...
         if (_player == null) return false;
         Vector2 directionToPlayer = (_player.position - eyes.position).normalized;
         float distanceToPlayer = Vector2.Distance(eyes.position, _player.position);
@@ -134,40 +138,18 @@ public class AIPerceptionSystem : MonoBehaviour
     void OnDrawGizmosSelected()
     {
         if (!showDebugGizmos || eyes == null) return;
-
         Vector3 forward = eyes.transform.up;
-        float stepAngle = 5f; // A "resolução" da visão
-
-        // O leque de visão JÁ É uma visualização direta de múltiplos raycasts que fazemos para a deteção.
-        // CanSeePlayer() apenas dispara um raio, mas para dar a noção de "área", o gizmo dispara vários.
-        // Isto está em conformidade com a nova regra.
+        Gizmos.color = Color.yellow;
+        float stepAngle = 5f;
         for (float angle = -visionAngle / 2; angle < visionAngle / 2; angle += stepAngle)
         {
             Quaternion rotation = Quaternion.AngleAxis(angle, Vector3.forward);
             Vector3 direction = rotation * forward;
             RaycastHit2D hit = Physics2D.Raycast(eyes.position, direction, visionRange, visionBlockers);
-
-            if (hit.collider != null)
-            {
-                Gizmos.color = Color.yellow;
-                Gizmos.DrawLine(eyes.position, hit.point);
-            }
-            else
-            {
-                Gizmos.color = Color.gray;
-                Gizmos.DrawLine(eyes.position, eyes.position + direction * visionRange);
-            }
+            Vector3 endPoint = hit.collider ? (Vector3)hit.point : eyes.position + direction * visionRange;
+            Gizmos.DrawLine(eyes.position, endPoint);
         }
-
-        if (Application.isPlaying && currentAwareness == AwarenessState.ALERT)
-        {
-            Handles.color = new Color(1, 0.5f, 0, 0.05f);
-            Handles.DrawSolidDisc(eyes.position, Vector3.forward, lkpSafeZoneRadius);
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(LastKnownPlayerPosition, 1f);
-            Gizmos.color = Color.magenta;
-            Gizmos.DrawRay(LastKnownPlayerPosition, _lastKnownPlayerVelocity.normalized * 3f);
-        }
+        if (Application.isPlaying && currentAwareness == AwarenessState.ALERT) { Handles.color = new Color(1, 0.5f, 0, 0.05f); Handles.DrawSolidDisc(eyes.position, Vector3.forward, lkpSafeZoneRadius); Gizmos.color = Color.red; Gizmos.DrawWireSphere(LastKnownPlayerPosition, 1f); Gizmos.color = Color.magenta; Gizmos.DrawRay(LastKnownPlayerPosition, _lastKnownPlayerVelocity.normalized * 3f); }
     }
     #endregion
 }

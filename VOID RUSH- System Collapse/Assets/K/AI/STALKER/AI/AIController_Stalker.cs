@@ -3,7 +3,6 @@ using BehaviorTree;
 using System.Collections;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(AIPerceptionSystem), typeof(AIPlatformerMotor), typeof(AINavigationSystem))]
 public class AIController_Stalker : MonoBehaviour
 {
     private Node _rootNode;
@@ -13,8 +12,8 @@ public class AIController_Stalker : MonoBehaviour
     private Transform _player;
 
     [Header("▶ Configuração de Combate")]
-    public float moveSpeed = 4f;
-    public float huntSpeed = 6f;
+    public float patrolTopSpeed = 4f;
+    public float huntTopSpeed = 7f; // Renomeado para clareza
     public float jumpForce = 15f;
     public float attackRange = 1.5f;
 
@@ -31,6 +30,7 @@ public class AIController_Stalker : MonoBehaviour
 
         _rootNode = new Selector(new List<Node>
         {
+            new ActionNode(ProcessClimbingLogic), // A escalada tem prioridade máxima
             new Sequence(new List<Node>
             {
                 new ActionNode(CheckIfAwareOfPlayer),
@@ -47,7 +47,27 @@ public class AIController_Stalker : MonoBehaviour
 
     private NodeState CheckIfAwareOfPlayer() => _perception.IsAwareOfPlayer ? NodeState.SUCCESS : NodeState.FAILURE;
 
-    // CORRIGIDO: Agora usa a nova estrutura QueryEnvironment
+    private NodeState ProcessClimbingLogic()
+    {
+        if (!_motor.IsClimbing) return NodeState.FAILURE; // Se não está a escalar, este nó falha.
+
+        Debug.Log("[AIController] A processar lógica de ESCALADA.");
+        var query = _navigation.QueryEnvironment();
+
+        if (query.canMantleLedge)
+        {
+            Debug.Log("[AIController] Decisão: Terminar escalada (chegou ao topo).");
+            _motor.StopClimb();
+            // Adicionar uma pequena força para o "empurrar" para cima da plataforma
+            _motor.GetComponent<Rigidbody2D>().AddForce(transform.right * 3f + Vector3.up * 2f, ForceMode2D.Impulse);
+        }
+        else
+        {
+            _motor.Climb(1f); // Continua a subir
+        }
+        return NodeState.RUNNING; // Escalar é uma ação contínua
+    }
+
     private NodeState ProcessCombatLogic()
     {
         FaceTarget(_player.position);
@@ -59,28 +79,31 @@ public class AIController_Stalker : MonoBehaviour
         else
         {
             var query = _navigation.QueryEnvironment();
-            if (query.wallAhead || query.jumpablePlatformAhead) _motor.Jump(jumpForce);
-            else if (query.holeAhead) _motor.Stop();
-            else _motor.Move(huntSpeed);
+            if (query.climbableWallAhead) _motor.StartClimb();
+            else if (query.wallAhead) _motor.Jump(jumpForce);
+
+            else if (query.isAtLedge) _motor.Stop();
+            else _motor.Move(huntTopSpeed);
         }
         return NodeState.RUNNING;
     }
 
-    // CORRIGIDO: Agora usa a nova estrutura QueryEnvironment
     private NodeState ProcessPatrolLogic()
     {
         var query = _navigation.QueryEnvironment();
 
-        if (query.ceilingAhead && !_motor.IsCrouching) _motor.StartCrouch();
-        else if (!query.ceilingAhead && _motor.IsCrouching) _motor.StopCrouch();
-
-        if (_canFlip && (query.wallAhead || query.holeAhead))
+        if (query.climbableWallAhead)
+        {
+            Debug.Log("[AIController] Decisão de Patrulha: Iniciar escalada.");
+            _motor.StartClimb();
+        }
+        else if (_canFlip && (query.wallAhead || query.isAtLedge))
         {
             _motor.Flip();
             StartCoroutine(FlipCooldownRoutine());
         }
 
-        _motor.Move(moveSpeed);
+        _motor.Move(patrolTopSpeed);
         return NodeState.RUNNING;
     }
 

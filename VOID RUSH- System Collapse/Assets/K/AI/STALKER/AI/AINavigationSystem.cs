@@ -2,117 +2,89 @@
 
 public class AINavigationSystem : MonoBehaviour
 {
-    #region CONFIGURATION
+    private AIPlatformerMotor _motor;
+
+    [Header("▶ Pontos de Origem das Sondas")]
+    public Transform wallProbeOrigin;
+    public Transform ledgeProbeOrigin;
+    public Transform climbProbeOrigin;
+    public Transform ledgeMantleProbeOrigin;
+
     [Header("▶ Configuração das Sondas")]
     public LayerMask groundLayer;
+    public LayerMask climbableLayer;
     [Space]
-    public float wallProbeDistance = 0.8f;
-    public float ceilingProbeHeight = 1.0f;
-    [Space]
-    public Vector2 holeProbeOffset = new Vector2(1.2f, 1.0f);
-    public float holeProbeLength = 1.5f;
-    [Space]
-    public Vector2 jumpProbeOffset = new Vector2(0.5f, 1.0f);
-    public float maxJumpHeight = 2.5f;
-    [Space]
+    public float wallProbeDistance = 1.0f;
+    public float ledgeMantleDistance = 1.0f;
     public float safeDropDepth = 3.0f;
 
     [Header("▶ Depuração Visual")]
-    [Tooltip("Ative para ver os Raycasts de navegação no Editor.")]
-    public bool showDebugGizmos = true; // Ativado por padrão para depuração
-    #endregion
-
-    private AIPlatformerMotor _motor;
+    public bool showDebugGizmos = true;
+    // O #endregion que estava aqui foi removido.
 
     void Start()
     {
         _motor = GetComponent<AIPlatformerMotor>();
     }
 
-    // A ESTRUTURA DE DADOS QUE O CÉREBRO USA
     public struct NavQueryResult
     {
         public bool wallAhead;
-        public bool ceilingAhead;
-        public bool holeAhead;
+        public bool isAtLedge;
         public bool canSafelyDrop;
-        public bool jumpablePlatformAhead;
+        public bool climbableWallAhead;
+        public bool canMantleLedge;
     }
 
-    // O MÉTODO CENTRAL QUE FOI RESTAURADO
     public NavQueryResult QueryEnvironment()
     {
+        bool atLedge = IsAtLedge();
         return new NavQueryResult
         {
             wallAhead = ProbeForWall(),
-            ceilingAhead = ProbeForCeiling(),
-            holeAhead = ProbeForHole(),
-            canSafelyDrop = ProbeForLedgeDrop(),
-            jumpablePlatformAhead = ProbeForJumpablePlatform()
+            isAtLedge = atLedge,
+            canSafelyDrop = atLedge && ProbeForSafeDrop(),
+            climbableWallAhead = ProbeForClimbableWall(),
+            canMantleLedge = ProbeForLedgeMantle()
         };
     }
 
-    #region Implementação das Sondas Individuais
-    private bool ProbeForWall() => Physics2D.Raycast(transform.position, transform.right, wallProbeDistance, groundLayer);
+    #region Implementação das Sondas
+    private bool ProbeForWall() => Physics2D.Raycast(wallProbeOrigin.position, transform.right, wallProbeDistance, groundLayer);
 
-    private bool ProbeForCeiling() => Physics2D.Raycast((Vector2)transform.position + new Vector2(0, ceilingProbeHeight), transform.right, wallProbeDistance, groundLayer);
+    private bool IsAtLedge() => _motor.IsGrounded() && !Physics2D.Raycast((Vector2)ledgeProbeOrigin.position, Vector2.down, 0.5f, groundLayer);
 
-    private bool ProbeForHole()
-    {
-        Vector2 topProbeOrigin = (Vector2)transform.position + new Vector2(holeProbeOffset.x * _motor.currentFacingDirection, holeProbeOffset.y);
-        Vector2 bottomProbeOrigin = (Vector2)transform.position + new Vector2(holeProbeOffset.x * _motor.currentFacingDirection, 0);
-        return !Physics2D.Raycast(bottomProbeOrigin, Vector2.down, holeProbeLength, groundLayer) && !Physics2D.Raycast(topProbeOrigin, Vector2.down, holeProbeLength, groundLayer);
-    }
+    private bool ProbeForSafeDrop() => Physics2D.Raycast((Vector2)ledgeProbeOrigin.position, Vector2.down, safeDropDepth, groundLayer);
 
-    private bool ProbeForJumpablePlatform()
-    {
-        Vector2 probeOrigin = (Vector2)transform.position + new Vector2(jumpProbeOffset.x * _motor.currentFacingDirection, jumpProbeOffset.y);
-        RaycastHit2D hit = Physics2D.Raycast(probeOrigin, transform.right, 2f, groundLayer);
-        return hit.collider && hit.point.y - transform.position.y < maxJumpHeight;
-    }
+    private bool ProbeForClimbableWall() => Physics2D.Raycast(climbProbeOrigin.position, transform.right, wallProbeDistance, climbableLayer);
 
-    private bool ProbeForLedgeDrop()
-    {
-        Vector2 probeOrigin = (Vector2)transform.position + (Vector2)transform.right * 0.5f;
-        RaycastHit2D hit = Physics2D.Raycast(probeOrigin, Vector2.down, safeDropDepth, groundLayer);
-        return hit.collider != null;
-    }
+    private bool ProbeForLedgeMantle() => _motor.IsClimbing && !Physics2D.Raycast(ledgeMantleProbeOrigin.position, transform.right, ledgeMantleDistance, groundLayer);
     #endregion
 
-    #region Visualização Neural Direta (Gizmos como Raycasts)
+    #region Visualização Neural Direta
     void OnDrawGizmosSelected()
     {
         if (!showDebugGizmos) return;
-        if (_motor == null) _motor = GetComponent<AIPlatformerMotor>();
-        if (_motor == null) return;
 
-        Vector2 pos = transform.position;
-        Vector2 right = transform.right;
+        // Adicionadas verificações de nulidade para evitar erros no editor antes de 'Start' ser chamado
+        if (Application.isPlaying)
+        {
+            // Parede (Vermelho)
+            Gizmos.color = ProbeForWall() ? Color.red : new Color(0.5f, 0, 0);
+            if (wallProbeOrigin) Gizmos.DrawLine(wallProbeOrigin.position, wallProbeOrigin.position + transform.right * wallProbeDistance);
 
-        // Visualização 1:1 do ProbeForWall
-        Gizmos.color = ProbeForWall() ? Color.red : Color.gray;
-        Gizmos.DrawLine(pos, pos + right * wallProbeDistance);
+            // Queda (Amarelo/Vermelho)
+            Gizmos.color = IsAtLedge() ? (ProbeForSafeDrop() ? Color.yellow : Color.red) : new Color(0.5f, 0.5f, 0);
+            if (ledgeProbeOrigin) Gizmos.DrawLine(ledgeProbeOrigin.position, ledgeProbeOrigin.position + Vector3.down * safeDropDepth);
 
-        // Visualização 1:1 do ProbeForCeiling
-        Gizmos.color = ProbeForCeiling() ? Color.Lerp(Color.red, Color.yellow, 0.5f) : Color.gray;
-        Gizmos.DrawLine(pos + new Vector2(0, ceilingProbeHeight), pos + new Vector2(0, ceilingProbeHeight) + right * wallProbeDistance);
+            // Escalada (Verde)
+            Gizmos.color = ProbeForClimbableWall() ? Color.green : new Color(0, 0.5f, 0);
+            if (climbProbeOrigin) Gizmos.DrawLine(climbProbeOrigin.position, climbProbeOrigin.position + transform.right * wallProbeDistance);
 
-        // Visualização 1:1 do ProbeForHole
-        Vector2 topProbe = pos + new Vector2(holeProbeOffset.x * _motor.currentFacingDirection, holeProbeOffset.y);
-        Vector2 bottomProbe = pos + new Vector2(holeProbeOffset.x * _motor.currentFacingDirection, 0);
-        Gizmos.color = ProbeForHole() ? Color.cyan : Color.gray;
-        Gizmos.DrawLine(topProbe, topProbe + Vector2.down * holeProbeLength);
-        Gizmos.DrawLine(bottomProbe, bottomProbe + Vector2.down * holeProbeLength);
-
-        // Visualização 1:1 do ProbeForJumpablePlatform
-        Gizmos.color = ProbeForJumpablePlatform() ? Color.magenta : Color.gray;
-        Vector2 jumpProbe = pos + new Vector2(jumpProbeOffset.x * _motor.currentFacingDirection, jumpProbeOffset.y);
-        Gizmos.DrawLine(jumpProbe, jumpProbe + right * 2f);
-
-        // Visualização 1:1 do ProbeForLedgeDrop
-        Gizmos.color = ProbeForLedgeDrop() ? Color.yellow : Color.gray;
-        Vector2 dropProbe = pos + right * 0.5f;
-        Gizmos.DrawLine(dropProbe, dropProbe + Vector2.down * safeDropDepth);
+            // Fim da Escalada (Branco)
+            Gizmos.color = Color.white;
+            if (ledgeMantleProbeOrigin) Gizmos.DrawLine(ledgeMantleProbeOrigin.position, ledgeMantleProbeOrigin.position + transform.right * ledgeMantleDistance);
+        }
     }
     #endregion
 }
