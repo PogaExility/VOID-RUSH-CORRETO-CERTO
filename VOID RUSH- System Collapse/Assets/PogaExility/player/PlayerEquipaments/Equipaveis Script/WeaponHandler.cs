@@ -127,7 +127,10 @@ public class WeaponHandler : MonoBehaviour
         // A lógica terminou, então podemos liberar o estado.
         IsReloading = false;
         Debug.Log("Lógica de recarga finalizada. Jogador pode mirar/atirar novamente.");
-        // Não precisamos fazer nada com a animação da mão, ela vai terminar sozinha.
+
+        // ADIÇÃO CRÍTICA: Avisamos o Maestro para mandar a mão voltar para a animação de "parado".
+        // Isso vai "limpar" o cérebro dele e prepará-lo para a próxima recarga.
+        animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.parado);
     }
 
     private int FindAndConsumeAmmo(int maxAmountNeeded)
