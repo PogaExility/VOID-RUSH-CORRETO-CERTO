@@ -31,7 +31,7 @@ public class DefenseHandler : MonoBehaviour
 
     private IEnumerator BlockRoutine(SkillSO blockSkill)
     {
-        animatorController.PlayState(PlayerAnimState.block);
+      //  animatorController.PlayState(PlayerAnimState.block);
         canParry = true;
         yield return new WaitForSeconds(blockSkill.block_ParryWindow); // Usa o parâmetro do SkillSO
         canParry = false;
@@ -57,7 +57,7 @@ public class DefenseHandler : MonoBehaviour
     {
         if (canParry)
         {
-            animatorController.PlayState(PlayerAnimState.parry);
+           // animatorController.PlayState(PlayerAnimState.parry);
             Debug.Log($"PARRY! Stun por {parrySkill.parry_StunDuration}s, Dano x{parrySkill.parry_CounterDamageMultiplier}");
             EndBlock();
         }

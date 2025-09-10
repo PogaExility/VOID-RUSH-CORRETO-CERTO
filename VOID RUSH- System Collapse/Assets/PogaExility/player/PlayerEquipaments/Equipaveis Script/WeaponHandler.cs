@@ -19,9 +19,7 @@ public class WeaponHandler : MonoBehaviour
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private Transform weaponSocket;
     [SerializeField] private GameObject armPivot; // A referência para o objeto do braço
-    [SerializeField] private Animator handAnimator;
-    private static readonly int HandIdleHash = Animator.StringToHash("Mao_Idle");
-    private static readonly int HandReloadingHash = Animator.StringToHash("Recarregando");
+    [SerializeField] private PlayerAnimatorController animatorController;
 
     private WeaponBase activeWeaponInstance;
     public int currentWeaponIndex { get; private set; } = 0;
@@ -37,6 +35,10 @@ public class WeaponHandler : MonoBehaviour
         Instance = this;
         initialWeaponSocketScale = weaponSocket.localScale;
         if (playerController == null) playerController = GetComponent<PlayerController>();
+
+        // ADICIONE ESTA LINHA para encontrar o maestro
+        if (animatorController == null) animatorController = GetComponentInParent<PlayerAnimatorController>();
+
         for (int i = 0; i < weaponSlots.Length; i++) { if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot(); }
         for (int i = 0; i < ammoSlots.Length; i++) { if (ammoSlots[i] == null) ammoSlots[i] = new InventorySlot(); }
     }
@@ -92,31 +94,33 @@ public class WeaponHandler : MonoBehaviour
     {
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
         {
-            // Usa a função IsReloading() que já existe na RangedWeapon
             if (rangedWeapon.IsReloading() || rangedWeapon.GetAmmoNeeded() <= 0) return;
 
             int ammoFound = FindAndConsumeAmmo(rangedWeapon.GetAmmoNeeded());
             if (ammoFound > 0)
             {
-                // Comanda o animator da mão para tocar a animação.
-                handAnimator.Play(HandReloadingHash);
-                // Dá a ordem para a arma iniciar a lógica de recarga.
+                IsReloading = true;
+
+                // MUDANÇA: Comanda o maestro para tocar a animação na MÃO.
+                animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.recarregando);
+
                 rangedWeapon.StartReload(ammoFound);
             }
         }
     }
 
-    // ADICIONE esta função para ser chamada pelo Animation Event
     public void OnReloadComplete()
     {
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
         {
             rangedWeapon.OnReloadAnimationComplete();
-            // Manda a mão voltar para a animação de parada.
-            handAnimator.Play(HandIdleHash);
+
+            // MUDANÇA: Comanda o maestro para voltar a mão ao estado PARADO.
+            animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.parado);
+
+            IsReloading = false;
         }
     }
-
     private int FindAndConsumeAmmo(int maxAmountNeeded)
     {
         var weaponData = GetActiveWeaponSlot()?.item;

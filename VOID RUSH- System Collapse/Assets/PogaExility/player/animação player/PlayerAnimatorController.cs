@@ -1,5 +1,11 @@
 using UnityEngine;
+using System.Collections.Generic; // Necessário para usar Dicionários
 
+public enum AnimatorTarget
+{
+    PlayerBody,
+    PlayerHand
+}
 
 public enum PlayerAnimState
 {
@@ -14,30 +20,25 @@ public enum PlayerAnimState
     parry,
     dashAereo,
     flip,
-    dano,          
-    morrendo,         
-    poucaVidaParado,  
-    paradoCotoco,     
+    dano,
+    morrendo,
+    poucaVidaParado,
+    paradoCotoco,
     andarCotoco,
     pulandoCotoco,
     recarregando
-
 }
 
-
-[RequireComponent(typeof(Animator))]
 public class PlayerAnimatorController : MonoBehaviour
 {
-    private Animator animator;
-    private PlayerAnimState currentState;
-    private PlayerAnimState[] currentLayerState;
-    public AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex = 0)
-    {
-        return animator != null ? animator.GetCurrentAnimatorStateInfo(layerIndex) : default;
-    }
+    [Header("Referências dos Animators")]
+    [SerializeField] private Animator bodyAnimator;
+    [SerializeField] private Animator handAnimator;
 
+    // MUDANÇA CRÍTICA: O novo "CÉREBRO". Um dicionário para guardar o estado atual de CADA animator.
+    private Dictionary<AnimatorTarget, PlayerAnimState> currentStateByTarget;
 
-    // Hashes dos nomes dos estados
+    #region State Hashes
     private static readonly int ParadoHash = Animator.StringToHash("parado");
     private static readonly int AndandoHash = Animator.StringToHash("andando");
     private static readonly int PulandoHash = Animator.StringToHash("pulando");
@@ -56,40 +57,61 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int AndarCotocoHash = Animator.StringToHash("andarCotoco");
     private static readonly int PulandoCotocoHash = Animator.StringToHash("pulandoCotoco");
     private static readonly int ReloadingHash = Animator.StringToHash("recarregando");
-
-    [Tooltip("Duração da transição suave entre animações.")]
-    public float crossFadeDuration = 0.1f;
+    #endregion
 
     void Awake()
     {
-        animator = GetComponent<Animator>();
-        currentLayerState = new PlayerAnimState[animator.layerCount];
+        if (bodyAnimator == null)
+        {
+            bodyAnimator = GetComponent<Animator>();
+        }
+        // Inicializa o "cérebro"
+        currentStateByTarget = new Dictionary<AnimatorTarget, PlayerAnimState>();
     }
-    public Animator GetAnimator()
+
+    public void PlayState(AnimatorTarget target, PlayerAnimState state, int layer = 0)
     {
-        return animator;
+        // MUDANÇA CRÍTICA: A LÓGICA DO "CÉREBRO"
+        // 1. Tenta pegar o estado atual que já está tocando para este alvo.
+        currentStateByTarget.TryGetValue(target, out PlayerAnimState currentState);
+
+        // 2. Se o estado que queremos tocar já for o atual, não fazemos NADA.
+        //    Isso impede que a animação seja reiniciada todo frame.
+        if (currentState == state)
+        {
+            return;
+        }
+
+        Animator targetAnimator = GetTargetAnimator(target);
+
+        if (targetAnimator == null)
+        {
+            Debug.LogWarning($"Animator para o alvo '{target}' não foi configurado.", this);
+            return;
+        }
+
+        // 3. Se for um novo estado, atualizamos o "cérebro" e tocamos a animação.
+        currentStateByTarget[target] = state;
+        int stateHash = GetStateHash(state);
+        targetAnimator.Play(stateHash, layer, 0f);
     }
- public void PlayState(PlayerAnimState state, int layer = 0)
-{
-    // A verificação de segurança continua a mesma.
-    if (layer >= animator.layerCount)
+
+    // Função auxiliar para pegar o animator correto.
+    private Animator GetTargetAnimator(AnimatorTarget target)
     {
-        Debug.LogWarning($"Tentando tocar animação na camada {layer}, que não existe.", this);
-        return;
+        switch (target)
+        {
+            case AnimatorTarget.PlayerBody: return bodyAnimator;
+            case AnimatorTarget.PlayerHand: return handAnimator;
+            default: return null;
+        }
     }
 
-    // A verificação de estado atual também.
-    if (state == currentLayerState[layer]) return;
-
-    currentLayerState[layer] = state;
-    int stateHash = GetStateHash(state);
-
-    // MUDANÇA PRINCIPAL: Usamos animator.Play() para controle direto e instantâneo.
-    // O -1 no 'normalizedTime' garante que a animação sempre recomece do início.
-    animator.Play(stateHash, layer, 0f);
-}
-
-    // A função OnLandingAnimationEnd foi REMOVIDA daqui.
+    public AnimatorStateInfo GetCurrentAnimatorStateInfo(AnimatorTarget target, int layerIndex = 0)
+    {
+        Animator targetAnimator = GetTargetAnimator(target);
+        return targetAnimator != null ? targetAnimator.GetCurrentAnimatorStateInfo(layerIndex) : default;
+    }
 
     private int GetStateHash(PlayerAnimState state)
     {
@@ -113,9 +135,7 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.andarCotoco: return AndarCotocoHash;
             case PlayerAnimState.pulandoCotoco: return PulandoCotocoHash;
             case PlayerAnimState.recarregando: return ReloadingHash;
-
             default: return ParadoHash;
         }
-
     }
 }

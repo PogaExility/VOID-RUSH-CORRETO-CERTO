@@ -59,7 +59,12 @@ public class RangedWeapon : WeaponBase
             );
         }
     }
-
+    public int GetAmmoNeeded()
+    {
+        // Retorna a quantidade de munição necessária para encher o pente.
+        // Garante que não retorne um número negativo se por algum bug a CurrentAmmo for maior que o magazineSize.
+        return Mathf.Max(0, weaponData.magazineSize - CurrentAmmo);
+    }
     private void FirePowder()
     {
         Debug.Log("Click. Sem munição.");

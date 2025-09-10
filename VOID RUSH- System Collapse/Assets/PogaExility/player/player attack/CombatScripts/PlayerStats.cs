@@ -80,7 +80,7 @@ public class PlayerStats : MonoBehaviour
 
         if (_currentHealth > 0)
         {
-            animatorController.PlayState(PlayerAnimState.dano);
+         //   animatorController.PlayState(PlayerAnimState.dano);
             movementScript.ApplyKnockback(attackDirection);
             StartCoroutine(InvincibilityCoroutine());
         }
@@ -92,7 +92,7 @@ public class PlayerStats : MonoBehaviour
 
     private void PlayDeathAnimation()
     {
-        animatorController.PlayState(PlayerAnimState.morrendo);
+       // animatorController.PlayState(PlayerAnimState.morrendo);
         // Opcional: Desativar controles do jogador aqui
     }
 
@@ -171,7 +171,7 @@ public class PlayerStats : MonoBehaviour
             GetComponent<AdvancedPlayerMovement2D>().IsGrounded() &&
             animatorController.GetCurrentAnimatorStateInfo(0).IsName("parado")) // Só substitui a animação de parado
         {
-            animatorController.PlayState(PlayerAnimState.poucaVidaParado);
+          //  animatorController.PlayState(PlayerAnimState.poucaVidaParado);
         }
     }
     public bool IsHealthLow()

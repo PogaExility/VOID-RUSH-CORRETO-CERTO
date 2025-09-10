@@ -1547,7 +1547,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23c4e3fb562ed8740a66cd1a8b86a1d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  crossFadeDuration: 0.1
+  bodyAnimator: {fileID: 6689212545231447408}
+  handAnimator: {fileID: 2256219269939066689}
 --- !u!114 &8298078936381974819
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1694,7 +1695,7 @@ MonoBehaviour:
   inventoryManager: {fileID: 6956942213338850998}
   weaponSocket: {fileID: 6398474281398656026}
   armPivot: {fileID: 8673842369191267755}
-  handAnimator: {fileID: 2256219269939066689}
+  animatorController: {fileID: 4961355594823665309}
   IsReloading: 1
 --- !u!1 &3653114368772367964
 GameObject:
