@@ -3,24 +3,34 @@ using BehaviorTree;
 using System.Collections;
 using System.Collections.Generic;
 
+[RequireComponent(typeof(AIPerceptionSystem), typeof(AIPlatformerMotor), typeof(AINavigationSystem))]
 public class AIController_Stalker : MonoBehaviour
 {
+    #region REFERENCES & STATE
     private Node _rootNode;
     private AIPerceptionSystem _perception;
     private AIPlatformerMotor _motor;
     private AINavigationSystem _navigation;
     private Transform _player;
+    private bool _canFlip = true;
+    private bool _isAnalyzingLedge = false;
+    private bool _isAnalyzingWall = false;
+    #endregion
 
+    #region CONFIGURATION
     [Header("▶ Configuração de Combate")]
     public float patrolTopSpeed = 4f;
-    public float huntTopSpeed = 7f; // Renomeado para clareza
+    public float huntTopSpeed = 7f;
     public float jumpForce = 15f;
     public float attackRange = 1.5f;
 
-    [Header("▶ Lógica de Patrulha")]
+    [Header("▶ Lógica de Análise")]
     public float flipCooldown = 0.5f;
-    private bool _canFlip = true;
+    public float ledgeAnalysisDuration = 2.0f;
+    public float wallAnalysisDuration = 1.5f;
+    #endregion
 
+    #region UNITY LIFECYCLE & BEHAVIOR TREE SETUP
     void Start()
     {
         _perception = GetComponent<AIPerceptionSystem>();
@@ -30,12 +40,14 @@ public class AIController_Stalker : MonoBehaviour
 
         _rootNode = new Selector(new List<Node>
         {
-            new ActionNode(ProcessClimbingLogic), // A escalada tem prioridade máxima
+            new ActionNode(ProcessClimbingLogic),
             new Sequence(new List<Node>
             {
                 new ActionNode(CheckIfAwareOfPlayer),
                 new ActionNode(ProcessCombatLogic)
             }),
+            new ActionNode(ProcessLedgeAnalysisLogic),
+            new ActionNode(ProcessWallAnalysisLogic),
             new ActionNode(ProcessPatrolLogic)
         });
     }
@@ -44,28 +56,22 @@ public class AIController_Stalker : MonoBehaviour
     {
         _rootNode?.Evaluate();
     }
+    #endregion
 
+    #region BEHAVIOR TREE NODES
     private NodeState CheckIfAwareOfPlayer() => _perception.IsAwareOfPlayer ? NodeState.SUCCESS : NodeState.FAILURE;
 
     private NodeState ProcessClimbingLogic()
     {
-        if (!_motor.IsClimbing) return NodeState.FAILURE; // Se não está a escalar, este nó falha.
-
-        Debug.Log("[AIController] A processar lógica de ESCALADA.");
+        if (!_motor.IsClimbing) return NodeState.FAILURE;
         var query = _navigation.QueryEnvironment();
-
         if (query.canMantleLedge)
         {
-            Debug.Log("[AIController] Decisão: Terminar escalada (chegou ao topo).");
             _motor.StopClimb();
-            // Adicionar uma pequena força para o "empurrar" para cima da plataforma
             _motor.GetComponent<Rigidbody2D>().AddForce(transform.right * 3f + Vector3.up * 2f, ForceMode2D.Impulse);
         }
-        else
-        {
-            _motor.Climb(1f); // Continua a subir
-        }
-        return NodeState.RUNNING; // Escalar é uma ação contínua
+        else { _motor.Climb(1f); }
+        return NodeState.RUNNING;
     }
 
     private NodeState ProcessCombatLogic()
@@ -79,35 +85,102 @@ public class AIController_Stalker : MonoBehaviour
         else
         {
             var query = _navigation.QueryEnvironment();
-            if (query.climbableWallAhead) _motor.StartClimb();
-            else if (query.wallAhead) _motor.Jump(jumpForce);
-
-            else if (query.isAtLedge) _motor.Stop();
-            else _motor.Move(huntTopSpeed);
+            if (query.isAtLedge || query.dangerLedgeAhead) { _motor.Stop(); }
+            else if (query.anticipationLedgeAhead) { _motor.Move(huntTopSpeed / 2); }
+            else
+            {
+                if (query.climbableWallAhead) _motor.StartClimb();
+                else if (query.wallAhead) _motor.Jump(jumpForce);
+                else _motor.Move(huntTopSpeed);
+            }
         }
         return NodeState.RUNNING;
+    }
+
+    private NodeState ProcessLedgeAnalysisLogic()
+    {
+        if (_isAnalyzingLedge) return NodeState.RUNNING;
+
+        var query = _navigation.QueryEnvironment();
+        if (query.isAtLedge)
+        {
+            StartCoroutine(AnalyzeLedgeRoutine());
+            return NodeState.RUNNING;
+        }
+        return NodeState.FAILURE;
+    }
+
+    private NodeState ProcessWallAnalysisLogic()
+    {
+        if (_isAnalyzingWall) return NodeState.RUNNING;
+
+        var query = _navigation.QueryEnvironment();
+        if (query.wallAhead && !query.climbableWallAhead && query.isGrounded)
+        {
+            StartCoroutine(AnalyzeWallRoutine());
+            return NodeState.RUNNING;
+        }
+        return NodeState.FAILURE;
     }
 
     private NodeState ProcessPatrolLogic()
     {
         var query = _navigation.QueryEnvironment();
 
-        if (query.climbableWallAhead)
+        if (query.anticipationLedgeAhead || (query.wallAhead && !query.climbableWallAhead))
         {
-            Debug.Log("[AIController] Decisão de Patrulha: Iniciar escalada.");
-            _motor.StartClimb();
+            _motor.Brake();
         }
-        else if (_canFlip && (query.wallAhead || query.isAtLedge))
+        else
+        {
+            _motor.Move(patrolTopSpeed);
+        }
+
+        return NodeState.RUNNING;
+    }
+    #endregion
+
+    #region HELPER ROUTINES & LOGIC
+    private IEnumerator AnalyzeWallRoutine()
+    {
+        _isAnalyzingWall = true;
+        _motor.Stop();
+        _perception.StartObstacleAnalysis(_navigation.wallProbeOrigin.position, isLedge: false);
+
+        yield return new WaitForSeconds(wallAnalysisDuration);
+
+        _motor.Flip();
+        StartCoroutine(FlipCooldownRoutine());
+
+        _perception.StopObstacleAnalysis();
+        _isAnalyzingWall = false;
+    }
+
+    private IEnumerator AnalyzeLedgeRoutine()
+    {
+        _isAnalyzingLedge = true;
+        _motor.Stop();
+        _perception.StartObstacleAnalysis(_navigation.ledgeProbeOrigin.position, isLedge: true);
+
+        yield return new WaitForSeconds(ledgeAnalysisDuration);
+
+        var query = _navigation.QueryEnvironment();
+        if (!query.canSafelyDrop)
         {
             _motor.Flip();
             StartCoroutine(FlipCooldownRoutine());
         }
+        else
+        {
+            // Lógica futura para descer
+            _motor.Flip();
+            StartCoroutine(FlipCooldownRoutine());
+        }
 
-        _motor.Move(patrolTopSpeed);
-        return NodeState.RUNNING;
+        _perception.StopObstacleAnalysis();
+        _isAnalyzingLedge = false;
     }
 
-    #region Lógica de "Flip" e Cooldown
     private void FaceTarget(Vector3 targetPosition)
     {
         float dotProduct = Vector2.Dot((targetPosition - transform.position).normalized, transform.right);
