@@ -1670,24 +1670,31 @@ MonoBehaviour:
   weaponSlots:
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   ammoSlots:
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   playerController: {fileID: 8298078936381974819}
   inventoryManager: {fileID: 6956942213338850998}
   weaponSocket: {fileID: 6398474281398656026}
   armPivot: {fileID: 8673842369191267755}
-  allowMovementFlip: 1
+  handAnimator: {fileID: 2256219269939066689}
 --- !u!1 &3653114368772367964
 GameObject:
   m_ObjectHideFlags: 0
@@ -2066,8 +2073,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponIcon: {fileID: 6629765651941904508}
   ammoText: {fileID: 7691960559711538070}
-  cooldownSlider: {fileID: 8212904611068650308}
-  weaponHandler: {fileID: 2215104731333047473}
 --- !u!1 &5138038840997345197
 GameObject:
   m_ObjectHideFlags: 0
@@ -2117,28 +2122,40 @@ MonoBehaviour:
   backpackSlots:
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
   - item: {fileID: 0}
     count: 0
+    currentAmmo: -1
 --- !u!1 &5321183199542814243
 GameObject:
   m_ObjectHideFlags: 0
@@ -9213,17 +9230,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &8212904611068650308 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7251979090484409533, guid: abd2ed78f4b165c46bc0fde79eeb9d9f, type: 3}
-  m_PrefabInstance: {fileID: 1539718381140711417}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &3013419285603806194
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9940,6 +9946,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b52a1e2c85e96b648a9e43c20ac53ffa, type: 3}
+--- !u!95 &2256219269939066689 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 7650426692088312349, guid: b52a1e2c85e96b648a9e43c20ac53ffa, type: 3}
+  m_PrefabInstance: {fileID: 8459015683056649564}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6398474281398656026 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3291998868621859142, guid: b52a1e2c85e96b648a9e43c20ac53ffa, type: 3}

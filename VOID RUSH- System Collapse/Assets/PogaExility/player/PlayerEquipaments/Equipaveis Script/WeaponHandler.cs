@@ -19,6 +19,9 @@ public class WeaponHandler : MonoBehaviour
     [SerializeField] private InventoryManager inventoryManager;
     [SerializeField] private Transform weaponSocket;
     [SerializeField] private GameObject armPivot; // A referência para o objeto do braço
+    [SerializeField] private Animator handAnimator;
+    private static readonly int HandIdleHash = Animator.StringToHash("Mao_Idle");
+    private static readonly int HandReloadingHash = Animator.StringToHash("Recarregando");
 
     private WeaponBase activeWeaponInstance;
     public int currentWeaponIndex { get; private set; } = 0;
@@ -27,7 +30,7 @@ public class WeaponHandler : MonoBehaviour
     public event Action<int> OnActiveWeaponChanged;
     public event Action OnAmmoSlotsChanged;
     public event Action OnWeaponSlotsChanged;
-
+    public bool IsReloading { get; private set; } = false;
     void Awake()
     {
         Instance = this;
@@ -50,7 +53,9 @@ public class WeaponHandler : MonoBehaviour
             AimLogic();
         }
     }
+  
 
+ 
     private void AimLogic()
     {
         if (activeWeaponInstance == null) return;
@@ -93,21 +98,34 @@ public class WeaponHandler : MonoBehaviour
             activeWeaponInstance.Attack();
         }
     }
-
     public void HandleReloadInput()
     {
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
         {
-            int ammoNeeded = rangedWeapon.GetAmmoNeeded();
-            if (ammoNeeded <= 0) return;
+            // Pergunta para a arma se ela PODE recarregar.
+            if (!rangedWeapon.CanReload()) return;
 
-            int ammoFound = FindAndConsumeAmmo(ammoNeeded);
+            int ammoFound = FindAndConsumeAmmo(rangedWeapon.GetAmmoNeeded());
             if (ammoFound > 0)
             {
+                // Dispara o gatilho da animação no Animator da mão.
+                handAnimator.Play(HandReloadingHash);
+
+                // Dá a ordem para a arma iniciar a lógica de recarga.
                 rangedWeapon.StartReload(ammoFound);
             }
         }
     }
+    public void OnReloadComplete()
+    {
+        if (activeWeaponInstance is RangedWeapon rangedWeapon)
+        {
+            rangedWeapon.OnReloadAnimationComplete();
+            // Manda a mão voltar para a animação de parada.
+            handAnimator.Play(HandIdleHash);
+        }
+    }
+    
 
     private int FindAndConsumeAmmo(int maxAmountNeeded)
     {
@@ -135,7 +153,7 @@ public class WeaponHandler : MonoBehaviour
     // A função EquipToHand agora usa o ÍNDICE do slot como parâmetro.
     public void EquipToHand(int slotIndex)
     {
-        // 1. SALVA A MUNIÇÃO DA ARMA ANTIGA
+        IsReloading = false;
         if (activeWeaponInstance is RangedWeapon oldRangedWeapon)
         {
             weaponSlots[currentWeaponIndex].currentAmmo = oldRangedWeapon.CurrentAmmo;

@@ -19,8 +19,9 @@ public enum PlayerAnimState
     poucaVidaParado,  
     paradoCotoco,     
     andarCotoco,
-    pulandoCotoco
-       
+    pulandoCotoco,
+    recarregando
+
 }
 
 
@@ -29,6 +30,7 @@ public class PlayerAnimatorController : MonoBehaviour
 {
     private Animator animator;
     private PlayerAnimState currentState;
+    private PlayerAnimState[] currentLayerState;
     public AnimatorStateInfo GetCurrentAnimatorStateInfo(int layerIndex = 0)
     {
         return animator != null ? animator.GetCurrentAnimatorStateInfo(layerIndex) : default;
@@ -53,6 +55,7 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int ParadoCotocoHash = Animator.StringToHash("paradoCotoco");
     private static readonly int AndarCotocoHash = Animator.StringToHash("andarCotoco");
     private static readonly int PulandoCotocoHash = Animator.StringToHash("pulandoCotoco");
+    private static readonly int ReloadingHash = Animator.StringToHash("recarregando");
 
     [Tooltip("Duração da transição suave entre animações.")]
     public float crossFadeDuration = 0.1f;
@@ -60,19 +63,31 @@ public class PlayerAnimatorController : MonoBehaviour
     void Awake()
     {
         animator = GetComponent<Animator>();
+        currentLayerState = new PlayerAnimState[animator.layerCount];
     }
     public Animator GetAnimator()
     {
         return animator;
     }
-    public void PlayState(PlayerAnimState state)
+ public void PlayState(PlayerAnimState state, int layer = 0)
+{
+    // A verificação de segurança continua a mesma.
+    if (layer >= animator.layerCount)
     {
-        if (state == currentState) return;
-
-        currentState = state;
-        int stateHash = GetStateHash(state);
-        animator.CrossFade(stateHash, crossFadeDuration, 0, 0);
+        Debug.LogWarning($"Tentando tocar animação na camada {layer}, que não existe.", this);
+        return;
     }
+
+    // A verificação de estado atual também.
+    if (state == currentLayerState[layer]) return;
+
+    currentLayerState[layer] = state;
+    int stateHash = GetStateHash(state);
+
+    // MUDANÇA PRINCIPAL: Usamos animator.Play() para controle direto e instantâneo.
+    // O -1 no 'normalizedTime' garante que a animação sempre recomece do início.
+    animator.Play(stateHash, layer, 0f);
+}
 
     // A função OnLandingAnimationEnd foi REMOVIDA daqui.
 
@@ -97,6 +112,8 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.paradoCotoco: return ParadoCotocoHash;
             case PlayerAnimState.andarCotoco: return AndarCotocoHash;
             case PlayerAnimState.pulandoCotoco: return PulandoCotocoHash;
+            case PlayerAnimState.recarregando: return ReloadingHash;
+
             default: return ParadoHash;
         }
 

@@ -10,7 +10,7 @@ public class RangedWeapon : WeaponBase
     public int CurrentAmmo { get; private set; }
     private float lastAttackTime = -999f;
     private bool isReloading = false;
-
+    private int ammoToLoad;
     public override void Initialize(ItemSO data, int savedAmmo = -1)
     {
         base.Initialize(data, savedAmmo);
@@ -67,21 +67,32 @@ public class RangedWeapon : WeaponBase
     {
         return weaponData.magazineSize - CurrentAmmo;
     }
-
-    public void StartReload(int ammoToLoad)
+    public bool CanReload()
     {
-        if (isReloading || !gameObject.activeInHierarchy) return;
-        StartCoroutine(ReloadTimerCoroutine(ammoToLoad));
+        // Não pode recarregar se já estiver recarregando ou se o pente estiver cheio.
+        return !isReloading && CurrentAmmo < weaponData.magazineSize;
     }
 
-    private IEnumerator ReloadTimerCoroutine(int ammoToLoad)
+    public void StartReload(int foundAmmo)
     {
+        if (isReloading) return;
+
         isReloading = true;
-        Debug.Log("Recarregando...");
-        yield return new WaitForSeconds(weaponData.reloadTime);
-        CurrentAmmo += ammoToLoad;
+        this.ammoToLoad = foundAmmo;
+        // Apenas se prepara para a recarga. A animação vai chamar a próxima função.
+    }
+
+    public void CancelReload()
+    {
         isReloading = false;
-        Debug.Log($"Recarga Completa! Pente com {CurrentAmmo} balas.");
+    }
+
+    // ESTA É A FUNÇÃO QUE O ANIMATION EVENT VAI CHAMAR
+    public void OnReloadAnimationComplete()
+    {
+        CurrentAmmo += this.ammoToLoad;
+        isReloading = false;
         RaiseOnWeaponStateChanged();
+        Debug.Log("Recarga Completa via Animation Event!");
     }
 }

@@ -178,20 +178,19 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+
+
     private void UpdateAnimations()
     {
-        // PRIORIDADE MÁXIMA: Morte - para tudo.
+        // PRIORIDADE MÁXIMA: Morte
         if (playerStats.IsDead())
         {
             animatorController.PlayState(PlayerAnimState.morrendo);
             return;
         }
 
-        // PRIORIDADE 2: Eventos únicos (pouso, dano) - não podem ser interrompidos.
-        if (isLanding)
-        {
-            return;
-        }
+        // PRIORIDADE 2: Eventos (Pouso, Dano)
+        if (isLanding) return;
         if (!wasGroundedLastFrame && movementScript.IsGrounded())
         {
             isLanding = true;
@@ -199,12 +198,11 @@ public class PlayerController : MonoBehaviour
             animatorController.PlayState(PlayerAnimState.pousando);
             return;
         }
-        if (animatorController.GetCurrentAnimatorStateInfo(0).IsName("dano"))
-        {
-            return;
-        }
+        if (animatorController.GetCurrentAnimatorStateInfo(0).IsName("dano")) return;
 
-        // PRIORIDADE 3: Modo de Mira - tem sua própria árvore de animações.
+        // A LÓGICA DE RECARGA FOI COMPLETAMENTE REMOVIDA DAQUI.
+
+        // PRIORIDADE 3: Modo de Mira
         if (isInAimMode)
         {
             if (movementScript.IsGrounded())
@@ -214,17 +212,17 @@ public class PlayerController : MonoBehaviour
                 else
                     animatorController.PlayState(PlayerAnimState.paradoCotoco);
             }
-            else // No ar e mirando
+            else // No ar
             {
                 if (movementScript.GetVerticalVelocity() > 0.1f)
                     animatorController.PlayState(PlayerAnimState.pulandoCotoco);
                 else
-                    animatorController.PlayState(PlayerAnimState.falling); // Reutiliza a animação de queda normal
+                    animatorController.PlayState(PlayerAnimState.falling);
             }
-            return; // Termina aqui se estiver mirando.
+            return;
         }
 
-        // PRIORIDADE 4: Ações no Ar (sem mira)
+        // PRIORIDADE 4: Movimento Normal
         if (!movementScript.IsGrounded())
         {
             if (movementScript.IsWallSliding())
@@ -235,11 +233,10 @@ public class PlayerController : MonoBehaviour
                 animatorController.PlayState(PlayerAnimState.pulando);
             else
                 animatorController.PlayState(PlayerAnimState.falling);
-
-            return; // Termina aqui se estiver no ar.
+            return;
         }
 
-        // PRIORIDADE 5: Ações no Chão (sem mira)
+        // PRIORIDADE 5: Movimento no Chão
         if (movementScript.IsDashing())
             animatorController.PlayState(PlayerAnimState.dash);
         else if (movementScript.IsMoving())
