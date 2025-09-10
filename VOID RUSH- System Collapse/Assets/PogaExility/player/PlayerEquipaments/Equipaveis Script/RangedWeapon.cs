@@ -12,6 +12,7 @@ public class RangedWeapon : WeaponBase
     public bool isReloading { get; private set; } = false;
     private int ammoToLoad;
     private Coroutine reloadCoroutine;
+    private Coroutine recoilCoroutine;
 
     public override void Initialize(ItemSO data, int savedAmmo = -1)
     {
@@ -23,10 +24,54 @@ public class RangedWeapon : WeaponBase
     {
         if (Time.time < lastAttackTime + weaponData.attackRate || isReloading) return;
 
-        if (CurrentAmmo > 0) FireBullet();
-        else FirePowder();
+        // Se já estivermos no meio de um recoil, paramos ele para começar um novo.
+        if (recoilCoroutine != null)
+        {
+            StopCoroutine(recoilCoroutine);
+        }
+
+        if (CurrentAmmo > 0)
+        {
+            FireBullet();
+            // Inicia o recoil DEPOIS de atirar.
+            recoilCoroutine = StartCoroutine(RecoilCoroutine());
+        }
+        else
+        {
+            FirePowder();
+        }
 
         lastAttackTime = Time.time;
+    }
+
+    // ADICIONE a corrotina do Recoil
+    private IEnumerator RecoilCoroutine()
+    {
+        Vector3 originalPosition = Vector3.zero; // A posição inicial da arma é sempre (0,0,0) em relação ao socket
+        Vector3 recoilPosition = new Vector3(-weaponData.recoilDistance, 0, 0);
+
+        float journey = 0f;
+
+        // Movimento para trás (o "soco")
+        while (journey < weaponData.recoilDistance)
+        {
+            journey += Time.deltaTime * weaponData.recoilSpeed;
+            transform.localPosition = Vector3.Lerp(originalPosition, recoilPosition, journey / weaponData.recoilDistance);
+            yield return null;
+        }
+
+        journey = 0f;
+
+        // Movimento de volta para o lugar
+        while (journey < weaponData.recoilDistance)
+        {
+            journey += Time.deltaTime * weaponData.returnSpeed;
+            transform.localPosition = Vector3.Lerp(recoilPosition, originalPosition, journey / weaponData.recoilDistance);
+            yield return null;
+        }
+
+        transform.localPosition = originalPosition; // Garante que a arma volte exatamente para o lugar
+        recoilCoroutine = null;
     }
 
     private void FireBullet()
@@ -67,7 +112,22 @@ public class RangedWeapon : WeaponBase
     }
     private void FirePowder()
     {
-        Debug.Log("Click. Sem munição.");
+        if (weaponData.gunpowderPrefab == null)
+        {
+            Debug.Log("Click. Sem munição e sem prefab de pólvora.");
+            return;
+        }
+
+        // Instancia o prefab da explosão no cano da arma.
+        GameObject explosionGO = Instantiate(weaponData.gunpowderPrefab, muzzlePoint.position, muzzlePoint.rotation);
+
+        // Pega o script da explosão para passar os dados.
+        GunpowderExplosion explosionScript = explosionGO.GetComponent<GunpowderExplosion>();
+        if (explosionScript != null)
+        {
+            // Usa os dados do ItemSO para inicializar a explosão.
+            explosionScript.Initialize(weaponData.powderDamage, weaponData.powderRange);
+        }
     }
 
     public bool IsReloading()

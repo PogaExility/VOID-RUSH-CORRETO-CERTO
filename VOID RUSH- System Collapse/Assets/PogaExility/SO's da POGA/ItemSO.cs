@@ -33,9 +33,19 @@ public class ItemSO : ScriptableObject
     [Header("Ranger (Arma)")]
     public int magazineSize;
     public float reloadTime;
+
+    // ADICIONE ESTAS 3 LINHAS PARA O RECOIL
+    [Header("Recoil")]
+    public float recoilDistance = 0.5f; // O quão para trás a arma vai
+    public float recoilSpeed = 20f;     // A velocidade do "soco" para trás
+    public float returnSpeed = 5f;      // A velocidade da volta suave para o lugar
+
+    [Header("Pólvora")] // Reorganizado para clareza
+    public GameObject gunpowderPrefab; // ADICIONE ESTA LINHA PARA O PREFAB DA EXPLOSÃO
     public float powderDamage = 2f;
     public float powderRange = 2f;
     public ItemSO[] acceptedAmmo;
+
     [Header("Ammo Stats (se itemType for Ammo)")]
     public GameObject bulletPrefab;
     public float bulletDamage = 10f;

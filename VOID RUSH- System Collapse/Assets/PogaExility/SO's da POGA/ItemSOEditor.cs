@@ -98,6 +98,14 @@ public class ItemSOEditor : Editor
             EditorGUILayout.LabelField("Ranger", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("magazineSize"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("reloadTime"));
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Recoil", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("recoilDistance"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("recoilSpeed"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("returnSpeed"));
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Pólvora (Tiro sem Munição)", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("gunpowderPrefab"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderDamage"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderRange"));
             EditorGUILayout.Space(4);
