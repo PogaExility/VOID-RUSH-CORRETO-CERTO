@@ -94,20 +94,33 @@ public class WeaponHandler : MonoBehaviour
     {
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
         {
-            if (rangedWeapon.IsReloading() || rangedWeapon.GetAmmoNeeded() <= 0) return;
+            // Usa a propriedade 'isReloading' que agora é pública na RangedWeapon
+            if (rangedWeapon.isReloading || rangedWeapon.GetAmmoNeeded() <= 0) return;
 
             int ammoFound = FindAndConsumeAmmo(rangedWeapon.GetAmmoNeeded());
             if (ammoFound > 0)
             {
+                // Define o estado global para o PlayerController saber.
                 IsReloading = true;
 
-                // MUDANÇA: Comanda o maestro para tocar a animação na MÃO.
+                // 1. ORDEM PARA A ANIMAÇÃO: "Maestro, toque a animação de recarga na mão." (Dispara e esquece)
                 animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.recarregando);
 
-                rangedWeapon.StartReload(ammoFound);
+                // 2. ORDEM PARA A LÓGICA: "Arma, inicie seu timer de recarga e me avise quando terminar."
+                rangedWeapon.StartReload(ammoFound, OnReloadLogicComplete);
             }
         }
     }
+
+    // ADICIONE esta nova função. É ela que a RangedWeapon vai chamar quando o TIMER dela acabar.
+    public void OnReloadLogicComplete()
+    {
+        // A lógica terminou, então podemos liberar o estado.
+        IsReloading = false;
+        Debug.Log("Lógica de recarga finalizada. Jogador pode mirar/atirar novamente.");
+        // Não precisamos fazer nada com a animação da mão, ela vai terminar sozinha.
+    }
+
 
     public void OnReloadComplete()
     {

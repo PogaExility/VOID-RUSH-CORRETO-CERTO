@@ -9,7 +9,7 @@ public class RangedWeapon : WeaponBase
 
     public int CurrentAmmo { get; private set; }
     private float lastAttackTime = -999f;
-    private bool isReloading = false;
+    public bool isReloading = false;
     private int ammoToLoad;
     private Coroutine reloadCoroutine;
 
@@ -75,10 +75,11 @@ public class RangedWeapon : WeaponBase
         return isReloading;
     }
 
-    public void StartReload(int foundAmmo)
+    public void StartReload(int ammoToLoad, System.Action onReloadLogicFinished)
     {
-        isReloading = true;
-        this.ammoToLoad = foundAmmo;
+        // A checagem "!gameObject.activeInHierarchy" previne erros se a arma for trocada no meio da recarga.
+        if (isReloading || !gameObject.activeInHierarchy) return;
+        StartCoroutine(ReloadTimerCoroutine(ammoToLoad, onReloadLogicFinished));
     }
 
     public void CancelReload()
@@ -91,5 +92,20 @@ public class RangedWeapon : WeaponBase
         CurrentAmmo += this.ammoToLoad;
         isReloading = false;
         RaiseOnWeaponStateChanged();
+    }
+    private IEnumerator ReloadTimerCoroutine(int ammoToLoad, System.Action onReloadLogicFinished)
+    {
+        isReloading = true;
+
+        // 1. A LÓGICA ESPERA o tempo definido no seu ItemSO da arma.
+        yield return new WaitForSeconds(weaponData.reloadTime);
+
+        // 2. A LÓGICA ADICIONA a munição.
+        CurrentAmmo += ammoToLoad;
+        isReloading = false;
+        RaiseOnWeaponStateChanged(); // Avisa a UI que a munição mudou.
+
+        // 3. A LÓGICA AVISA o WeaponHandler que o trabalho dela terminou.
+        onReloadLogicFinished?.Invoke();
     }
 }
