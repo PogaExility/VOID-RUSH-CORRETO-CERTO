@@ -19,29 +19,61 @@ public class RangedWeapon : WeaponBase
         base.Initialize(data, savedAmmo);
         CurrentAmmo = (savedAmmo == -1) ? weaponData.magazineSize : savedAmmo;
     }
-
     public override void Attack()
     {
         if (Time.time < lastAttackTime + weaponData.attackRate || isReloading) return;
 
-        // Se já estivermos no meio de um recoil, paramos ele para começar um novo.
-        if (recoilCoroutine != null)
+        // --- AÇÕES QUE ACONTECEM EM TODOS OS TIROS ---
+
+        // 1. Recoil: Continua igual.
+        if (recoilCoroutine != null) StopCoroutine(recoilCoroutine);
+        recoilCoroutine = StartCoroutine(RecoilCoroutine());
+
+        // 2. Efeito Visual da Pólvora (LÓGICA CORRIGIDA)
+        if (weaponData.gunpowderPrefab != null)
         {
-            StopCoroutine(recoilCoroutine);
+            // A. Calculamos a posição para frente.
+            Vector3 spawnPosition = muzzlePoint.position + (muzzlePoint.right * weaponData.gunpowderSpawnOffset);
+
+            // B. Instanciamos o objeto na posição e rotação certas.
+            GameObject gunpowderGO = Instantiate(weaponData.gunpowderPrefab, spawnPosition, muzzlePoint.rotation);
+
+            // C. A MÁGICA: Imediatamente removemos qualquer parentesco.
+            // Isso garante que ele não herde nenhuma escala e fique fixo no espaço.
+            gunpowderGO.transform.SetParent(null);
         }
+
+        // --- AÇÕES QUE DEPENDEM DA MUNIÇÃO (continua igual) ---
 
         if (CurrentAmmo > 0)
         {
             FireBullet();
-            // Inicia o recoil DEPOIS de atirar.
-            recoilCoroutine = StartCoroutine(RecoilCoroutine());
         }
         else
         {
-            FirePowder();
+            DesperationAttack();
         }
 
         lastAttackTime = Time.time;
+    }
+
+    // A função DesperationAttack (ou FirePowder) foi simplificada.
+    // Ela não cria mais um prefab, apenas causa o dano.
+    private void DesperationAttack()
+    {
+        Debug.Log("Ataque de curto alcance sem munição!");
+
+        // Cria uma área de dano invisível na frente da arma.
+        Collider2D[] hits = Physics2D.OverlapCircleAll(muzzlePoint.position, weaponData.powderRange);
+
+        foreach (var hit in hits)
+        {
+            if (hit.TryGetComponent<AIController_Basic>(out AIController_Basic enemy))
+            {
+                Vector2 knockbackDirection = (hit.transform.position - muzzlePoint.position).normalized;
+                enemy.TakeDamage(weaponData.powderDamage, knockbackDirection);
+            }
+        }
     }
 
     // ADICIONE a corrotina do Recoil

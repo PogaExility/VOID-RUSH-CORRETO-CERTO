@@ -35,6 +35,10 @@ public class PlayerAnimatorController : MonoBehaviour
     [SerializeField] private Animator bodyAnimator;
     [SerializeField] private Animator handAnimator;
 
+    [Header("Configurações de Animação")]
+    [Tooltip("A duração original, em segundos, do seu clipe de animação 'recarregando'.")]
+    [SerializeField] private float reloadAnimationBaseDuration = 1f;
+
     // MUDANÇA CRÍTICA: O novo "CÉREBRO". Um dicionário para guardar o estado atual de CADA animator.
     private Dictionary<AnimatorTarget, PlayerAnimState> currentStateByTarget;
 
@@ -59,6 +63,7 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int ReloadingHash = Animator.StringToHash("recarregando");
     #endregion
 
+
     void Awake()
     {
         if (bodyAnimator == null)
@@ -68,7 +73,14 @@ public class PlayerAnimatorController : MonoBehaviour
         // Inicializa o "cérebro"
         currentStateByTarget = new Dictionary<AnimatorTarget, PlayerAnimState>();
     }
-
+    public void SetAnimatorFloat(AnimatorTarget target, string parameterName, float value)
+    {
+        Animator targetAnimator = GetTargetAnimator(target);
+        if (targetAnimator != null)
+        {
+            targetAnimator.SetFloat(parameterName, value);
+        }
+    }
     // Em PlayerAnimatorController.cs
 
     public void PlayState(AnimatorTarget target, PlayerAnimState state, int layer = 0)

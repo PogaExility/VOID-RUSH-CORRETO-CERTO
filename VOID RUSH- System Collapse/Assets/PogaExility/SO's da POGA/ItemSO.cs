@@ -45,6 +45,8 @@ public class ItemSO : ScriptableObject
     public float powderDamage = 2f;
     public float powderRange = 2f;
     public ItemSO[] acceptedAmmo;
+    [Tooltip("A distância para frente do cano onde o efeito de pólvora vai aparecer.")]
+    public float gunpowderSpawnOffset = 0.5f;
 
     [Header("Ammo Stats (se itemType for Ammo)")]
     public GameObject bulletPrefab;

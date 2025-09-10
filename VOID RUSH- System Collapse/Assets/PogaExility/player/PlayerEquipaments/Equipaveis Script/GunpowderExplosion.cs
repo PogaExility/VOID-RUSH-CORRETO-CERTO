@@ -1,39 +1,33 @@
-// GunpowderExplosion.cs
+// GunpowderExplosion.cs - VERSÃO COMPLETA E CORRIGIDA
 using UnityEngine;
 
-// Agora, este script REQUER que o ProjectileAnimator esteja no mesmo objeto.
-[RequireComponent(typeof(ProjectileAnimator))]
+[RequireComponent(typeof(Animator), typeof(ProjectileAnimator))]
 public class GunpowderExplosion : MonoBehaviour
 {
+    // Variáveis para guardar os dados recebidos da arma
     private float damage;
     private float radius;
     [SerializeField] private LayerMask enemyLayer;
 
-    // A referência para o nosso novo maestro.
-    private ProjectileAnimator projectileAnimator;
-
-    void Awake()
+    void Start()
     {
-        // Pega a referência do maestro no mesmo objeto.
-        projectileAnimator = GetComponent<ProjectileAnimator>();
+        // A primeira coisa que ele faz é pedir ao maestro para tocar a animação "polvora".
+        GetComponent<ProjectileAnimator>().PlayAnimation("polvora");
     }
 
+    /// <summary>
+    /// ESTA É A FUNÇÃO QUE ESTAVA FALTANDO. 
+    /// A RangedWeapon chama esta função para passar os dados de dano e raio.
+    /// </summary>
     public void Initialize(float damageAmount, float explosionRadius)
     {
         this.damage = damageAmount;
         this.radius = explosionRadius;
     }
 
-    void Start()
-    {
-        // Assim que a explosão é criada, ela manda o maestro tocar a animação "polvora".
-        projectileAnimator.PlayAnimation("polvora");
-    }
-
-    // ===================================================================
-    // As funções para os Animation Events continuam sendo a melhor forma de sincronizar o dano.
-    // ===================================================================
-
+    /// <summary>
+    /// Esta função causa o dano. Ela será chamada pelo Animation Event.
+    /// </summary>
     public void TriggerDamage()
     {
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, radius, enemyLayer);
@@ -47,14 +41,12 @@ public class GunpowderExplosion : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Esta função destrói o objeto. Ela será chamada pelo Animation Event no final.
+    /// </summary>
     public void DestroySelf()
     {
         Destroy(gameObject);
     }
 
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, radius);
-    }
 }

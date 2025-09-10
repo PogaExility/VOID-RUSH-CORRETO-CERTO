@@ -106,6 +106,7 @@ public class ItemSOEditor : Editor
             EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("Pólvora (Tiro sem Munição)", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("gunpowderPrefab"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("gunpowderSpawnOffset"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderDamage"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderRange"));
             EditorGUILayout.Space(4);

@@ -26,9 +26,9 @@ MonoBehaviour:
   useAimMode: 1
   magazineSize: 10
   reloadTime: 2
-  recoilDistance: 0.005
-  recoilSpeed: 20
-  returnSpeed: 1
+  recoilDistance: 0.003
+  recoilSpeed: 0.05
+  returnSpeed: 0.05
   gunpowderPrefab: {fileID: 4850390941570321052, guid: 4a85c060fc75f184eb278eea55da5829, type: 3}
   powderDamage: 2
   powderRange: 1.8
