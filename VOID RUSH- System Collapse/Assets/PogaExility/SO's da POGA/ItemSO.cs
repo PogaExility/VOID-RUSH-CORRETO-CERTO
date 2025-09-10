@@ -1,3 +1,4 @@
+// ItemSO.cs - VERSÃO COMPLETA E CORRIGIDA
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -7,53 +8,58 @@ public enum WeaponType { Meelee, Ranger, Buster }
 [CreateAssetMenu(fileName = "NewItem", menuName = "NEXUS/Itens/Novo Item", order = 0)]
 public class ItemSO : ScriptableObject
 {
-
     [Header("Informações Gerais")]
     public string itemName;
     public Sprite itemIcon;
     public ItemType itemType;
-    [Tooltip("O prefab do objeto que representa este item no mundo do jogo.")]
     public GameObject itemPrefab;
 
     [Header("Prefabs & Vínculos")]
-    public GameObject worldPickupPrefab;   // prefab do item no mundo (para soltar/loot)
-    public GameObject equipPrefab;         // prefab da arma na mão (mão do player / socket)
-
+    public GameObject worldPickupPrefab;
+    public GameObject equipPrefab;
 
     [Header("Configuração do Inventário")]
     public bool stackable = true;
     public int maxStack = 999;
-    [Header("Arma (vínculos de munição)")]
-    public ItemSO[] acceptedAmmo;
-    [Header("Dano por modo")]
-    public float bulletDamage = 10f;      
-    public float powderDamage = 2f;
-    public float powderRange = 2f;
+
     [Header("Configurações de Quest")]
     public bool isLostOnDeathDuringQuest = false;
 
     [Header("Configurações de Combate (se for Arma)")]
     public WeaponType weaponType;
-    public float damage;
     public float attackRate = 0.5f;
     public bool useAimMode = false;
-    public GameObject slashEffectPrefab;
-    public GameObject bulletPrefab;
-    public GameObject busterShotPrefab;
-    public GameObject chargedShotPrefab;
-
-    [Header("Meelee")]
-    public AnimationClip[] comboAnimations;
 
     [Header("Ranger")]
     public int magazineSize;
     public float reloadTime;
+    public GameObject bulletPrefab;
+    [Space(5)] // Adiciona um pequeno espaço no Inspector
+    public float bulletDamage = 10f;
+    public float bulletSpeed = 20f;
+    public float bulletLifetime = 3f;
+    [Space(5)]
+    [Tooltip("Quantos inimigos a bala pode perfurar. 0 = não perfura.")]
+    public int pierceCount = 0; // <-- ADICIONADO
+    [Tooltip("Percentual de dano perdido a cada perfuração. 0.3 = 30%. Use valores negativos para AUMENTAR o dano.")]
+    public float damageFalloff = 0.3f; // <-- ADICIONADO
+    [Space(5)]
+    public float powderDamage = 2f;
+    public float powderRange = 2f;
+    public ItemSO[] acceptedAmmo;
+
+    [Header("Meelee")]
+    public float damage;
+    public AnimationClip[] comboAnimations;
+    public GameObject slashEffectPrefab;
 
     [Header("Buster")]
     public float chargeTime;
     public float energyCostPerChargeSecond;
     public float baseEnergyCost;
     public float chargedShotDamage;
+    public GameObject busterShotPrefab;
+    public GameObject chargedShotPrefab;
 
     [Header("Configurações de Consumível")]
     public float healthToRestore;

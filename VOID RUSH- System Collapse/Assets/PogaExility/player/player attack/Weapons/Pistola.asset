@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Pistola
   m_EditorClassIdentifier: 
   itemName: Pistola
-  itemIcon: {fileID: 21300000, guid: 5919f5b9459751d4a87d64c54db99ec9, type: 3}
+  itemIcon: {fileID: 21300000, guid: 4213a23d839c1f445a90c27fec3e70c6, type: 3}
   itemType: 2
   itemPrefab: {fileID: 6872308494124798136, guid: 8f5d814a1764dac4cadb4e30567e48f1, type: 3}
   worldPickupPrefab: {fileID: 6872308494124798136, guid: 71e2bf77410f6814c9a1c76472cd4418, type: 3}
@@ -23,6 +23,8 @@ MonoBehaviour:
   acceptedAmmo:
   - {fileID: 11400000, guid: 0121d8d5195f0124da361bb77420f161, type: 2}
   bulletDamage: 10
+  bulletSpeed: 20
+  bulletLifetime: 3
   powderDamage: 2
   powderRange: 1.8
   isLostOnDeathDuringQuest: 0
@@ -31,7 +33,7 @@ MonoBehaviour:
   attackRate: 0.5
   useAimMode: 1
   slashEffectPrefab: {fileID: 0}
-  bulletPrefab: {fileID: 6872308494124798136, guid: 5bb499b0fb771a6429abf5ecb2d43c50, type: 3}
+  bulletPrefab: {fileID: 5714271926393328017, guid: 2887cfb781ee241468aad215fb9e7351, type: 3}
   busterShotPrefab: {fileID: 0}
   chargedShotPrefab: {fileID: 0}
   comboAnimations: []

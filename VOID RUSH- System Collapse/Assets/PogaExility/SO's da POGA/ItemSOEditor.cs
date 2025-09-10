@@ -104,6 +104,11 @@ public class ItemSOEditor : Editor
             EditorGUILayout.LabelField("Munições aceitas", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("acceptedAmmo"), true);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("bulletDamage"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("bulletSpeed"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("bulletLifetime"));
+            EditorGUILayout.Space(5);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("pierceCount"));      
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("damageFalloff"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderDamage"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderRange"));
         }

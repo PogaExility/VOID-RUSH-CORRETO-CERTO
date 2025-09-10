@@ -1,4 +1,4 @@
-// RangedWeapon.cs - VERSÃO SIMPLIFICADA
+// RangedWeapon.cs - VERSÃO COMPLETA E CORRIGIDA
 using System.Collections;
 using UnityEngine;
 
@@ -11,15 +11,15 @@ public class RangedWeapon : WeaponBase
     private float lastAttackTime = -999f;
     private bool isReloading = false;
 
-    protected override void InternalInitialize()
+    public override void Initialize(ItemSO data, int savedAmmo = -1)
     {
-        CurrentAmmo = weaponData.magazineSize;
+        base.Initialize(data, savedAmmo);
+        CurrentAmmo = (savedAmmo == -1) ? weaponData.magazineSize : savedAmmo;
     }
 
     public override void Attack()
     {
-        if (Time.time < lastAttackTime + weaponData.attackRate) return;
-        if (isReloading) return;
+        if (Time.time < lastAttackTime + weaponData.attackRate || isReloading) return;
 
         if (CurrentAmmo > 0) FireBullet();
         else FirePowder();
@@ -27,36 +27,42 @@ public class RangedWeapon : WeaponBase
         lastAttackTime = Time.time;
     }
 
-    // EM RangedWeapon.cs
-
     private void FireBullet()
     {
         CurrentAmmo--;
-        RaiseOnWeaponStateChanged(); // Mova o Raise para o início para a UI atualizar instantaneamente.
+        RaiseOnWeaponStateChanged();
 
-        if (weaponData.bulletPrefab != null && muzzlePoint != null)
+        if (weaponData.bulletPrefab == null)
         {
-            // 1. Cria o projétil.
-            GameObject projectileGO = Instantiate(weaponData.bulletPrefab, muzzlePoint.position, muzzlePoint.rotation);
+            Debug.LogWarning($"A arma {weaponData.itemName} não tem um 'bulletPrefab' configurado!");
+            return;
+        }
+        if (muzzlePoint == null)
+        {
+            Debug.LogError($"A arma {weaponData.itemName} não tem um 'muzzlePoint' configurado no prefab!");
+            return;
+        }
 
-            // 2. Pega o script do projétil recém-criado.
-            Projectile projectileScript = projectileGO.GetComponent<Projectile>();
-
-            // 3. Se o script existir, entrega a ele o dano que está no ItemSO.
-            if (projectileScript != null)
-            {
-                // O dano vem da "ficha técnica" da arma (ItemSO).
-                projectileScript.Initialize(weaponData.bulletDamage);
-            }
+        GameObject projGO = Instantiate(weaponData.bulletPrefab, muzzlePoint.position, muzzlePoint.rotation);
+        Projectile proj = projGO.GetComponent<Projectile>();
+        if (proj != null)
+        {
+            // A CHAMADA CORRIGIDA: Agora passa os 5 argumentos que o projétil espera.
+            proj.Initialize(
+                weaponData.bulletDamage,
+                weaponData.bulletSpeed,
+                weaponData.bulletLifetime,
+                weaponData.pierceCount,
+                weaponData.damageFalloff
+            );
         }
     }
 
     private void FirePowder()
     {
-        Debug.Log("Fagulha. Sem munição.");
+        Debug.Log("Click. Sem munição.");
     }
 
-    // NOVO: Pergunta que o Handler faz
     public int GetAmmoNeeded()
     {
         return weaponData.magazineSize - CurrentAmmo;
@@ -64,7 +70,7 @@ public class RangedWeapon : WeaponBase
 
     public void StartReload(int ammoToLoad)
     {
-        if (isReloading) return;
+        if (isReloading || !gameObject.activeInHierarchy) return;
         StartCoroutine(ReloadTimerCoroutine(ammoToLoad));
     }
 
@@ -73,11 +79,9 @@ public class RangedWeapon : WeaponBase
         isReloading = true;
         Debug.Log("Recarregando...");
         yield return new WaitForSeconds(weaponData.reloadTime);
-
         CurrentAmmo += ammoToLoad;
         isReloading = false;
-
         Debug.Log($"Recarga Completa! Pente com {CurrentAmmo} balas.");
-        RaiseOnWeaponStateChanged(); // Avisa a HUD para atualizar
+        RaiseOnWeaponStateChanged();
     }
 }

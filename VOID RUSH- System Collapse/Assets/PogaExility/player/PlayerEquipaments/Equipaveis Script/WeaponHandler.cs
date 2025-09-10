@@ -1,4 +1,5 @@
-﻿using System;
+﻿// WeaponHandler.cs - VERSÃO COMPLETA E CORRIGIDA
+using System;
 using System.Linq;
 using UnityEngine;
 
@@ -16,17 +17,13 @@ public class WeaponHandler : MonoBehaviour
     [Header("REFERÊNCIAS ESSENCIAIS")]
     [SerializeField] private PlayerController playerController;
     [SerializeField] private InventoryManager inventoryManager;
-    [SerializeField] private Transform weaponSocket; // A "mão" onde a arma é criada.
+    [SerializeField] private Transform weaponSocket;
+    [SerializeField] private GameObject armPivot; // A referência para o objeto do braço
 
-    // A instância da arma ativa em cena.
     private WeaponBase activeWeaponInstance;
-    // O renderer da arma ativa, para controle de camadas.
-    private SpriteRenderer activeWeaponRenderer;
-
     public int currentWeaponIndex { get; private set; } = 0;
     private bool isInAimMode = false;
 
-    // Eventos para a UI se atualizar.
     public event Action<int> OnActiveWeaponChanged;
     public event Action OnAmmoSlotsChanged;
     public event Action OnWeaponSlotsChanged;
@@ -35,26 +32,18 @@ public class WeaponHandler : MonoBehaviour
     {
         Instance = this;
         if (playerController == null) playerController = GetComponent<PlayerController>();
-
-        // Inicializa os slots para evitar erros.
-        for (int i = 0; i < weaponSlots.Length; i++)
-        {
-            if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot();
-        }
-        for (int i = 0; i < ammoSlots.Length; i++)
-        {
-            if (ammoSlots[i] == null) ammoSlots[i] = new InventorySlot();
-        }
+        for (int i = 0; i < weaponSlots.Length; i++) { if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot(); }
+        for (int i = 0; i < ammoSlots.Length; i++) { if (ammoSlots[i] == null) ammoSlots[i] = new InventorySlot(); }
     }
 
     void Start()
     {
-        EquipToHand(weaponSlots[currentWeaponIndex].item);
+        // Ao iniciar, equipa a arma no slot 0.
+        EquipToHand(0);
     }
 
     void Update()
     {
-        // A lógica de mira só é executada se o jogador tiver uma arma que usa mira.
         var activeWeaponData = GetActiveWeaponSlot()?.item;
         if (isInAimMode && activeWeaponData != null && activeWeaponData.useAimMode)
         {
@@ -68,21 +57,33 @@ public class WeaponHandler : MonoBehaviour
 
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        // 1. DÁ A ORDEM PARA VIRAR: O Handler pede, o Movement executa.
+        // 1. DÁ A ORDEM PARA VIRAR (sem mudanças)
         playerController.movementScript.FaceTowardsPoint(mouseWorldPos);
 
-        // 2. PERGUNTA A DIREÇÃO ATUAL: Pega a direção correta APÓS o flip.
-        bool isFacingRight = playerController.movementScript.IsFacingRight();
-        float currentDirectionX = isFacingRight ? 1f : -1f;
+        // 2. CÁLCULO DE ÂNGULO (sem mudanças)
+        Vector2 direction = (mouseWorldPos - weaponSocket.position);
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
-        // 3. CALCULA O ÂNGULO DA ARMA: Usa a direção correta como referência.
-        Vector2 playerForwardDirection = new Vector2(currentDirectionX, 0);
-        Vector2 directionToMouse = (mouseWorldPos - weaponSocket.position);
-        float armAngle = Vector2.SignedAngle(playerForwardDirection, directionToMouse);
-        float clampedArmAngle = Mathf.Clamp(armAngle, -90f, 90f);
+        // 3. CORREÇÃO DA MIRA E ESCALA (A MUDANÇA IMPORTANTE)
+        // Pega a escala atual do socket.
+        Vector3 currentScale = weaponSocket.localScale;
 
-        // 4. APLICA A ROTAÇÃO: A mira é aplicada localmente no braço.
-        weaponSocket.localRotation = Quaternion.Euler(0, 0, clampedArmAngle);
+        // Se o jogador NÃO está virado para a direita...
+        if (!playerController.movementScript.IsFacingRight())
+        {
+            // ... inverte a escala Y para o valor absoluto negativo.
+            // Ex: (17.3, 16.4) vira (17.3, -16.4)
+            weaponSocket.localScale = new Vector3(Mathf.Abs(currentScale.x), -Mathf.Abs(currentScale.y), currentScale.z);
+        }
+        else // Se está virado para a direita...
+        {
+            // ... garante que a escala Y seja o valor absoluto positivo.
+            // Ex: (17.3, -16.4) vira (17.3, 16.4)
+            weaponSocket.localScale = new Vector3(Mathf.Abs(currentScale.x), Mathf.Abs(currentScale.y), currentScale.z);
+        }
+
+        // 4. APLICA A ROTAÇÃO (sem mudanças)
+        weaponSocket.rotation = Quaternion.Euler(0, 0, angle);
     }
 
     public void HandleAttackInput()
@@ -98,10 +99,9 @@ public class WeaponHandler : MonoBehaviour
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
         {
             int ammoNeeded = rangedWeapon.GetAmmoNeeded();
-            if (ammoNeeded <= 0) return; // Pente cheio
+            if (ammoNeeded <= 0) return;
 
             int ammoFound = FindAndConsumeAmmo(ammoNeeded);
-
             if (ammoFound > 0)
             {
                 rangedWeapon.StartReload(ammoFound);
@@ -118,35 +118,41 @@ public class WeaponHandler : MonoBehaviour
         for (int i = 0; i < ammoSlots.Length; i++)
         {
             var ammoSlot = ammoSlots[i];
-            if (ammoSlot.item == null) continue;
-
-            if (weaponData.acceptedAmmo.Contains(ammoSlot.item))
+            if (ammoSlot.item != null && weaponData.acceptedAmmo.Contains(ammoSlot.item))
             {
                 int amountToConsume = Mathf.Min(maxAmountNeeded - totalConsumed, ammoSlot.count);
                 ammoSlot.count -= amountToConsume;
                 totalConsumed += amountToConsume;
-
                 if (ammoSlot.count <= 0) ammoSlot.Clear();
                 if (totalConsumed >= maxAmountNeeded) break;
             }
         }
 
-        if (totalConsumed > 0)
-        {
-            OnAmmoSlotsChanged?.Invoke();
-        }
+        if (totalConsumed > 0) OnAmmoSlotsChanged?.Invoke();
         return totalConsumed;
     }
 
-    public void EquipToHand(ItemSO weaponData)
+    // A função EquipToHand agora usa o ÍNDICE do slot como parâmetro.
+    public void EquipToHand(int slotIndex)
     {
+        // 1. SALVA A MUNIÇÃO DA ARMA ANTIGA
+        if (activeWeaponInstance is RangedWeapon oldRangedWeapon)
+        {
+            weaponSlots[currentWeaponIndex].currentAmmo = oldRangedWeapon.CurrentAmmo;
+        }
+
+        // 2. LIMPEZA
         if (activeWeaponInstance != null)
         {
             activeWeaponInstance.OnWeaponStateChanged -= HandleWeaponStateChange;
             Destroy(activeWeaponInstance.gameObject);
-            activeWeaponInstance = null;
-            activeWeaponRenderer = null;
         }
+
+        // 3. ATUALIZA O ÍNDICE E PEGA OS DADOS
+        currentWeaponIndex = slotIndex;
+        var newWeaponSlot = weaponSlots[currentWeaponIndex];
+        var weaponData = newWeaponSlot.item;
+        activeWeaponInstance = null;
 
         if (weaponData == null || weaponData.equipPrefab == null)
         {
@@ -155,24 +161,24 @@ public class WeaponHandler : MonoBehaviour
             return;
         }
 
+        // 4. CRIA A NOVA ARMA
         GameObject weaponGO = Instantiate(weaponData.equipPrefab, weaponSocket);
         weaponGO.transform.localPosition = Vector3.zero;
         weaponGO.transform.localRotation = Quaternion.identity;
 
-        // CORREÇÃO: Pega o renderer do Player a partir da referência do PlayerController.
-        activeWeaponRenderer = weaponGO.GetComponentInChildren<SpriteRenderer>();
         var playerRenderer = playerController.GetComponent<SpriteRenderer>();
-
-        if (activeWeaponRenderer != null && playerRenderer != null)
+        var weaponRenderer = weaponGO.GetComponentInChildren<SpriteRenderer>();
+        if (weaponRenderer != null && playerRenderer != null)
         {
-            activeWeaponRenderer.sortingLayerName = playerRenderer.sortingLayerName;
-            activeWeaponRenderer.sortingOrder = playerRenderer.sortingOrder + 1;
+            weaponRenderer.sortingLayerName = playerRenderer.sortingLayerName;
+            weaponRenderer.sortingOrder = playerRenderer.sortingOrder + 1;
         }
 
+        // 5. INICIALIZA A NOVA ARMA COM A MUNIÇÃO SALVA
         activeWeaponInstance = weaponGO.GetComponent<WeaponBase>();
         if (activeWeaponInstance != null)
         {
-            activeWeaponInstance.Initialize(weaponData);
+            activeWeaponInstance.Initialize(weaponData, newWeaponSlot.currentAmmo);
             activeWeaponInstance.OnWeaponStateChanged += HandleWeaponStateChange;
         }
         else
@@ -193,8 +199,8 @@ public class WeaponHandler : MonoBehaviour
 
     public void CycleWeapon()
     {
-        currentWeaponIndex = (currentWeaponIndex + 1) % weaponSlots.Length;
-        EquipToHand(weaponSlots[currentWeaponIndex].item);
+        int nextIndex = (currentWeaponIndex + 1) % weaponSlots.Length;
+        EquipToHand(nextIndex);
     }
 
     public void EquipItemFromMouse(int weaponSlotIndex)
@@ -203,20 +209,22 @@ public class WeaponHandler : MonoBehaviour
         var equipmentSlot = weaponSlots[weaponSlotIndex];
         if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Weapon) return;
 
-        ItemSO tempItem = equipmentSlot.item;
-        int tempCount = equipmentSlot.count;
-        equipmentSlot.Set(itemNoMouse.item, itemNoMouse.count);
-        itemNoMouse.Set(tempItem, tempCount);
+        // Troca os itens
+        (itemNoMouse.item, equipmentSlot.item) = (equipmentSlot.item, itemNoMouse.item);
+        (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
+        (itemNoMouse.currentAmmo, equipmentSlot.currentAmmo) = (equipmentSlot.currentAmmo, itemNoMouse.currentAmmo); // Troca a munição também
 
         inventoryManager.RequestRedraw();
         OnWeaponSlotsChanged?.Invoke();
 
+        // Reequipa a arma na mão se o slot ativo foi modificado.
         if (currentWeaponIndex == weaponSlotIndex)
         {
-            EquipToHand(weaponSlots[currentWeaponIndex].item);
+            EquipToHand(weaponSlotIndex);
         }
     }
 
+    // EquipAmmoFromMouse permanece o mesmo
     public void EquipAmmoFromMouse(int ammoSlotIndex)
     {
         var itemOnMouse = inventoryManager.GetHeldItem();
@@ -240,9 +248,12 @@ public class WeaponHandler : MonoBehaviour
             playerController.SetAimingState(isInAimMode);
         }
 
-        // A visibilidade do braço (armPivot) agora deve ser controlada pelo Animator,
-        // com base no estado 'isInAimMode' que o PlayerController define.
-        // Removido: armPivot.SetActive(isInAimMode);
+        // CORREÇÃO: O braço (armPivot) é ativado/desativado diretamente.
+        // Isso resolve as mãos que não aparecem e o erro de corrotina.
+        if (armPivot != null)
+        {
+            armPivot.SetActive(shouldBeAiming);
+        }
 
         var cursorManager = playerController?.cursorManager;
         if (cursorManager != null)
@@ -257,7 +268,7 @@ public class WeaponHandler : MonoBehaviour
         }
     }
 
-    // Funções de Acesso para a UI
+    // Funções de Acesso para a UI (sem mudanças)
     public InventorySlot GetActiveWeaponSlot() => weaponSlots[currentWeaponIndex];
     public InventorySlot GetWeaponSlot(int index) => weaponSlots[index];
     public InventorySlot GetAmmoSlot(int index) => ammoSlots[index];

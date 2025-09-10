@@ -1,21 +1,30 @@
-// WeaponSlotsUIController.cs - VERSÃO CORRETA E SIMPLIFICADA
+// WeaponSlotsUIController.cs - CÉREBRO DA HOTBAR
 using System.Collections.Generic;
 using UnityEngine;
 
 public class WeaponSlotsUIController : MonoBehaviour
 {
-    [SerializeField] private List<WeaponItemView> weaponItemViews;
+    [Header("Referências")]
+    [Tooltip("Arraste aqui os 3 objetos FILHOS que contêm o script ItemView dos seus slots de arma.")]
+    [SerializeField] private List<ItemView> weaponItemViews;
+
     private WeaponHandler weaponHandler;
 
     void Start()
     {
         weaponHandler = WeaponHandler.Instance;
-        if (weaponHandler == null) return;
+        if (weaponHandler == null)
+        {
+            Debug.LogError("WeaponSlotsUIController não encontrou o WeaponHandler! Verifique a Ordem de Execução.", this);
+            return;
+        }
 
-        // Se inscreve nos eventos corretos.
+        // Se inscreve nos eventos para saber quando redesenhar.
         weaponHandler.OnWeaponSlotsChanged += Redraw;
+        // Também redesenha quando a arma ativa muda (para atualizar a munição).
         weaponHandler.OnActiveWeaponChanged += (index) => Redraw();
-        Redraw();
+
+        Redraw(); // Desenho inicial
     }
 
     private void OnDestroy()
@@ -29,26 +38,14 @@ public class WeaponSlotsUIController : MonoBehaviour
     {
         for (int i = 0; i < weaponItemViews.Count; i++)
         {
+            ItemView view = weaponItemViews[i];
+            if (view == null) continue; // Pula se um slot não foi configurado.
+
             InventorySlot slotData = weaponHandler.GetWeaponSlot(i);
-            WeaponItemView view = weaponItemViews[i];
-            if (view == null) continue;
 
-            // Se o slot não tem item, manda null para o Render esconder tudo.
-            if (slotData == null || slotData.item == null)
-            {
-                view.Render(null, -1);
-                continue;
-            }
-
-            // Se o slot (i) é o da arma ATIVA, pede a munição real.
-            if (i == weaponHandler.currentWeaponIndex && weaponHandler.TryGetActiveWeaponAmmo(out int current, out int max))
-            {
-                view.Render(slotData.item, current);
-            }
-            else // Senão, é arma inativa. Manda -1.
-            {
-                view.Render(slotData.item, -1);
-            }
+            // A lógica de Render do ItemView já sabe como se desenhar.
+            // Aqui, passamos os dados corretos: o item e a quantidade (que será 1 para armas).
+            view.Render(slotData.item, slotData.count);
         }
     }
 }
