@@ -182,14 +182,8 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateAnimations()
     {
-        // PRIORIDADE MÁXIMA: Morte
-        if (playerStats.IsDead())
-        {
-            animatorController.PlayState(PlayerAnimState.morrendo);
-            return;
-        }
-
-        // PRIORIDADE 2: Eventos (Pouso, Dano)
+        // PRIORIDADE MÁXIMA: Morte e Eventos únicos
+        if (playerStats.IsDead()) { animatorController.PlayState(PlayerAnimState.morrendo); return; }
         if (isLanding) return;
         if (!wasGroundedLastFrame && movementScript.IsGrounded())
         {
@@ -200,53 +194,47 @@ public class PlayerController : MonoBehaviour
         }
         if (animatorController.GetCurrentAnimatorStateInfo(0).IsName("dano")) return;
 
-        // A LÓGICA DE RECARGA FOI COMPLETAMENTE REMOVIDA DAQUI.
+        // PRIORIDADE 2: Recarga. Toca a animação da MÃO, mas NÃO para a lógica.
+        if (weaponHandler.IsReloading)
+        {
+            // Toca a animação na camada 1 (Mão) ou no Animator da mão.
+            animatorController.PlayState(PlayerAnimState.recarregando, 1);
+        }
 
-        // PRIORIDADE 3: Modo de Mira
-        if (isInAimMode)
+        // PRIORIDADE 3: Lógica de animação do CORPO (Camada 0)
+        // Se estiver mirando E NÃO recarregando, usa as animações "cotoco".
+        if (isInAimMode && !weaponHandler.IsReloading)
         {
             if (movementScript.IsGrounded())
             {
-                if (movementScript.IsMoving())
-                    animatorController.PlayState(PlayerAnimState.andarCotoco);
-                else
-                    animatorController.PlayState(PlayerAnimState.paradoCotoco);
+                if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andarCotoco);
+                else animatorController.PlayState(PlayerAnimState.paradoCotoco);
             }
             else // No ar
             {
-                if (movementScript.GetVerticalVelocity() > 0.1f)
-                    animatorController.PlayState(PlayerAnimState.pulandoCotoco);
-                else
-                    animatorController.PlayState(PlayerAnimState.falling);
+                if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulandoCotoco);
+                else animatorController.PlayState(PlayerAnimState.falling);
             }
-            return;
         }
-
-        // PRIORIDADE 4: Movimento Normal
-        if (!movementScript.IsGrounded())
+        else // Movimento Normal (se não estiver mirando OU se estiver recarregando)
         {
-            if (movementScript.IsWallSliding())
-                animatorController.PlayState(PlayerAnimState.derrapagem);
-            else if (movementScript.IsInParabolaArc() || movementScript.IsDashing())
-                animatorController.PlayState(PlayerAnimState.dashAereo);
-            else if (movementScript.GetVerticalVelocity() > 0.1f)
-                animatorController.PlayState(PlayerAnimState.pulando);
-            else
-                animatorController.PlayState(PlayerAnimState.falling);
-            return;
-        }
-
-        // PRIORIDADE 5: Movimento no Chão
-        if (movementScript.IsDashing())
-            animatorController.PlayState(PlayerAnimState.dash);
-        else if (movementScript.IsMoving())
-            animatorController.PlayState(PlayerAnimState.andando);
-        else // Parado
-        {
-            if (playerStats.IsHealthLow())
-                animatorController.PlayState(PlayerAnimState.poucaVidaParado);
-            else
-                animatorController.PlayState(PlayerAnimState.parado);
+            if (!movementScript.IsGrounded())
+            {
+                if (movementScript.IsWallSliding()) animatorController.PlayState(PlayerAnimState.derrapagem);
+                else if (movementScript.IsInParabolaArc() || movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dashAereo);
+                else if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(PlayerAnimState.pulando);
+                else animatorController.PlayState(PlayerAnimState.falling);
+            }
+            else // No chão
+            {
+                if (movementScript.IsDashing()) animatorController.PlayState(PlayerAnimState.dash);
+                else if (movementScript.IsMoving()) animatorController.PlayState(PlayerAnimState.andando);
+                else
+                {
+                    if (playerStats.IsHealthLow()) animatorController.PlayState(PlayerAnimState.poucaVidaParado);
+                    else animatorController.PlayState(PlayerAnimState.parado);
+                }
+            }
         }
     }
 

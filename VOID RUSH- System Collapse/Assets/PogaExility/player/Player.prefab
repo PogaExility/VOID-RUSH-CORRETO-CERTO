@@ -1695,6 +1695,7 @@ MonoBehaviour:
   weaponSocket: {fileID: 6398474281398656026}
   armPivot: {fileID: 8673842369191267755}
   handAnimator: {fileID: 2256219269939066689}
+  IsReloading: 1
 --- !u!1 &3653114368772367964
 GameObject:
   m_ObjectHideFlags: 0

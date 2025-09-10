@@ -30,10 +30,12 @@ public class WeaponHandler : MonoBehaviour
     public event Action<int> OnActiveWeaponChanged;
     public event Action OnAmmoSlotsChanged;
     public event Action OnWeaponSlotsChanged;
-    public bool IsReloading { get; private set; } = false;
+    private Vector3 initialWeaponSocketScale;
+    public bool IsReloading;
     void Awake()
     {
         Instance = this;
+        initialWeaponSocketScale = weaponSocket.localScale;
         if (playerController == null) playerController = GetComponent<PlayerController>();
         for (int i = 0; i < weaponSlots.Length; i++) { if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot(); }
         for (int i = 0; i < ammoSlots.Length; i++) { if (ammoSlots[i] == null) ammoSlots[i] = new InventorySlot(); }
@@ -53,41 +55,29 @@ public class WeaponHandler : MonoBehaviour
             AimLogic();
         }
     }
-  
 
- 
+
+
     private void AimLogic()
     {
         if (activeWeaponInstance == null) return;
 
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        // 1. DÁ A ORDEM PARA VIRAR (sem mudanças)
         playerController.movementScript.FaceTowardsPoint(mouseWorldPos);
 
-        // 2. CÁLCULO DE ÂNGULO (sem mudanças)
         Vector2 direction = (mouseWorldPos - weaponSocket.position);
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
-        // 3. CORREÇÃO DA MIRA E ESCALA (A MUDANÇA IMPORTANTE)
-        // Pega a escala atual do socket.
-        Vector3 currentScale = weaponSocket.localScale;
-
-        // Se o jogador NÃO está virado para a direita...
         if (!playerController.movementScript.IsFacingRight())
         {
-            // ... inverte a escala Y para o valor absoluto negativo.
-            // Ex: (17.3, 16.4) vira (17.3, -16.4)
-            weaponSocket.localScale = new Vector3(Mathf.Abs(currentScale.x), -Mathf.Abs(currentScale.y), currentScale.z);
+            weaponSocket.localScale = new Vector3(initialWeaponSocketScale.x, -initialWeaponSocketScale.y, initialWeaponSocketScale.z);
         }
-        else // Se está virado para a direita...
+        else
         {
-            // ... garante que a escala Y seja o valor absoluto positivo.
-            // Ex: (17.3, -16.4) vira (17.3, 16.4)
-            weaponSocket.localScale = new Vector3(Mathf.Abs(currentScale.x), Mathf.Abs(currentScale.y), currentScale.z);
+            weaponSocket.localScale = initialWeaponSocketScale;
         }
 
-        // 4. APLICA A ROTAÇÃO (sem mudanças)
         weaponSocket.rotation = Quaternion.Euler(0, 0, angle);
     }
 
@@ -100,20 +90,28 @@ public class WeaponHandler : MonoBehaviour
     }
     public void HandleReloadInput()
     {
-        if (activeWeaponInstance is RangedWeapon rangedWeapon)
+        // Se não tiver uma arma Ranger, ou se já estiver recarregando, não faz nada.
+        if (!(activeWeaponInstance is RangedWeapon rangedWeapon) || rangedWeapon.IsReloading()) return;
+
+        // Verifica se a arma pode recarregar (pente não está cheio).
+        if (!rangedWeapon.CanReload()) return;
+
+        int ammoFound = FindAndConsumeAmmo(rangedWeapon.GetAmmoNeeded());
+        if (ammoFound > 0)
         {
-            // Pergunta para a arma se ela PODE recarregar.
-            if (!rangedWeapon.CanReload()) return;
-
-            int ammoFound = FindAndConsumeAmmo(rangedWeapon.GetAmmoNeeded());
-            if (ammoFound > 0)
+            // --- A CORREÇÃO CRÍTICA ESTÁ AQUI ---
+            // Força a ativação do braço ANTES de tocar a animação.
+            if (armPivot != null)
             {
-                // Dispara o gatilho da animação no Animator da mão.
-                handAnimator.Play(HandReloadingHash);
-
-                // Dá a ordem para a arma iniciar a lógica de recarga.
-                rangedWeapon.StartReload(ammoFound);
+                armPivot.SetActive(true);
             }
+            // --- FIM DA CORREÇÃO ---
+
+            // Dispara o gatilho da animação no Animator da mão.
+            handAnimator.Play(HandReloadingHash);
+
+            // Dá a ordem para a arma iniciar a lógica de recarga.
+            rangedWeapon.StartReload(ammoFound);
         }
     }
     public void OnReloadComplete()
