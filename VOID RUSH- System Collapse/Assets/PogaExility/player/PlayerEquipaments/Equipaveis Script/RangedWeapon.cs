@@ -9,7 +9,7 @@ public class RangedWeapon : WeaponBase
 
     public int CurrentAmmo { get; private set; }
     private float lastAttackTime = -999f;
-    public bool isReloading = false;
+    public bool isReloading { get; private set; } = false;
     private int ammoToLoad;
     private Coroutine reloadCoroutine;
 
@@ -77,13 +77,19 @@ public class RangedWeapon : WeaponBase
 
     public void StartReload(int ammoToLoad, System.Action onReloadLogicFinished)
     {
-        // A checagem "!gameObject.activeInHierarchy" previne erros se a arma for trocada no meio da recarga.
         if (isReloading || !gameObject.activeInHierarchy) return;
-        StartCoroutine(ReloadTimerCoroutine(ammoToLoad, onReloadLogicFinished));
+        // Guardamos a corrotina na variável para podermos cancelá-la depois.
+        reloadCoroutine = StartCoroutine(ReloadTimerCoroutine(ammoToLoad, onReloadLogicFinished));
     }
 
     public void CancelReload()
     {
+        // Se a corrotina estiver rodando, pare-a.
+        if (reloadCoroutine != null)
+        {
+            StopCoroutine(reloadCoroutine);
+            reloadCoroutine = null;
+        }
         isReloading = false;
     }
 

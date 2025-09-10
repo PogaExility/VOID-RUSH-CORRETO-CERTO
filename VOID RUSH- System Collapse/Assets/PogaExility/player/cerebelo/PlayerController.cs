@@ -109,6 +109,10 @@ public class PlayerController : MonoBehaviour
     }
     private void HandleWeaponSwitching()
     {
+        // ADICIONE ESTA LINHA NO TOPO DA FUNÇÃO
+        // Impede a troca de armas durante a recarga.
+        if (weaponHandler.IsReloading) return;
+
         if (isInventoryOpen || weaponHandler == null) return;
         float scrollInput = Input.GetAxis("Mouse ScrollWheel");
 
@@ -158,6 +162,7 @@ public class PlayerController : MonoBehaviour
     }
     private void HandleCombatInput()
     {
+        if (weaponHandler.IsReloading) return;
         if (Input.GetButton("Fire1"))
         {
             weaponHandler.HandleAttackInput();
@@ -195,20 +200,20 @@ public class PlayerController : MonoBehaviour
         if (animatorController.GetCurrentAnimatorStateInfo(AnimatorTarget.PlayerBody, 0).IsName("dano")) return;
 
         // PRIORIDADE 3: Lógica de animação do CORPO (Camada 0)
-        if (isInAimMode && !weaponHandler.IsReloading)
+        if (isInAimMode) // A linha agora é só essa
         {
             if (movementScript.IsGrounded())
             {
                 if (movementScript.IsMoving()) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.andarCotoco);
                 else animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.paradoCotoco);
             }
-            else // No ar
+            else
             {
                 if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.pulandoCotoco);
                 else animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.falling);
             }
         }
-        else // Movimento Normal
+        else  // Movimento Normal
         {
             if (!movementScript.IsGrounded())
             {

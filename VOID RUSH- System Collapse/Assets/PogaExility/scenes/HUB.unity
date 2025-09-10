@@ -14336,6 +14336,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8673842369191267755, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_Name
+      value: "m\xE3os"
+      objectReference: {fileID: 0}
+    - target: {fileID: 8673842369191267755, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}

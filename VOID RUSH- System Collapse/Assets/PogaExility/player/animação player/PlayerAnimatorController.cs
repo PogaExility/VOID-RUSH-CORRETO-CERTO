@@ -69,28 +69,30 @@ public class PlayerAnimatorController : MonoBehaviour
         currentStateByTarget = new Dictionary<AnimatorTarget, PlayerAnimState>();
     }
 
+    // Em PlayerAnimatorController.cs
+
     public void PlayState(AnimatorTarget target, PlayerAnimState state, int layer = 0)
     {
-        // MUDANÇA CRÍTICA: A LÓGICA DO "CÉREBRO"
-        // 1. Tenta pegar o estado atual que já está tocando para este alvo.
         currentStateByTarget.TryGetValue(target, out PlayerAnimState currentState);
-
-        // 2. Se o estado que queremos tocar já for o atual, não fazemos NADA.
-        //    Isso impede que a animação seja reiniciada todo frame.
-        if (currentState == state)
-        {
-            return;
-        }
+        if (currentState == state) return;
 
         Animator targetAnimator = GetTargetAnimator(target);
 
         if (targetAnimator == null)
         {
-            Debug.LogWarning($"Animator para o alvo '{target}' não foi configurado.", this);
+            Debug.LogError($"Maestro falhou: Animator para o alvo '{target}' é NULO.", this);
             return;
         }
 
-        // 3. Se for um novo estado, atualizamos o "cérebro" e tocamos a animação.
+        // ---- INÍCIO DO DIAGNÓSTICO ----
+        // Se o alvo for a mão, vamos imprimir informações vitais antes de tocar.
+        if (target == AnimatorTarget.PlayerHand)
+        {
+            Debug.Log($"Maestro recebeu ordem para a MÃO. O Animator da mão está no objeto: '{targetAnimator.gameObject.name}'");
+            Debug.Log($"O Animator Controller que ele está usando é: '{targetAnimator.runtimeAnimatorController.name}'");
+        }
+        // ---- FIM DO DIAGNÓSTICO ----
+
         currentStateByTarget[target] = state;
         int stateHash = GetStateHash(state);
         targetAnimator.Play(stateHash, layer, 0f);

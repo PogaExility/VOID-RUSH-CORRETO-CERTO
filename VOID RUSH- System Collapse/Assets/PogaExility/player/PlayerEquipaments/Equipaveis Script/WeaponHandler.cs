@@ -94,19 +94,28 @@ public class WeaponHandler : MonoBehaviour
     {
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
         {
-            // Usa a propriedade 'isReloading' que agora é pública na RangedWeapon
             if (rangedWeapon.isReloading || rangedWeapon.GetAmmoNeeded() <= 0) return;
 
             int ammoFound = FindAndConsumeAmmo(rangedWeapon.GetAmmoNeeded());
             if (ammoFound > 0)
             {
-                // Define o estado global para o PlayerController saber.
                 IsReloading = true;
 
-                // 1. ORDEM PARA A ANIMAÇÃO: "Maestro, toque a animação de recarga na mão." (Dispara e esquece)
-                animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.recarregando);
+                // ---- INÍCIO DO DIAGNÓSTICO ----
+                try
+                {
+                    // 1. TENTAMOS tocar a animação.
+                    Debug.Log("Tentando tocar animação no Maestro...");
+                    animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.recarregando);
+                }
+                catch (System.Exception e)
+                {
+                    // 2. Se a animação falhar, este bloco captura o erro e nos avisa.
+                    Debug.LogError("!!!! ERRO NA ANIMAÇÃO CAPTURADO !!!! A LÓGICA VAI CONTINUAR. Erro: " + e.Message);
+                }
+                // ---- FIM DO DIAGNÓSTICO ----
 
-                // 2. ORDEM PARA A LÓGICA: "Arma, inicie seu timer de recarga e me avise quando terminar."
+                // 3. Como o erro foi capturado, a lógica do timer SEMPRE vai rodar agora.
                 rangedWeapon.StartReload(ammoFound, OnReloadLogicComplete);
             }
         }
@@ -121,19 +130,6 @@ public class WeaponHandler : MonoBehaviour
         // Não precisamos fazer nada com a animação da mão, ela vai terminar sozinha.
     }
 
-
-    public void OnReloadComplete()
-    {
-        if (activeWeaponInstance is RangedWeapon rangedWeapon)
-        {
-            rangedWeapon.OnReloadAnimationComplete();
-
-            // MUDANÇA: Comanda o maestro para voltar a mão ao estado PARADO.
-            animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.parado);
-
-            IsReloading = false;
-        }
-    }
     private int FindAndConsumeAmmo(int maxAmountNeeded)
     {
         var weaponData = GetActiveWeaponSlot()?.item;
@@ -160,20 +156,27 @@ public class WeaponHandler : MonoBehaviour
     // A função EquipToHand agora usa o ÍNDICE do slot como parâmetro.
     public void EquipToHand(int slotIndex)
     {
+        // 1. MASTER RESET: A primeira coisa que fazemos é garantir que o estado de recarga seja resetado.
+        // Isso conserta o bug de ficar preso.
         IsReloading = false;
+
         if (activeWeaponInstance is RangedWeapon oldRangedWeapon)
         {
+            // 2. CANCELAMENTO: Antes de destruir a arma antiga, mandamos ela parar qualquer recarga em andamento.
+            oldRangedWeapon.CancelReload();
+
+            // Salva a munição como antes.
             weaponSlots[currentWeaponIndex].currentAmmo = oldRangedWeapon.CurrentAmmo;
         }
 
-        // 2. LIMPEZA
+        // 3. LIMPEZA (como antes)
         if (activeWeaponInstance != null)
         {
             activeWeaponInstance.OnWeaponStateChanged -= HandleWeaponStateChange;
             Destroy(activeWeaponInstance.gameObject);
         }
 
-        // 3. ATUALIZA O ÍNDICE E PEGA OS DADOS
+        // O resto da função continua exatamente igual ao seu código original.
         currentWeaponIndex = slotIndex;
         var newWeaponSlot = weaponSlots[currentWeaponIndex];
         var weaponData = newWeaponSlot.item;
@@ -186,7 +189,6 @@ public class WeaponHandler : MonoBehaviour
             return;
         }
 
-        // 4. CRIA A NOVA ARMA
         GameObject weaponGO = Instantiate(weaponData.equipPrefab, weaponSocket);
         weaponGO.transform.localPosition = Vector3.zero;
         weaponGO.transform.localRotation = Quaternion.identity;
@@ -199,7 +201,6 @@ public class WeaponHandler : MonoBehaviour
             weaponRenderer.sortingOrder = playerRenderer.sortingOrder + 1;
         }
 
-        // 5. INICIALIZA A NOVA ARMA COM A MUNIÇÃO SALVA
         activeWeaponInstance = weaponGO.GetComponent<WeaponBase>();
         if (activeWeaponInstance != null)
         {
