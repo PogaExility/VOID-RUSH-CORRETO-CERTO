@@ -11,6 +11,7 @@ public class RangedWeapon : WeaponBase
     private float lastAttackTime = -999f;
     private bool isReloading = false;
     private int ammoToLoad;
+    private Coroutine reloadCoroutine;
 
     public override void Initialize(ItemSO data, int savedAmmo = -1)
     {
@@ -64,15 +65,6 @@ public class RangedWeapon : WeaponBase
         Debug.Log("Click. Sem munição.");
     }
 
-    public int GetAmmoNeeded()
-    {
-        return weaponData.magazineSize - CurrentAmmo;
-    }
-    public bool CanReload()
-    {
-        return CurrentAmmo < weaponData.magazineSize;
-    }
-
     public bool IsReloading()
     {
         return isReloading;
@@ -95,19 +87,4 @@ public class RangedWeapon : WeaponBase
         isReloading = false;
         RaiseOnWeaponStateChanged();
     }
-
-    private IEnumerator ReloadTimerCoroutine(int ammoToLoad)
-    {
-        isReloading = true;
-        WeaponHandler.Instance.IsReloading = true; // Usa a propriedade pública
-
-        yield return new WaitForSeconds(weaponData.reloadTime);
-
-        CurrentAmmo += ammoToLoad;
-        isReloading = false;
-
-        WeaponHandler.Instance.IsReloading = false; // Usa a propriedade pública
-        RaiseOnWeaponStateChanged();
-    }
-   
 }

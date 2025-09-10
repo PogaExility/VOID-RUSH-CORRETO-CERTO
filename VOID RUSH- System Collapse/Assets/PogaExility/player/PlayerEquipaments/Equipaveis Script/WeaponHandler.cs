@@ -90,30 +90,23 @@ public class WeaponHandler : MonoBehaviour
     }
     public void HandleReloadInput()
     {
-        // Se não tiver uma arma Ranger, ou se já estiver recarregando, não faz nada.
-        if (!(activeWeaponInstance is RangedWeapon rangedWeapon) || rangedWeapon.IsReloading()) return;
-
-        // Verifica se a arma pode recarregar (pente não está cheio).
-        if (!rangedWeapon.CanReload()) return;
-
-        int ammoFound = FindAndConsumeAmmo(rangedWeapon.GetAmmoNeeded());
-        if (ammoFound > 0)
+        if (activeWeaponInstance is RangedWeapon rangedWeapon)
         {
-            // --- A CORREÇÃO CRÍTICA ESTÁ AQUI ---
-            // Força a ativação do braço ANTES de tocar a animação.
-            if (armPivot != null)
+            // Usa a função IsReloading() que já existe na RangedWeapon
+            if (rangedWeapon.IsReloading() || rangedWeapon.GetAmmoNeeded() <= 0) return;
+
+            int ammoFound = FindAndConsumeAmmo(rangedWeapon.GetAmmoNeeded());
+            if (ammoFound > 0)
             {
-                armPivot.SetActive(true);
+                // Comanda o animator da mão para tocar a animação.
+                handAnimator.Play(HandReloadingHash);
+                // Dá a ordem para a arma iniciar a lógica de recarga.
+                rangedWeapon.StartReload(ammoFound);
             }
-            // --- FIM DA CORREÇÃO ---
-
-            // Dispara o gatilho da animação no Animator da mão.
-            handAnimator.Play(HandReloadingHash);
-
-            // Dá a ordem para a arma iniciar a lógica de recarga.
-            rangedWeapon.StartReload(ammoFound);
         }
     }
+
+    // ADICIONE esta função para ser chamada pelo Animation Event
     public void OnReloadComplete()
     {
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
@@ -123,7 +116,6 @@ public class WeaponHandler : MonoBehaviour
             handAnimator.Play(HandIdleHash);
         }
     }
-    
 
     private int FindAndConsumeAmmo(int maxAmountNeeded)
     {
