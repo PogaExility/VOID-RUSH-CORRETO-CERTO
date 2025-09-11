@@ -13991,6 +13991,18 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1308354841243548261, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 2.1375427
+      objectReference: {fileID: 0}
+    - target: {fileID: 1806446187817274072, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0.816864
+      objectReference: {fileID: 0}
+    - target: {fileID: 2215104731333047473, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: IsReloading
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2251706762305074577, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -14222,6 +14234,10 @@ PrefabInstance:
     - target: {fileID: 4903396576088559188, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4961355594823665309, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: reloadAnimationBaseDuration
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 5037623946287551860, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchorMax.y

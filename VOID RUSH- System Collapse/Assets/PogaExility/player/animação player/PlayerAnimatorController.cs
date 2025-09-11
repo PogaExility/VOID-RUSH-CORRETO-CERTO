@@ -26,6 +26,7 @@ public enum PlayerAnimState
     paradoCotoco,
     andarCotoco,
     pulandoCotoco,
+    fallingCotoco,
     recarregando
 }
 
@@ -37,10 +38,11 @@ public class PlayerAnimatorController : MonoBehaviour
 
     [Header("Configurações de Animação")]
     [Tooltip("A duração original, em segundos, do seu clipe de animação 'recarregando'.")]
-    [SerializeField] private float reloadAnimationBaseDuration = 1f;
+    [SerializeField] public float reloadAnimationBaseDuration = 1f;
 
     // MUDANÇA CRÍTICA: O novo "CÉREBRO". Um dicionário para guardar o estado atual de CADA animator.
     private Dictionary<AnimatorTarget, PlayerAnimState> currentStateByTarget;
+    private int cotocoLayerIndex;
 
     #region State Hashes
     private static readonly int ParadoHash = Animator.StringToHash("parado");
@@ -60,18 +62,24 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int ParadoCotocoHash = Animator.StringToHash("paradoCotoco");
     private static readonly int AndarCotocoHash = Animator.StringToHash("andarCotoco");
     private static readonly int PulandoCotocoHash = Animator.StringToHash("pulandoCotoco");
+    private static readonly int FallingCotocoHash = Animator.StringToHash("fallingCotoco");
     private static readonly int ReloadingHash = Animator.StringToHash("recarregando");
     #endregion
 
 
     void Awake()
     {
-        if (bodyAnimator == null)
-        {
-            bodyAnimator = GetComponent<Animator>();
-        }
-        // Inicializa o "cérebro"
+        if (bodyAnimator == null) bodyAnimator = GetComponent<Animator>();
         currentStateByTarget = new Dictionary<AnimatorTarget, PlayerAnimState>();
+
+        // AQUI ESTÁ A MÁGICA: No início do jogo, ele pergunta para o Animator qual é o número da "CotocoLayer".
+        cotocoLayerIndex = bodyAnimator.GetLayerIndex("CotocoLayer");
+
+        // Uma verificação de segurança para te ajudar a debugar.
+        if (cotocoLayerIndex == -1)
+        {
+            Debug.LogWarning("AVISO: A layer 'CotocoLayer' não foi encontrada no Animator do corpo. A mira não vai funcionar. Verifique se o nome está escrito exatamente igual.", this.gameObject);
+        }
     }
     public void SetAnimatorFloat(AnimatorTarget target, string parameterName, float value)
     {
@@ -126,6 +134,16 @@ public class PlayerAnimatorController : MonoBehaviour
         Animator targetAnimator = GetTargetAnimator(target);
         return targetAnimator != null ? targetAnimator.GetCurrentAnimatorStateInfo(layerIndex) : default;
     }
+    public void SetAimLayerWeight(float weight)
+    {
+        // Garante que o peso esteja sempre entre 0 e 1.
+        weight = Mathf.Clamp01(weight);
+
+        if (cotocoLayerIndex != -1) // Só tenta mudar o peso se a layer existir.
+        {
+            bodyAnimator.SetLayerWeight(cotocoLayerIndex, weight);
+        }
+    }
 
     private int GetStateHash(PlayerAnimState state)
     {
@@ -148,6 +166,7 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.paradoCotoco: return ParadoCotocoHash;
             case PlayerAnimState.andarCotoco: return AndarCotocoHash;
             case PlayerAnimState.pulandoCotoco: return PulandoCotocoHash;
+            case PlayerAnimState.fallingCotoco: return FallingCotocoHash;
             case PlayerAnimState.recarregando: return ReloadingHash;
             default: return ParadoHash;
         }

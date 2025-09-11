@@ -47,10 +47,10 @@ public class PlayerController : MonoBehaviour
     private bool isInAimMode = false;
     private PlayerStats playerStats;
     public bool inventoryLocked = false;
-
+    private PlayerAnimState previousBodyState;
+    private bool isActionInterruptingAim = false;
     void Awake()
     {
-
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
         skillRelease = GetComponent<SkillRelease>();
         defenseHandler = GetComponent<DefenseHandler>();
@@ -58,55 +58,42 @@ public class PlayerController : MonoBehaviour
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         if (cursorManager == null) cursorManager = FindAnyObjectByType<CursorManager>();
         if (weaponHandler == null) weaponHandler = GetComponent<WeaponHandler>();
-
     }
 
     void Start()
     {
         if (energyBar != null) energyBar.SetMaxEnergy(100f);
         SetPowerMode(false);
-        if (inventoryPanel != null)
-        {
-            inventoryPanel.SetActive(false);
-            isInventoryOpen = false;
-        }
-        if (cursorManager != null)
-        {
-            cursorManager.SetDefaultCursor();
-        }
+        if (inventoryPanel != null) { inventoryPanel.SetActive(false); isInventoryOpen = false; }
+        if (cursorManager != null) cursorManager.SetDefaultCursor();
+        if (animatorController != null) animatorController.SetAimLayerWeight(0);
     }
 
     public void SetAimingState(bool isNowAiming)
     {
         isInAimMode = isNowAiming;
         movementScript.allowMovementFlip = !isNowAiming;
+        animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
     }
+
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
+        if (isInventoryOpen) { movementScript.SetMoveInput(0); return; }
 
-        float horizontalInput = 0;
-        if (!isInventoryOpen)
-        {
-            horizontalInput = Input.GetAxisRaw("Horizontal");
-        }
-        movementScript.SetMoveInput(horizontalInput);
-
-        if (isInventoryOpen) return;
-
+        movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
         HandlePowerModeToggle();
         HandleSkillInput();
         HandleCombatInput();
         HandleWeaponSwitching();
-
         UpdateAnimations();
         wasGroundedLastFrame = movementScript.IsGrounded();
-
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            movementScript.CutJump();
-        }
+        if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
     }
+
+
+
+
     private void HandleWeaponSwitching()
     {
         // ADICIONE ESTA LINHA NO TOPO DA FUNÇÃO
@@ -183,58 +170,109 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
-
     private void UpdateAnimations()
     {
-        // PRIORIDADE MÁXIMA: Morte e Eventos únicos
-        if (playerStats.IsDead()) { animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.morrendo); return; }
-        if (isLanding) return;
-        if (!wasGroundedLastFrame && movementScript.IsGrounded())
-        {
-            isLanding = true;
-            movementScript.OnLandingStart();
-            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.pousando);
-            return;
-        }
-        if (animatorController.GetCurrentAnimatorStateInfo(AnimatorTarget.PlayerBody, 0).IsName("dano")) return;
+        // --- ETAPA 1: DETERMINAR O ESTADO DESEJADO DA BASE LAYER ---
+        PlayerAnimState desiredState;
 
-        // PRIORIDADE 3: Lógica de animação do CORPO (Camada 0)
-        if (isInAimMode) // A linha agora é só essa
+        if (playerStats.IsDead()) { desiredState = PlayerAnimState.morrendo; }
+        else if (isLanding) { desiredState = PlayerAnimState.pousando; }
+        else if (animatorController.GetCurrentAnimatorStateInfo(AnimatorTarget.PlayerBody, 0).IsName("dano")) { desiredState = PlayerAnimState.dano; }
+        else if (!movementScript.IsGrounded())
         {
-            if (movementScript.IsGrounded())
-            {
-                if (movementScript.IsMoving()) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.andarCotoco);
-                else animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.paradoCotoco);
-            }
+            if (movementScript.IsWallSliding()) desiredState = PlayerAnimState.derrapagem;
+            else if (movementScript.IsDashing()) desiredState = PlayerAnimState.dashAereo;
+            else if (movementScript.GetVerticalVelocity() > 0.1f) desiredState = PlayerAnimState.pulando;
+            else desiredState = PlayerAnimState.falling;
+        }
+        else // No chão
+        {
+            if (movementScript.IsDashing()) desiredState = PlayerAnimState.dash;
+            else if (movementScript.IsMoving()) desiredState = PlayerAnimState.andando;
             else
             {
-                if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.pulandoCotoco);
-                else animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.falling);
+                if (playerStats.IsHealthLow()) desiredState = PlayerAnimState.poucaVidaParado;
+                else desiredState = PlayerAnimState.parado;
             }
         }
-        else  // Movimento Normal
+
+        // --- ETAPA 2: LÓGICA DE MEMÓRIA E INTERRUPÇÃO (O CÉREBRO) ---
+
+        bool isDesiredStateAnAction = IsActionState(desiredState);
+
+        if (isDesiredStateAnAction)
         {
-            if (!movementScript.IsGrounded())
+            isActionInterruptingAim = true;
+            weaponHandler.ForceExitAimMode();
+        }
+        else
+        {
+            if (isActionInterruptingAim)
             {
-                if (movementScript.IsWallSliding()) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.derrapagem);
-                else if (movementScript.IsInParabolaArc() || movementScript.IsDashing()) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.dashAereo);
-                else if (movementScript.GetVerticalVelocity() > 0.1f) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.pulando);
-                else animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.falling);
-            }
-            else // No chão
-            {
-                if (movementScript.IsDashing()) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.dash);
-                else if (movementScript.IsMoving()) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.andando);
-                else
+                isActionInterruptingAim = false;
+                if (weaponHandler.IsAimWeaponEquipped())
                 {
-                    if (playerStats.IsHealthLow()) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.poucaVidaParado);
-                    else animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.parado);
+                    SetAimingState(true);
                 }
             }
         }
+
+        // --- ETAPA 3: TOCAR A ANIMAÇÃO CORRETA ---
+
+        if (isInAimMode)
+        {
+            // Toca a versão "cotoco" apropriada na COTOCOLAYER.
+            if (!movementScript.IsGrounded())
+            {
+                // ADICIONADO: Lógica para diferenciar pulo de queda.
+                if (movementScript.GetVerticalVelocity() > 0.1f)
+                    animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.pulandoCotoco, 1);
+                else
+                    animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.fallingCotoco, 1);
+            }
+            else if (movementScript.IsMoving())
+            {
+                animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.andarCotoco, 1);
+            }
+            else
+            {
+                animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.paradoCotoco, 1);
+            }
+        }
+        else
+        {
+            // Toca a animação normal da BASE LAYER que foi determinada na Etapa 1.
+            animatorController.PlayState(AnimatorTarget.PlayerBody, desiredState, 0);
+        }
+    }
+    private bool IsActionState(PlayerAnimState state)
+    {
+        switch (state)
+        {
+            case PlayerAnimState.dash:
+            case PlayerAnimState.dashAereo:
+            case PlayerAnimState.pousando:
+            case PlayerAnimState.derrapagem:
+            case PlayerAnimState.dano:
+            case PlayerAnimState.flip:
+            case PlayerAnimState.block:
+            case PlayerAnimState.parry:
+            case PlayerAnimState.morrendo:
+                return true;
+            default:
+                return false;
+        }
     }
 
+    public void OnActionAnimationComplete()
+    {
+        // Pergunta para o WeaponHandler se a arma atual AINDA é uma arma de mira.
+        if (weaponHandler.IsAimWeaponEquipped())
+        {
+            // Se for, REATIVA o modo de mira.
+            SetAimingState(true);
+        }
+    }
     private void HandlePowerModeToggle()
     {
         if (Input.GetKeyDown(KeyCode.G))

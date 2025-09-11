@@ -79,7 +79,7 @@ AnimatorState:
   m_SpeedParameter: ReloadSpeedMultiplier
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
-  m_TimeParameter: 
+  m_TimeParameter: ReloadSpeedMultiplier
 --- !u!1107 &7626441443906203923
 AnimatorStateMachine:
   serializedVersion: 6

@@ -30,18 +30,18 @@ public class RangedWeapon : WeaponBase
         recoilCoroutine = StartCoroutine(RecoilCoroutine());
 
         // 2. Efeito Visual da Pólvora (LÓGICA CORRIGIDA)
-        if (weaponData.gunpowderPrefab != null)
-        {
-            // A. Calculamos a posição para frente.
-            Vector3 spawnPosition = muzzlePoint.position + (muzzlePoint.right * weaponData.gunpowderSpawnOffset);
+          if (weaponData.gunpowderPrefab != null)
+    {
+        // A. Calculamos a posição para frente.
+        Vector3 spawnPosition = muzzlePoint.position + (muzzlePoint.right * weaponData.gunpowderSpawnOffset);
 
-            // B. Instanciamos o objeto na posição e rotação certas.
-            GameObject gunpowderGO = Instantiate(weaponData.gunpowderPrefab, spawnPosition, muzzlePoint.rotation);
+        // B. Instanciamos o objeto na posição e rotação certas.
+        GameObject gunpowderGO = Instantiate(weaponData.gunpowderPrefab, spawnPosition, muzzlePoint.rotation);
 
-            // C. A MÁGICA: Imediatamente removemos qualquer parentesco.
-            // Isso garante que ele não herde nenhuma escala e fique fixo no espaço.
-            gunpowderGO.transform.SetParent(null);
-        }
+        // C. A MÁGICA: Imediatamente removemos qualquer parentesco.
+        // Isso garante que ele não herde nenhuma escala e fique fixo no espaço.
+        gunpowderGO.transform.SetParent(null);
+    }
 
         // --- AÇÕES QUE DEPENDEM DA MUNIÇÃO (continua igual) ---
 

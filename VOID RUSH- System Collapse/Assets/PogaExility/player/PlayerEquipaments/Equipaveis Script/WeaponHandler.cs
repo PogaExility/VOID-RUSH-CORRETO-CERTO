@@ -59,7 +59,8 @@ public class WeaponHandler : MonoBehaviour
     }
 
 
-
+   
+   
     private void AimLogic()
     {
         if (activeWeaponInstance == null) return;
@@ -90,6 +91,23 @@ public class WeaponHandler : MonoBehaviour
             activeWeaponInstance.Attack();
         }
     }
+    // Em WeaponHandler.cs
+
+    public void ForceExitAimMode()
+    {
+        if (isInAimMode)
+        {
+            SetAimMode(false);
+        }
+    }
+
+    public bool IsAimWeaponEquipped()
+    {
+        var activeWeaponData = GetActiveWeaponSlot()?.item;
+        if (activeWeaponData == null) return false;
+        return activeWeaponData.useAimMode;
+    }
+
     public void HandleReloadInput()
     {
         if (activeWeaponInstance is RangedWeapon rangedWeapon)
@@ -101,21 +119,15 @@ public class WeaponHandler : MonoBehaviour
             {
                 IsReloading = true;
 
-                // ---- INÍCIO DO DIAGNÓSTICO ----
-                try
-                {
-                    // 1. TENTAMOS tocar a animação.
-                    Debug.Log("Tentando tocar animação no Maestro...");
-                    animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.recarregando);
-                }
-                catch (System.Exception e)
-                {
-                    // 2. Se a animação falhar, este bloco captura o erro e nos avisa.
-                    Debug.LogError("!!!! ERRO NA ANIMAÇÃO CAPTURADO !!!! A LÓGICA VAI CONTINUAR. Erro: " + e.Message);
-                }
-                // ---- FIM DO DIAGNÓSTICO ----
+                float desiredDuration = GetActiveWeaponSlot().item.reloadTime;
+                float baseDuration = animatorController.reloadAnimationBaseDuration; // Adicionado para clareza
+                float speedMultiplier = (desiredDuration > 0) ? baseDuration / desiredDuration : 1f;
 
-                // 3. Como o erro foi capturado, a lógica do timer SEMPRE vai rodar agora.
+                // ADICIONE ESTE DEBUG.LOG
+                Debug.Log($"CÁLCULO DE VELOCIDADE: Duração Base ({baseDuration}) / Duração Desejada ({desiredDuration}) = Multiplicador Final ({speedMultiplier})");
+
+                animatorController.SetAnimatorFloat(AnimatorTarget.PlayerHand, "ReloadSpeedMultiplier", speedMultiplier);
+                animatorController.PlayState(AnimatorTarget.PlayerHand, PlayerAnimState.recarregando);
                 rangedWeapon.StartReload(ammoFound, OnReloadLogicComplete);
             }
         }

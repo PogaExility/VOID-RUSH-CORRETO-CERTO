@@ -22,10 +22,10 @@ MonoBehaviour:
   maxStack: 1
   isLostOnDeathDuringQuest: 0
   weaponType: 1
-  attackRate: 0.3
+  attackRate: 0.2
   useAimMode: 1
   magazineSize: 10
-  reloadTime: 2
+  reloadTime: 5
   recoilDistance: 0.003
   recoilSpeed: 0.05
   returnSpeed: 0.05
@@ -34,6 +34,7 @@ MonoBehaviour:
   powderRange: 1.8
   acceptedAmmo:
   - {fileID: 11400000, guid: 0121d8d5195f0124da361bb77420f161, type: 2}
+  gunpowderSpawnOffset: 0.5
   bulletPrefab: {fileID: 5714271926393328017, guid: 2887cfb781ee241468aad215fb9e7351, type: 3}
   bulletDamage: 10
   bulletSpeed: 20
