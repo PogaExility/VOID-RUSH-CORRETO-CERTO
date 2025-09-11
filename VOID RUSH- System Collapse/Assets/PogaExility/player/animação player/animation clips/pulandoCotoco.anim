@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pularCotoco
+  m_Name: pulandoCotoco
   serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
@@ -21,13 +21,13 @@ AnimationClip:
   - serializedVersion: 2
     curve:
     - time: 0
-      value: {fileID: 21300000, guid: 902bd920e54e8be41916d07ec82dcb12, type: 3}
+      value: {fileID: 21300000, guid: 477c7e7c8476150408c98e542ac7982c, type: 3}
     - time: 0.083333336
-      value: {fileID: 21300000, guid: 9b8046c3956cb2347a2304301be9d0b1, type: 3}
+      value: {fileID: 21300000, guid: 832396064429d9f4f9b57eabaea58579, type: 3}
     - time: 0.16666667
-      value: {fileID: 21300000, guid: d2adca25d01310b43a696c6519781187, type: 3}
+      value: {fileID: 21300000, guid: d7ca18aadc9314042affa57fb961df3f, type: 3}
     - time: 0.25
-      value: {fileID: 21300000, guid: e58524c3b5a04184f8c90fe409765ad8, type: 3}
+      value: {fileID: 21300000, guid: 62ab7e20a06056e4493a360d6ba858a0, type: 3}
     attribute: m_Sprite
     path: 
     classID: 212
@@ -50,10 +50,10 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     pptrCurveMapping:
-    - {fileID: 21300000, guid: 902bd920e54e8be41916d07ec82dcb12, type: 3}
-    - {fileID: 21300000, guid: 9b8046c3956cb2347a2304301be9d0b1, type: 3}
-    - {fileID: 21300000, guid: d2adca25d01310b43a696c6519781187, type: 3}
-    - {fileID: 21300000, guid: e58524c3b5a04184f8c90fe409765ad8, type: 3}
+    - {fileID: 21300000, guid: 477c7e7c8476150408c98e542ac7982c, type: 3}
+    - {fileID: 21300000, guid: 832396064429d9f4f9b57eabaea58579, type: 3}
+    - {fileID: 21300000, guid: d7ca18aadc9314042affa57fb961df3f, type: 3}
+    - {fileID: 21300000, guid: 62ab7e20a06056e4493a360d6ba858a0, type: 3}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}

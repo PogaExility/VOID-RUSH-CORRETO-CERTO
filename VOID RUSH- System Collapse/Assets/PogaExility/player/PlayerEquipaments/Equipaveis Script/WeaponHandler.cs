@@ -281,16 +281,18 @@ public class WeaponHandler : MonoBehaviour
         OnAmmoSlotsChanged?.Invoke();
     }
 
-    private void SetAimMode(bool shouldBeAiming)
+    public void SetAimMode(bool shouldBeAiming)
     {
         isInAimMode = shouldBeAiming;
+
+        // Esta função já chama o PlayerController, mas agora ela é a "parte visual".
+        // Isso é bom, pois garante que o estado de movimento seja sempre atualizado.
         if (playerController != null)
         {
-            playerController.SetAimingState(isInAimMode);
+            playerController.SetAimingStateVisuals(shouldBeAiming);
+
         }
 
-        // CORREÇÃO: O braço (armPivot) é ativado/desativado diretamente.
-        // Isso resolve as mãos que não aparecem e o erro de corrotina.
         if (armPivot != null)
         {
             armPivot.SetActive(shouldBeAiming);

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 902bd920e54e8be41916d07ec82dcb12
+guid: 62ab7e20a06056e4493a360d6ba858a0
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6195863787275096891
-    second: pulandoCotoco1_0
+      213: 9061364310547181119
+    second: pulandoCotocoTrue4_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: pulandoCotoco1_0
+      name: pulandoCotocoTrue4_0
       rect:
         serializedVersion: 2
-        x: 8
-        y: 5
-        width: 15
-        height: 22
+        x: 9
+        y: 0
+        width: 13
+        height: 21
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b331d3599412cf550800000000000000
-      internalID: 6195863787275096891
+      spriteID: f3e219ec4de60cd70800000000000000
+      internalID: 9061364310547181119
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      pulandoCotoco1_0: 6195863787275096891
+      pulandoCotocoTrue4_0: 9061364310547181119
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
