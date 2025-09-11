@@ -168,7 +168,18 @@ public class WeaponHandler : MonoBehaviour
         return totalConsumed;
     }
 
-    // A função EquipToHand agora usa o ÍNDICE do slot como parâmetro.
+    public void UpdateAimVisuals(bool isAiming)
+    {
+        isInAimMode = isAiming;
+        if (armPivot != null) armPivot.SetActive(isAiming);
+        var cursorManager = playerController?.cursorManager;
+        if (cursorManager != null)
+        {
+            if (isAiming) cursorManager.SetAimCursor();
+            else cursorManager.SetDefaultCursor();
+        }
+        if (isAiming) AimLogic();
+    }
     public void EquipToHand(int slotIndex)
     {
         // 1. MASTER RESET: A primeira coisa que fazemos é garantir que o estado de recarga seja resetado.
@@ -199,7 +210,7 @@ public class WeaponHandler : MonoBehaviour
 
         if (weaponData == null || weaponData.equipPrefab == null)
         {
-            SetAimMode(false);
+            playerController.SetAimingState(false);
             OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
             return;
         }
@@ -229,7 +240,8 @@ public class WeaponHandler : MonoBehaviour
             return;
         }
 
-        SetAimMode(weaponData.useAimMode);
+      
+        playerController.SetAimingState(weaponData.useAimMode);
         OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
 

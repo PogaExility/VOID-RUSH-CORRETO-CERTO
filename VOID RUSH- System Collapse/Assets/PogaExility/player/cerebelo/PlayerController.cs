@@ -71,9 +71,15 @@ public class PlayerController : MonoBehaviour
 
     public void SetAimingState(bool isNowAiming)
     {
-        if (isInAimMode == isNowAiming) return; // Evita chamadas repetidas
+        // Se já estamos no estado desejado, não faz nada para evitar loops.
+        if (isInAimMode == isNowAiming) return;
+
         isInAimMode = isNowAiming;
-        weaponHandler.SetAimMode(isNowAiming); // Comanda o WeaponHandler
+
+        // Comanda os outros componentes
+        movementScript.allowMovementFlip = !isNowAiming;
+        animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
+        weaponHandler.UpdateAimVisuals(isNowAiming);
     }
     public void SetAimingStateVisuals(bool isNowAiming)
     {
@@ -204,39 +210,29 @@ public class PlayerController : MonoBehaviour
         }
 
         // --- ETAPA 2: LÓGICA DE MEMÓRIA E INTERRUPÇÃO (O CÉREBRO) ---
-
         bool isDesiredStateAnAction = IsActionState(desiredState);
 
-        // Se a animação desejada é uma AÇÃO (dash, pulo, etc.)...
         if (isDesiredStateAnAction)
         {
-            // ...nós ligamos a nossa "memória" e forçamos a saída da mira.
             isActionInterruptingAim = true;
-            SetAimingState(false); // O CÉREBRO comanda a si mesmo para desligar a mira.
+            SetAimingState(false);
         }
-        // SENÃO, se a animação desejada é um estado normal (parado, andando)...
         else
         {
-            // ...e a nossa "memória" diz que a gente ACABOU de sair de uma ação...
             if (isActionInterruptingAim)
             {
-                // ...então a ação terminou! É hora de reavaliar.
-                isActionInterruptingAim = false; // Limpa a memória.
-
-                // PERGUNTA: O jogador ainda deve estar mirando?
+                isActionInterruptingAim = false;
                 if (weaponHandler.IsAimWeaponEquipped())
                 {
-                    SetAimingState(true); // O CÉREBRO comanda a si mesmo para LIGAR a mira de volta.
+                    SetAimingState(true);
                 }
             }
         }
 
         // --- ETAPA 3: TOCAR A ANIMAÇÃO CORRETA ---
-
-        // Se, depois de toda a lógica, o modo de mira estiver ativo...
         if (isInAimMode)
         {
-            // ...tocamos a versão "cotoco" apropriada na COTOCOLAYER.
+            // A CotocoLayer agora tem a lógica completa
             if (!movementScript.IsGrounded())
             {
                 if (movementScript.GetVerticalVelocity() > 0.1f)
@@ -255,17 +251,12 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            // Senão, tocamos a animação normal da BASE LAYER que foi determinada na Etapa 1.
             animatorController.PlayState(AnimatorTarget.PlayerBody, desiredState, 0);
         }
     }
 
-    /// <summary>
-    /// Função auxiliar que define quais animações são "Ações" que interrompem a mira.
-    /// </summary>
     private bool IsActionState(PlayerAnimState state)
     {
-        // ESTA É A LISTA CORRETA. "parado" e "andando" NÃO são mais ações de interrupção.
         switch (state)
         {
             case PlayerAnimState.dash:
@@ -278,13 +269,11 @@ public class PlayerController : MonoBehaviour
             case PlayerAnimState.parry:
             case PlayerAnimState.morrendo:
                 return true;
-
-            // "parado", "andando" e os estados "cotoco" não interrompem a mira.
             default:
                 return false;
         }
     }
-  
+
     public void OnActionAnimationComplete()
     {
         // Pergunta para o WeaponHandler se a arma atual AINDA é uma arma de mira.
