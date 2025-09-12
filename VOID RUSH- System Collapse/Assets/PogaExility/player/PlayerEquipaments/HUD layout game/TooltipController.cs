@@ -70,7 +70,7 @@ public class TooltipController : MonoBehaviour
 
         if (item.itemType == ItemType.Weapon)
         {
-            body += $"Dano: {item.damage}\n";
+         
             body += $"Cadência: {item.attackRate}s\n";
         }
         else if (item.itemType == ItemType.Consumable)

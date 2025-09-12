@@ -64,31 +64,50 @@ public class SkillRelease : MonoBehaviour
     {
         if (skill == null) return false;
 
-        // --- A NOVA CHECAGEM DE COOLDOWN ---
-        // Se a skill que estamos tentando usar está no dicionário, significa que ela está em cooldown.
+        // Se a skill for a WallDash, começamos a registrar tudo no console.
+        bool isDebugging = (skill.actionToPerform == MovementSkillType.WallDash);
+
+        if (isDebugging) Debug.Log($"--- TENTANDO ATIVAR: {skill.skillName} ---");
+
         if (skillCooldowns.ContainsKey(skill))
         {
-            return false; // Falha imediatamente.
+            if (isDebugging) Debug.Log("<color=red>FALHA:</color> Skill está em cooldown.");
+            return false;
         }
 
-        if (currentActionCoroutine != null) return false;
-        if (skill.cancelIfKeysHeld.Any(key => Input.GetKey(key))) return false;
-        if (!CheckKeyPress(skill) || !CheckStateConditions(skill)) return false;
+        if (currentActionCoroutine != null)
+        {
+            if (isDebugging) Debug.Log($"<color=red>FALHA:</color> Outra ação já está em execução ({currentActionCoroutine.ToString()}).");
+            return false;
+        }
 
-        // Se a skill foi executada com sucesso...
+        if (skill.cancelIfKeysHeld.Any(key => Input.GetKey(key)))
+        {
+            if (isDebugging) Debug.Log("<color=red>FALHA:</color> Uma tecla de cancelamento está sendo segurada.");
+            return false;
+        }
+
+        // Modificamos a chamada para passar a flag de debug
+        if (!CheckKeyPress(skill) || !CheckStateConditions(skill, isDebugging))
+        {
+            // As próprias funções de checagem agora vão logar a falha
+            return false;
+        }
+
+        if (isDebugging) Debug.Log("<color=green>SUCESSO:</color> Todas as condições foram atendidas. Executando ação.");
+
         if (ExecuteAction(skill))
         {
-            // ...e se ela TEM um cooldown...
             if (skill.cooldownDuration > 0)
             {
-                // ...adiciona ela ao dicionário com sua duração total.
                 skillCooldowns[skill] = skill.cooldownDuration;
             }
-            return true; // Retorna sucesso.
+            return true;
         }
 
         return false;
     }
+
 
 
     private bool CheckKeyPress(SkillSO skill)
@@ -122,25 +141,50 @@ public class SkillRelease : MonoBehaviour
 
         return false;
     }
-    private bool CheckStateConditions(SkillSO skill)
+    private bool CheckStateConditions(SkillSO skill, bool isDebugging)
     {
         foreach (var group in skill.conditionGroups)
         {
+            if (isDebugging) Debug.Log($"Avaliando grupo de condições com lógica: {group.logicType}");
+
             if (group.logicType == ConditionLogic.AllOf)
             {
-                if (!group.states.All(state => movement.CheckState(state))) return false;
+                if (!group.states.All(state => {
+                    bool result = movement.CheckState(state);
+                    if (isDebugging) Debug.Log($"  - Checando se '{state}' é verdadeiro... Resultado: {result}");
+                    return result;
+                }))
+                {
+                    if (isDebugging) Debug.Log($"<color=red>FALHA:</color> Nem todos os estados no grupo 'AllOf' são verdadeiros.");
+                    return false;
+                }
             }
             else if (group.logicType == ConditionLogic.AnyOf)
             {
-                if (!group.states.Any(state => movement.CheckState(state))) return false;
+                if (!group.states.Any(state => {
+                    bool result = movement.CheckState(state);
+                    if (isDebugging) Debug.Log($"  - Checando se '{state}' é verdadeiro... Resultado: {result}");
+                    return result;
+                }))
+                {
+                    if (isDebugging) Debug.Log($"<color=red>FALHA:</color> Nenhum dos estados no grupo 'AnyOf' é verdadeiro.");
+                    return false;
+                }
             }
         }
+
         foreach (var state in skill.forbiddenStates)
         {
-            if (movement.CheckState(state)) return false;
+            if (movement.CheckState(state))
+            {
+                if (isDebugging) Debug.Log($"<color=red>FALHA:</color> O estado proibido '{state}' está ATIVO.");
+                return false;
+            }
         }
+
         return true;
     }
+
 
 
     private bool ExecuteAction(SkillSO skill)
@@ -215,12 +259,18 @@ public class SkillRelease : MonoBehaviour
 
     private IEnumerator ExecuteDashCoroutine(SkillSO skill)
     {
-        movement.OnDashStart();
+        // --- LÓGICA DE ATIVAÇÃO DE ESTADO ---
+        bool isWallDash = skill.actionToPerform == MovementSkillType.WallDash;
+        if (isWallDash)
+            movement.OnWallDashStart();
+        else
+            movement.OnDashStart();
+        // --------------------------------------
 
         Vector2 direction;
         float inputX = Input.GetAxisRaw("Horizontal");
 
-        if (Mathf.Abs(inputX) > 0.1f)
+        if (Mathf.Abs(inputX) > 0.1f && !isWallDash) // Modificado para ignorar input no WallDash
         {
             direction = new Vector2(Mathf.Sign(inputX), 0);
         }
@@ -228,21 +278,17 @@ public class SkillRelease : MonoBehaviour
         {
             direction = movement.GetFacingDirection();
         }
-        if (skill.actionToPerform == MovementSkillType.WallDash)
-        {
-            // --- A ORDEM QUE FALTAVA ---
-            movement.StopWallSlide();
 
+        if (isWallDash)
+        {
+            movement.StopWallSlide();
             direction = movement.GetWallEjectDirection();
         }
 
-        // --- A CORREÇÃO DO ERRO DE DIGITAÇÃO ---
-        // A segunda condição agora é 'movement.IsFacingRight()', como deveria ser.
         if ((direction.x > 0 && !movement.IsFacingRight()) || (direction.x < 0 && movement.IsFacingRight()))
         {
             movement.Flip();
         }
-
 
         float originalGravity = movement.GetRigidbody().gravityScale;
         movement.SetGravityScale(0f);
@@ -250,14 +296,24 @@ public class SkillRelease : MonoBehaviour
         while (timer < skill.dashDuration)
         {
             if (movement.IsTouchingWall() && timer > 0.1f) break;
-            movement.SetVelocity(direction.x * skill.dashSpeed, movement.GetRigidbody().linearVelocity.y);
+
+            // CORREÇÃO: A velocidade em Y deve ser 0 durante o dash para um movimento reto.
+            movement.SetVelocity(direction.x * skill.dashSpeed, 0);
+
             timer += Time.deltaTime;
             yield return null;
         }
 
         movement.SetVelocity(0, movement.GetRigidbody().linearVelocity.y);
         movement.SetGravityScale(originalGravity);
-        movement.OnDashEnd();
+
+        // --- LÓGICA DE DESATIVAÇÃO DE ESTADO ---
+        if (isWallDash)
+            movement.OnWallDashEnd();
+        else
+            movement.OnDashEnd();
+        // -----------------------------------------
+
         currentActionCoroutine = null;
     }
 }

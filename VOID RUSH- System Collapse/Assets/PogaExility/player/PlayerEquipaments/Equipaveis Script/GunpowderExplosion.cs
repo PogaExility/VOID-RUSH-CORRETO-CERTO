@@ -1,7 +1,7 @@
 // GunpowderExplosion.cs - VERSÃO COMPLETA E CORRIGIDA
 using UnityEngine;
 
-[RequireComponent(typeof(Animator), typeof(ProjectileAnimator))]
+[RequireComponent(typeof(Animator), typeof(ProjectileAnimatorController))]
 public class GunpowderExplosion : MonoBehaviour
 {
     // Variáveis para guardar os dados recebidos da arma
@@ -12,7 +12,7 @@ public class GunpowderExplosion : MonoBehaviour
     void Start()
     {
         // A primeira coisa que ele faz é pedir ao maestro para tocar a animação "polvora".
-        GetComponent<ProjectileAnimator>().PlayAnimation("polvora");
+        GetComponent<ProjectileAnimatorController>().PlayAnimation("polvora");
     }
 
     /// <summary>

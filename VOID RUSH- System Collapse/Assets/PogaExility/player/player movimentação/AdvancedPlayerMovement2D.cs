@@ -48,9 +48,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
 
     [Header("Física de Dano")]
-    public float knockbackForce = 5f;
-    public float knockbackUpwardForce = 3f;
-    public float knockbackDuration = 0.2f;
+  
     private DefenseHandler defenseHandler;
     public void SetMoveInput(float input)
     {
@@ -75,6 +73,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isLanding = false;
     private bool isInKnockback = false;
     private Coroutine knockbackCoroutine;
+    private bool isWallDashing = false;
     private bool isIgnoringSteeringInput = false;
     private Coroutine steeringGraceCoroutine;
 
@@ -119,16 +118,16 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
         bool shouldFaceRight = (worldPoint.x > transform.position.x);
 
-        if (shouldFaceRight && !isFacingRight) 
-        { 
-        
-        Flip();
+        if (shouldFaceRight && !isFacingRight)
+        {
+
+            Flip();
         }
-          else if (!shouldFaceRight && isFacingRight)
-          {
-              Flip();
-          }
-     }
+        else if (!shouldFaceRight && isFacingRight)
+        {
+            Flip();
+        }
+    }
     public void FaceTowardsPoint(Vector3 worldPoint)
     {
         // Determina se o ponto está à direita ou à esquerda do jogador.
@@ -162,9 +161,16 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             case PlayerState.IsLanding: return isLanding;
             case PlayerState.IsBlocking: return defenseHandler != null && defenseHandler.IsBlocking();
             case PlayerState.IsParrying: return defenseHandler != null && defenseHandler.CanParry();
+
+            // --- ADICIONE OS NOVOS CASES QUE AGORA SÃO VÁLIDOS ---
+            case PlayerState.IsWallDashing: return IsWallDashing();
+            case PlayerState.IsTakingDamage: return IsTakingDamage();
+            // --------------------------------------------------------
+
             default: return false;
         }
     }
+
     public void OnParabolaStart(float damping)
     {
         isInParabolaArc = true;
@@ -242,14 +248,23 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     void FixedUpdate()
     {
-
         if (physicsControlDisabled)
         {
-
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
             return;
         }
-        CheckCollisions();
+
+        CheckCollisions(); // A variável isTouchingWall é atualizada aqui.
+
+        // --- ADICIONE ESTA VERIFICAÇÃO AQUI ---
+        // Se o jogador está no estado de WallSlide, mas não está mais tocando uma parede,
+        // ou se ele tocou o chão, a skill deve ser interrompida.
+        if (isWallSliding && (!IsTouchingWall() || IsGrounded()))
+        {
+            StopWallSlide();
+        }
+        // --- FIM DA CORREÇÃO ---
+
         HandleMovement();
         HandleGravity();
     }
@@ -257,24 +272,39 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public void Freeze() { rb.linearVelocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Kinematic; }
     public void Unfreeze() { rb.bodyType = RigidbodyType2D.Dynamic; }
 
-    public void ApplyKnockback(Vector2 attackDirection)
+
+    // O novo método público que o PlayerStats irá chamar.
+    public void ExecuteKnockback(float force, Vector2 attackDirection, float upwardModifier = 0.5f, float duration = 0.2f)
     {
-        if (knockbackCoroutine != null) StopCoroutine(knockbackCoroutine);
-        knockbackCoroutine = StartCoroutine(KnockbackCoroutine(attackDirection));
+        if (knockbackCoroutine != null)
+        {
+            StopCoroutine(knockbackCoroutine);
+        }
+        knockbackCoroutine = StartCoroutine(ExecuteKnockbackCoroutine(force, attackDirection, upwardModifier, duration));
     }
 
-    private IEnumerator KnockbackCoroutine(Vector2 attackDirection)
+    private IEnumerator ExecuteKnockbackCoroutine(float force, Vector2 attackDirection, float upwardModifier, float duration)
     {
         isInKnockback = true;
+
+        // Zera a velocidade para garantir que o impulso do knockback seja limpo e consistente.
         rb.linearVelocity = Vector2.zero;
+
+        // Calcula a direção da repulsão (para longe do ataque) e adiciona um componente para cima.
         Vector2 knockbackDirection = -attackDirection.normalized;
-        knockbackDirection.y += knockbackUpwardForce;
-        rb.AddForce(knockbackDirection.normalized * knockbackForce, ForceMode2D.Impulse);
-        yield return new WaitForSeconds(knockbackDuration);
+        knockbackDirection.y += upwardModifier;
+
+        // Aplica a força calculada como um impulso instantâneo.
+        rb.AddForce(knockbackDirection.normalized * force, ForceMode2D.Impulse);
+
+        // Aguarda a duração do knockback, durante a qual o jogador está travado.
+        yield return new WaitForSeconds(duration);
+
         isInKnockback = false;
-        
         knockbackCoroutine = null;
     }
+
+
     // Em AdvancedPlayerMovement2D.cs, adicione esta função inteira
     private IEnumerator SteeringGracePeriodCoroutine(float duration)
     {
@@ -333,9 +363,19 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
 
         float wallRayStartOffset = capsuleCollider.size.x * 0.5f;
+      
+
+        // Detecta a parede da direita
         isTouchingWallRight = Physics2D.Raycast(capsuleCenter, Vector2.right, wallRayStartOffset + wallCheckDistance, collisionLayer);
+
+        // Detecta a parede da esquerda
         isTouchingWallLeft = Physics2D.Raycast(capsuleCenter, Vector2.left, wallRayStartOffset + wallCheckDistance, collisionLayer);
 
+        // ADICIONE ESTAS LINHAS DE DEBUG AQUI:
+        Color rayColorRight = isTouchingWallRight ? Color.green : Color.red;
+        Color rayColorLeft = isTouchingWallLeft ? Color.green : Color.red;
+        Debug.DrawRay(capsuleCenter, Vector2.right * (wallRayStartOffset + wallCheckDistance), rayColorRight);
+        Debug.DrawRay(capsuleCenter, Vector2.left * (wallRayStartOffset + wallCheckDistance), rayColorLeft);
         if (isInParabolaArc && IsTouchingWall())
         {
 
@@ -427,32 +467,30 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     // Em AdvancedPlayerMovement2D.cs
     private void HandleMovement()
     {
-        if (isDashing || isWallJumping || isWallSliding)
+        // ADICIONE A VERIFICAÇÃO "isInKnockback" AQUI
+        if (isDashing || isWallJumping || isWallSliding || isInKnockback)
         {
             return;
         }
 
         if (isInParabolaArc)
         {
-            // Se a imunidade estiver ativa, o input do jogador é completamente ignorado.
             if (isIgnoringSteeringInput)
             {
                 return;
             }
 
-            // Após a imunidade, a lógica de troca de direção funciona como antes.
             bool wantsToChangeDirection = (moveInput > 0 && rb.linearVelocity.x < -0.1f) || (moveInput < 0 && rb.linearVelocity.x > 0.1f);
 
             if (wantsToChangeDirection)
             {
-                rb.linearVelocity = new Vector2(-rb.linearVelocity .x, rb.linearVelocity.y);
+                rb.linearVelocity = new Vector2(-rb.linearVelocity.x, rb.linearVelocity.y);
                 Flip();
             }
 
             return;
         }
 
-        // 3. Lógica de movimento padrão no chão/ar (inalterada)
         bool isPushingAgainstWall = !isGrounded && IsTouchingWall() && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
         if (isPushingAgainstWall) return;
 
@@ -492,24 +530,32 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public bool IsTouchingWall() { return isTouchingWallLeft || isTouchingWallRight; }
     public void OnDashStart() { isDashing = true; }
     public void OnDashEnd() { isDashing = false; }
+    public void OnWallDashStart() { isWallDashing = true; }
+    public void OnWallDashEnd() { isWallDashing = false; }
     public bool IsDashing() { return isDashing; }
+
+    public bool IsWallDashing() { return isWallDashing; }
     public bool IsWallJumping() { return isWallJumping; }
     public bool IsJumping() { return isJumping; }
+
+    public bool IsTakingDamage() { return isInKnockback; }
     public bool IsFacingRight() { return isFacingRight; }
     public Rigidbody2D GetRigidbody() { return rb; }
 
-
-    // Em AdvancedPlayerMovement2D.cs
     private void UpdateDebugUI()
     {
-        // Usa a nova variável 'stateCheckText'. Se você não a renomeou, mantenha 'groundCheckStatusText'.
         if (stateCheckText != null)
         {
-            // Pega a velocidade atual do Rigidbody
             Vector2 currentVelocity = rb.linearVelocity;
-
-            // Monta o texto com os estados e a nova informação de velocidade
-            stateCheckText.text = $"Grounded: {CheckState(PlayerState.IsGrounded)}\n" + $"WallSliding: {CheckState(PlayerState.IsWallSliding)}\n" + $"TouchingWall: {CheckState(PlayerState.IsWallSliding)}\n" + $"Dashing: {CheckState(PlayerState.IsDashing)}\n" + $"InParabola: {CheckState(PlayerState.IsInParabola)}\n" + $"--- VELOCIDADE ---\n" + $"X Speed: {currentVelocity.x:F2}\n" +  $"Y Speed: {currentVelocity.y:F2}";   
+            // CORREÇÃO: A terceira linha estava checando IsWallSliding em vez de IsTouchingWall
+            stateCheckText.text = $"Grounded: {CheckState(PlayerState.IsGrounded)}\n" +
+                                  $"WallSliding: {CheckState(PlayerState.IsWallSliding)}\n" +
+                                  $"TouchingWall: {CheckState(PlayerState.IsTouchingWall)}\n" + // <-- CORRIGIDO
+                                  $"Dashing: {CheckState(PlayerState.IsDashing)}\n" +
+                                  $"InParabola: {CheckState(PlayerState.IsInParabola)}\n" +
+                                  $"--- VELOCIDADE ---\n" +
+                                  $"X Speed: {currentVelocity.x:F2}\n" +
+                                  $"Y Speed: {currentVelocity.y:F2}";
         }
     }
 }

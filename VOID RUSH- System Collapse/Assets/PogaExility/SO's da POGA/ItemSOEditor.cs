@@ -115,10 +115,14 @@ public class ItemSOEditor : Editor
         }
         else if (item.weaponType == WeaponType.Meelee)
         {
+            // --- INÍCIO DA MODIFICAÇÃO ---
             EditorGUILayout.LabelField("Meelee", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("damage"));
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("comboAnimations"), true);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("slashEffectPrefab"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("comboResetTime"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("lungeDuration"));
+
+            // Esta linha desenha a lista inteira com a interface da Unity (expandir, +, -)
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("comboSteps"), true);
+            // --- FIM DA MODIFICAÇÃO ---
         }
         else if (item.weaponType == WeaponType.Buster)
         {

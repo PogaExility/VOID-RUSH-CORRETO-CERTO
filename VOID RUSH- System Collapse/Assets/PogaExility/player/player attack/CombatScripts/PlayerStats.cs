@@ -35,8 +35,11 @@ public class PlayerStats : MonoBehaviour
     public SpriteRenderer playerSprite;
     [Tooltip("A velocidade do pisca-pisca (valores maiores = mais rápido).")]
     public float flashSpeed = 10f;
-
     private bool isInvincible = false;
+    [Header("Física de Combate")]
+    [Tooltip("A capacidade do jogador de resistir a repulsão. Subtraído da 'Força' de um ataque recebido.")]
+    public float knockbackResistance = 5f;
+
 
     public float MaxHealth => baseMaxHealth + _healthBonus;
     public float MaxBlockGauge => baseMaxBlockGauge + _blockGaugeBonus;
@@ -68,8 +71,12 @@ public class PlayerStats : MonoBehaviour
         OnDeath += PlayDeathAnimation; 
 
     }
-
     public void TakeDamage(float amount, Vector2 attackDirection)
+    {
+        // Chama a função principal de dano, passando 0 como força de knockback padrão.
+        TakeDamage(amount, attackDirection, 0f);
+    }
+    public void TakeDamage(float amount, Vector2 attackDirection, float incomingKnockbackPower)
     {
         if (isInvincible) return;
 
@@ -80,8 +87,22 @@ public class PlayerStats : MonoBehaviour
 
         if (_currentHealth > 0)
         {
-         //   animatorController.PlayState(PlayerAnimState.dano);
-            movementScript.ApplyKnockback(attackDirection);
+            // --- INÍCIO DA LÓGICA DE KNOCKBACK DINÂMICO ---
+
+            // 1. Calcula a força final da repulsão (Força do Ataque - Resistência do Alvo)
+            float finalForce = incomingKnockbackPower - knockbackResistance;
+
+            // 2. Só aplica o knockback se a força do ataque superar a resistência.
+            if (finalForce > 0)
+            {
+                // 3. Comanda o script de movimento para EXECUTAR a repulsão com a força calculada.
+                //    (A função ExecuteKnockback será criada no próximo passo).
+                movementScript.ExecuteKnockback(finalForce, attackDirection);
+            }
+
+            // --- FIM DA LÓGICA DE KNOCKBACK DINÂMICO ---
+
+            // A lógica de invencibilidade permanece a mesma.
             StartCoroutine(InvincibilityCoroutine());
         }
         else

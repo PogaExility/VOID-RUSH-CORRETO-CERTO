@@ -144,7 +144,35 @@ public class PlayerAnimatorController : MonoBehaviour
             bodyAnimator.SetLayerWeight(cotocoLayerIndex, weight);
         }
     }
+    /// <summary>
+    /// Toca um estado de animação usando o nome exato do clipe.
+    /// Essencial para animações dinâmicas como ataques de combo que vêm do ItemSO.
+    /// </summary>
+    public void PlayStateByName(AnimatorTarget target, string stateName, int layer = 0)
+    {
+        Animator targetAnimator = GetTargetAnimator(target);
+        if (targetAnimator != null && targetAnimator.isActiveAndEnabled)
+        {
+            targetAnimator.Play(stateName, layer, 0f);
+        }
+        else if (targetAnimator == null)
+        {
+            Debug.LogError($"Maestro falhou: Animator para o alvo '{target}' é NULO.", this);
+        }
+    }
 
+    /// <summary>
+    /// Define o multiplicador de velocidade para um animator específico.
+    /// 1.0f = velocidade normal.
+    /// </summary>
+    public void SetAnimatorSpeed(AnimatorTarget target, float speed)
+    {
+        Animator targetAnimator = GetTargetAnimator(target);
+        if (targetAnimator != null)
+        {
+            targetAnimator.speed = speed;
+        }
+    }
     private int GetStateHash(PlayerAnimState state)
     {
         switch (state)

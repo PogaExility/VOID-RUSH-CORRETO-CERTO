@@ -2,7 +2,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(Animator))]
-public class ProjectileAnimator : MonoBehaviour
+public class ProjectileAnimatorController : MonoBehaviour
 {
     private Animator animator;
 

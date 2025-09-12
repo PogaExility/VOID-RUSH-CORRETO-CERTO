@@ -1,3 +1,4 @@
+// SkillEnums.cs
 
 public enum SkillClass
 {
@@ -5,6 +6,7 @@ public enum SkillClass
     Buff,
     Combate
 }
+
 public enum DashType
 {
     Normal,
@@ -17,51 +19,52 @@ public enum CombatSkillType
     MeleeAttack,
     FirearmAttack,
     BusterAttack,
-    Block,          
+    Block,
     Parry
 }
+
 public enum MovementSkillType
 {
-    None,         // Nenhuma ação, usado como padrão.
-    SuperJump,    // O pulo padrão do jogador, tanto no chão quanto no ar.
-    Dash,         // O dash padrão, horizontal.
-    DashJump,     // Ação de lançamento para frente e para cima a partir do chão.
-    WallSlide,    // A ação de se "agarrar" e começar a deslizar na parede.
-    WallJump,     // O pulo para longe da parede.
-    WallDash,     // O dash horizontal a partir de uma parede.
-    WallDashJump, // O lançamento diagonal a partir de uma parede.
-    Stealth       // Reservado para uso futuro.
+    None,
+    SuperJump,
+    Dash,
+    DashJump,
+    WallSlide,
+    WallJump,
+    WallDash,
+    WallDashJump,
+    Stealth
 }
 
 /// <summary>
 /// Define todos os estados de física ou de ação em que o jogador pode estar.
-/// Usado pelo SkillSO para definir as condições de ativação de uma habilidade.
-/// O SkillRelease vai checar estes estados no AdvancedPlayerMovement2D.
 /// </summary>
 public enum PlayerState
 {
     None,
-    IsGrounded,     // Está no chão?
+    IsGrounded,
     CanJumpFromGround,
-    IsTouchingWall, // Está colidindo com uma parede?
-    IsWallSliding,  // Está no estado de deslize na parede?
-    IsDashing,      // Está no meio de um dash?
-    IsJumping,      // A velocidade Y é positiva?
+    IsTouchingWall,
+    IsWallSliding,
+    IsDashing,
+    IsJumping,
     IsInAir,
-    IsInParabola,   // Está no arco de um lançamento (como o WallDashJump)?
-    IsWallJumping,   // Está no breve estado de pulo de parede?
+    IsInParabola,
+    IsWallJumping,
     IsLanding,
     IsBlocking,
     IsParrying,
 
+    // --- ADIÇÕES PARA CORRIGIR O ERRO E DAR MAIS CONTROLE ---
+    IsWallDashing,  // Estado específico para o Dash a partir da parede.
+    IsTakingDamage  // Estado para quando o jogador está em knockback.
 }
 
 /// <summary>
 /// Define como um grupo de condições de PlayerState deve ser avaliado.
-/// Permite a criação de lógicas "E" (AllOf) e "OU" (AnyOf).
 /// </summary>
 public enum ConditionLogic
 {
-    AllOf, // TODAS as condições no grupo devem ser verdadeiras.
-    AnyOf  // PELO MENOS UMA das condições no grupo deve ser verdadeira.
+    AllOf,
+    AnyOf
 }
