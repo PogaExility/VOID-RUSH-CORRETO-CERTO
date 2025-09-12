@@ -23,7 +23,7 @@ MonoBehaviour:
   combatActionToPerform: 0
   conditionGroups:
   - logicType: 0
-    states: 0700000003000000
+    states: 0300000004000000
   forbiddenStates: 09000000
   jumpForce: 12
   airJumps: 0

@@ -15,11 +15,17 @@ public class AIController_Basic : MonoBehaviour
 
     #region Parâmetros de Comportamento (SEU PAINEL DE CONTROLE)
 
+
+    [Header("▶ Estado Interno e Componentes ")]
+    private float _currentHealth;
+    private Rigidbody2D rb;
+ 
     [Header("▶ STATUS E COMBATE")]
     public float maxHealth = 100f;
     public float moveSpeed = 3f;
-    public float climbSpeed = 3f; // Usado se a escalada for reativada
-    public float knockbackForce = 5f; // Força do knockback que o JOGADOR recebe
+    public float climbSpeed = 3f;
+    public float attackKnockbackPower = 5f;
+    public float knockbackResistance = 2f;
 
     [Header("▶ CONFIGURAÇÃO DE ATAQUE")]
     [Tooltip("Define se esta IA ataca de perto ou de longe.")]
@@ -45,11 +51,17 @@ public class AIController_Basic : MonoBehaviour
     private bool isFacingRight = true;
     private bool canAttack = true;
     private bool isInvincible = false;
-    private bool isExecutingAction = false; // <-- ADICIONE ESTA LINHA
+    private bool isExecutingAction = false;
+    private bool isTakingKnockback = false; 
     #endregion
 
+
+
     #region Unity Lifecycle
-    void Awake() { motor = GetComponent<AIMotor_Basic>(); }
+    void Awake()
+    {
+        motor = GetComponent<AIMotor_Basic>();
+    }
 
     void Start()
     {
@@ -62,25 +74,24 @@ public class AIController_Basic : MonoBehaviour
 
     void Update()
     {
-        if (currentState == State.Dead) return;
+        // A verificação de estado agora inclui o knockback.
+        if (currentState == State.Dead || isTakingKnockback) return;
 
         bool canSeePlayer = CanSeePlayer();
         float distanceToPlayer = (playerTarget != null) ? Vector2.Distance(transform.position, playerTarget.position) : float.MaxValue;
 
-        // --- TOMADA DE DECISÃO ---
+        // --- TOMADA DE DECISÃO (sem mudanças aqui) ---
         if (canSeePlayer)
         {
-            // Se o jogador está dentro do alcance de ataque, ataca. Senão, caça.
-            if (distanceToPlayer <= attackRange) ChangeState(State.Attacking);
-            else ChangeState(State.Hunting);
+            if (distanceToPlayer <= attackRange && !isExecutingAction) ChangeState(State.Attacking);
+            else if (!isExecutingAction) ChangeState(State.Hunting);
         }
         else
         {
-            // Se perdeu o jogador de vista, volta a patrulhar.
             if (currentState == State.Hunting || currentState == State.Attacking) ChangeState(State.Patrolling);
         }
 
-        // --- EXECUÇÃO ---
+        // --- EXECUÇÃO (sem mudanças aqui) ---
         switch (currentState)
         {
             case State.Patrolling:
@@ -104,26 +115,36 @@ public class AIController_Basic : MonoBehaviour
     #region Health and Damage
 
     /// <summary>
-    /// Função pública para que outros objetos (como projéteis do jogador) possam causar dano a esta IA.
+    /// A função pública que recebe o dano do SlashEffect do jogador.
     /// </summary>
-    public void TakeDamage(float amount, Vector2 attackDirection)
+    public void TakeDamage(float amount, Vector2 attackDirection, float incomingKnockbackPower)
     {
         if (isInvincible || currentState == State.Dead) return;
 
         currentHealth -= amount;
-        if (currentHealth < 0) currentHealth = 0;
-
         Debug.Log($"{gameObject.name} tomou {amount} de dano. Vida restante: {currentHealth}");
 
-        if (currentHealth > 0)
+        // Lógica de Knockback (Força do Ataque vs. Resistência da IA)
+        float finalForce = incomingKnockbackPower - knockbackResistance;
+        if (finalForce > 0 && !isTakingKnockback)
         {
-            StartCoroutine(DamageFeedbackCoroutine());
-            motor.ApplyKnockback(attackDirection);
+            motor.ExecuteKnockback(finalForce, attackDirection);
+            StartCoroutine(KnockbackStateCoroutine());
         }
-        else
+
+        if (currentHealth <= 0)
         {
             Die();
         }
+        else
+        {
+            StartCoroutine(DamageFeedbackCoroutine());
+        }
+    }
+    public void TakeDamage(float amount, Vector2 attackDirection)
+    {
+        // Esta função simplesmente chama a função principal, passando 0 como força de knockback.
+        TakeDamage(amount, attackDirection, 0f);
     }
 
     private void Die()
@@ -136,7 +157,7 @@ public class AIController_Basic : MonoBehaviour
         Destroy(gameObject, 3f);
     }
 
-    // Efeito visual de piscar ao tomar dano, inspirado no seu PlayerStats.
+    // Efeito visual de piscar ao tomar dano.
     private IEnumerator DamageFeedbackCoroutine()
     {
         isInvincible = true;
@@ -153,6 +174,15 @@ public class AIController_Basic : MonoBehaviour
         }
         isInvincible = false;
     }
+
+    // Corrotina para controlar o ESTADO de knockback
+    private IEnumerator KnockbackStateCoroutine()
+    {
+        isTakingKnockback = true;
+        yield return new WaitForSeconds(0.3f); // Duração do "stun"
+        isTakingKnockback = false;
+    }
+
     #endregion
 
     #region Funções de Suporte e Corrotinas
@@ -163,12 +193,10 @@ public class AIController_Basic : MonoBehaviour
         isExecutingAction = true;
 
         Debug.Log($"Inimigo preparando ataque do tipo: {attackType}");
-        // Animação de "preparar o ataque"
         yield return new WaitForSeconds(0.5f);
 
         if (attackType == AttackType.Melee)
         {
-            // ATAQUE CORPO A CORPO
             Collider2D[] targetsHit = Physics2D.OverlapCircleAll(eyes.position, attackRange, playerLayer);
             foreach (Collider2D target in targetsHit)
             {
@@ -176,13 +204,16 @@ public class AIController_Basic : MonoBehaviour
                 {
                     Debug.Log($"Ataque corpo a corpo atingiu {player.name}!");
                     Vector2 knockbackDirection = (player.transform.position - transform.position).normalized;
-                    player.TakeDamage(attackDamage, knockbackDirection * knockbackForce);
+
+                    // --- LINHA MODIFICADA ---
+                    // Agora passamos o poder de knockback da IA para a função de dano do jogador.
+                    player.TakeDamage(attackDamage, knockbackDirection, attackKnockbackPower);
                 }
             }
         }
+        // ... (o resto da função permanece igual)
         else if (attackType == AttackType.Ranged)
         {
-            // ATAQUE À DISTÂNCIA
             if (projectilePrefab != null)
             {
                 Debug.Log("Disparando projétil!");
@@ -192,12 +223,11 @@ public class AIController_Basic : MonoBehaviour
             }
         }
 
-        yield return new WaitForSeconds(0.5f); // "Recuperação" do ataque
+        yield return new WaitForSeconds(0.5f);
         isExecutingAction = false;
         yield return new WaitForSeconds(attackCooldown);
         canAttack = true;
     }
-
     private bool CanSeePlayer()
     {
         if (playerTarget == null || eyes == null) return false;

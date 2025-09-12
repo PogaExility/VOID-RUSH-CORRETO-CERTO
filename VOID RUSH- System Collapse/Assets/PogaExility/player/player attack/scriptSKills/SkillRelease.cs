@@ -60,41 +60,44 @@ public class SkillRelease : MonoBehaviour
         }
     }
 
+    // Em SkillRelease.cs
+
     public bool TryActivateSkill(SkillSO skill)
     {
         if (skill == null) return false;
 
-        // Se a skill for a WallDash, começamos a registrar tudo no console.
-        bool isDebugging = (skill.actionToPerform == MovementSkillType.WallDash);
+        // Primeiro, checamos o input. Se não houver input, não fazemos mais nada.
+        if (!CheckKeyPress(skill)) return false;
 
-        if (isDebugging) Debug.Log($"--- TENTANDO ATIVAR: {skill.skillName} ---");
+        // Se a tecla foi pressionada, AGORA sim começamos o debug.
+        Debug.Log($"--- TENTANDO ATIVAR: {skill.skillName} (Input Recebido) ---");
 
         if (skillCooldowns.ContainsKey(skill))
         {
-            if (isDebugging) Debug.Log("<color=red>FALHA:</color> Skill está em cooldown.");
+            Debug.Log("<color=red>FALHA:</color> Skill está em cooldown.");
             return false;
         }
 
         if (currentActionCoroutine != null)
         {
-            if (isDebugging) Debug.Log($"<color=red>FALHA:</color> Outra ação já está em execução ({currentActionCoroutine.ToString()}).");
+            Debug.Log($"<color=red>FALHA:</color> Outra ação já está em execução.");
             return false;
         }
 
         if (skill.cancelIfKeysHeld.Any(key => Input.GetKey(key)))
         {
-            if (isDebugging) Debug.Log("<color=red>FALHA:</color> Uma tecla de cancelamento está sendo segurada.");
+            Debug.Log("<color=red>FALHA:</color> Uma tecla de cancelamento está sendo segurada.");
             return false;
         }
 
-        // Modificamos a chamada para passar a flag de debug
-        if (!CheckKeyPress(skill) || !CheckStateConditions(skill, isDebugging))
+        // Passamos 'true' para a função de debug
+        if (!CheckStateConditions(skill, true))
         {
-            // As próprias funções de checagem agora vão logar a falha
+            // A própria função já vai logar a falha de estado
             return false;
         }
 
-        if (isDebugging) Debug.Log("<color=green>SUCESSO:</color> Todas as condições foram atendidas. Executando ação.");
+        Debug.Log("<color=green>SUCESSO:</color> Todas as condições foram atendidas. Executando ação.");
 
         if (ExecuteAction(skill))
         {
@@ -107,6 +110,8 @@ public class SkillRelease : MonoBehaviour
 
         return false;
     }
+
+
 
 
 

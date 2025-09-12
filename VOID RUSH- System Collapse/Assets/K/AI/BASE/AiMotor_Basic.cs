@@ -26,11 +26,17 @@ public class AIMotor_Basic : MonoBehaviour
 
     // EM: AIMotor_Basic.cs, #region Comandos de Ação (Músculos)
 
-    public void ApplyKnockback(Vector2 force)
+    public void ExecuteKnockback(float force, Vector2 attackDirection, float upwardModifier = 0.2f)
     {
-        // Zera a velocidade atual para garantir que o knockback seja consistente.
+        // Zera a velocidade atual para garantir que o knockback seja limpo e consistente.
         rb.linearVelocity = Vector2.zero;
-        rb.AddForce(force, ForceMode2D.Impulse);
+
+        // Calcula a direção da repulsão (para longe do ataque) e adiciona o impulso para cima.
+        Vector2 knockbackDirection = -attackDirection.normalized;
+        knockbackDirection.y += upwardModifier;
+
+        // Aplica a força final como um impulso instantâneo.
+        rb.AddForce(knockbackDirection.normalized * force, ForceMode2D.Impulse);
     }
     // --- COMANDOS DE MOVIMENTO ---
     public void Move(float direction, float speed) { rb.linearVelocity = new Vector2(direction * speed, rb.linearVelocity.y); }

@@ -30,19 +30,29 @@ public class WeaponHandler : MonoBehaviour
     public event Action OnWeaponSlotsChanged;
     private Vector3 initialWeaponSocketScale;
     public bool IsReloading;
+    public Transform attackPoint;
     void Awake()
     {
         Instance = this;
         initialWeaponSocketScale = weaponSocket.localScale;
         if (playerController == null) playerController = GetComponent<PlayerController>();
-
+        
         // ADICIONE ESTA LINHA para encontrar o maestro
         if (animatorController == null) animatorController = GetComponentInParent<PlayerAnimatorController>();
 
         for (int i = 0; i < weaponSlots.Length; i++) { if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot(); }
         for (int i = 0; i < ammoSlots.Length; i++) { if (ammoSlots[i] == null) ammoSlots[i] = new InventorySlot(); }
+        attackPoint = playerController.transform.Find("AttackPoint");
+        if (attackPoint == null)
+        {
+            Debug.LogError("CRÍTICO: O objeto filho 'AttackPoint' não foi encontrado no Player.", playerController.gameObject);
+        }
     }
 
+    public Transform GetAttackPoint()
+    {
+        return attackPoint;
+    }
     void Start()
     {
         // Ao iniciar, equipa a arma no slot 0.
@@ -59,7 +69,6 @@ public class WeaponHandler : MonoBehaviour
     }
 
 
-   
    
     private void AimLogic()
     {
@@ -88,10 +97,10 @@ public class WeaponHandler : MonoBehaviour
     {
         if (activeWeaponInstance != null)
         {
+            // A versão correta que não passa parâmetros.
             activeWeaponInstance.Attack();
         }
     }
-    // Em WeaponHandler.cs
 
     public void ForceExitAimMode()
     {
@@ -182,69 +191,76 @@ public class WeaponHandler : MonoBehaviour
     }
     public void EquipToHand(int slotIndex)
     {
-        // 1. MASTER RESET: A primeira coisa que fazemos é garantir que o estado de recarga seja resetado.
-        // Isso conserta o bug de ficar preso.
         IsReloading = false;
 
-        if (activeWeaponInstance is RangedWeapon oldRangedWeapon)
-        {
-            // 2. CANCELAMENTO: Antes de destruir a arma antiga, mandamos ela parar qualquer recarga em andamento.
-            oldRangedWeapon.CancelReload();
-
-            // Salva a munição como antes.
-            weaponSlots[currentWeaponIndex].currentAmmo = oldRangedWeapon.CurrentAmmo;
-        }
-
-        // 3. LIMPEZA (como antes)
+        // Limpa a arma antiga antes de equipar a nova.
         if (activeWeaponInstance != null)
         {
-            activeWeaponInstance.OnWeaponStateChanged -= HandleWeaponStateChange;
-            Destroy(activeWeaponInstance.gameObject);
+            // Se for RangedWeapon, cancela a recarga.
+            if (activeWeaponInstance is RangedWeapon oldRangedWeapon)
+            {
+                oldRangedWeapon.CancelReload();
+                weaponSlots[currentWeaponIndex].currentAmmo = oldRangedWeapon.CurrentAmmo;
+            }
+            // Se for MeeleeWeapon, cancela o ataque.
+            if (activeWeaponInstance is MeeleeWeapon oldMeeleeWeapon)
+            {
+                oldMeeleeWeapon.CancelAttack();
+            }
+
+            // Destrói o *componente* do script, não o GameObject.
+            Destroy(activeWeaponInstance);
+            activeWeaponInstance = null;
         }
 
-        // O resto da função continua exatamente igual ao seu código original.
         currentWeaponIndex = slotIndex;
         var newWeaponSlot = weaponSlots[currentWeaponIndex];
         var weaponData = newWeaponSlot.item;
-        activeWeaponInstance = null;
 
-        if (weaponData == null || weaponData.equipPrefab == null)
+        if (weaponData == null)
         {
             playerController.SetAimingState(false);
             OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
             return;
         }
 
-        GameObject weaponGO = Instantiate(weaponData.equipPrefab, weaponSocket);
-        weaponGO.transform.localPosition = Vector3.zero;
-        weaponGO.transform.localRotation = Quaternion.identity;
+        // Adiciona o componente de script da arma ao próprio GameObject do WeaponHandler.
+        // Isso pressupõe que o prefab em "equipPrefab" na verdade contém apenas o script.
+        // Uma abordagem mais segura é ter uma referência direta ao tipo do script.
+        // Mas vamos manter a lógica do prefab por enquanto.
 
-        var playerRenderer = playerController.GetComponent<SpriteRenderer>();
-        var weaponRenderer = weaponGO.GetComponentInChildren<SpriteRenderer>();
-        if (weaponRenderer != null && playerRenderer != null)
+        // Pega o script do prefab sem instanciar o prefab inteiro
+        var weaponScriptPrefab = weaponData.equipPrefab.GetComponent<WeaponBase>();
+        if (weaponScriptPrefab != null)
         {
-            weaponRenderer.sortingLayerName = playerRenderer.sortingLayerName;
-            weaponRenderer.sortingOrder = playerRenderer.sortingOrder + 1;
-        }
+            // Adiciona o componente do tipo da arma a este GameObject
+            activeWeaponInstance = (WeaponBase)gameObject.AddComponent(weaponScriptPrefab.GetType());
 
-        activeWeaponInstance = weaponGO.GetComponent<WeaponBase>();
-        if (activeWeaponInstance != null)
-        {
+            // Inicializa a arma recém-adicionada
             activeWeaponInstance.Initialize(weaponData, newWeaponSlot.currentAmmo);
             activeWeaponInstance.OnWeaponStateChanged += HandleWeaponStateChange;
+
+            // Configuração específica para MeeleeWeapon
+            if (activeWeaponInstance is MeeleeWeapon meeleeWeapon)
+            {
+                Transform attackPoint = playerController.transform.Find("AttackPoint");
+                if (attackPoint == null)
+                {
+                    Debug.LogError("CRÍTICO: O objeto filho 'AttackPoint' não foi encontrado no Player.", playerController.gameObject);
+                }
+                meeleeWeapon.InitializeMeelee(playerController, animatorController);
+            }
+            // Adicione aqui a inicialização para RangedWeapon se necessário
         }
         else
         {
-            Debug.LogError($"Prefab '{weaponData.name}' não tem script derivado de WeaponBase!");
-            Destroy(weaponGO);
+            Debug.LogError($"Prefab '{weaponData.name}' não tem um script derivado de WeaponBase!");
             return;
         }
 
-      
         playerController.SetAimingState(weaponData.useAimMode);
         OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
     }
-
     private void HandleWeaponStateChange()
     {
         OnActiveWeaponChanged?.Invoke(currentWeaponIndex);
