@@ -1,30 +1,52 @@
-// ProjectileAnimator.cs
+// ProjectileAnimatorController.cs - VERSÃO PROFISSIONAL COM HASHES
 using UnityEngine;
+
+public enum ProjectileAnimState
+{
+    None, // Estado padrão
+    polvora,
+    Corte1_Anim,
+    Corte2_Anim,
+    Corte3_Anim
+}
 
 [RequireComponent(typeof(Animator))]
 public class ProjectileAnimatorController : MonoBehaviour
 {
     private Animator animator;
 
+    #region State Hashes
+    private static readonly int PolvoraHash = Animator.StringToHash("polvora");
+    private static readonly int Corte1Hash = Animator.StringToHash("Corte1_Anim");
+    private static readonly int Corte2Hash = Animator.StringToHash("Corte2_Anim");
+    private static readonly int Corte3Hash = Animator.StringToHash("Corte3_Anim");
+    #endregion
+
     void Awake()
     {
-        // Pega a referência do Animator que está no mesmo objeto.
         animator = GetComponent<Animator>();
     }
 
-    /// <summary>
-    /// Função pública que outros scripts (como GunpowderExplosion) vão chamar.
-    /// </summary>
-    /// <param name="animationName">O nome exato do estado da animação a ser tocado.</param>
-    public void PlayAnimation(string animationName)
+    public void PlayAnimation(ProjectileAnimState state)
     {
-        if (animator != null)
+        if (animator == null) return;
+
+        int hash = GetStateHash(state);
+        if (hash != 0)
         {
-            animator.Play(animationName);
+            animator.Play(hash, 0, 0f);
         }
-        else
+    }
+
+    private int GetStateHash(ProjectileAnimState state)
+    {
+        switch (state)
         {
-            Debug.LogError("Animator não encontrado neste objeto!", this.gameObject);
+            case ProjectileAnimState.polvora: return PolvoraHash;
+            case ProjectileAnimState.Corte1_Anim: return Corte1Hash;
+            case ProjectileAnimState.Corte2_Anim: return Corte2Hash;
+            case ProjectileAnimState.Corte3_Anim: return Corte3Hash;
+            default: return 0;
         }
     }
 }

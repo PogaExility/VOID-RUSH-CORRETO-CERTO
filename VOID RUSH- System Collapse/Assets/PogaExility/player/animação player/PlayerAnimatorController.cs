@@ -27,7 +27,10 @@ public enum PlayerAnimState
     andarCotoco,
     pulandoCotoco,
     fallingCotoco,
-    recarregando
+    recarregando,
+    Combo1,
+    Combo2,
+    Combo3
 }
 
 public class PlayerAnimatorController : MonoBehaviour
@@ -64,6 +67,9 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int PulandoCotocoHash = Animator.StringToHash("pulandoCotoco");
     private static readonly int FallingCotocoHash = Animator.StringToHash("fallingCotoco");
     private static readonly int ReloadingHash = Animator.StringToHash("recarregando");
+    private static readonly int Combo1Hash = Animator.StringToHash("Combo1");
+    private static readonly int Combo2Hash = Animator.StringToHash("Combo2");
+    private static readonly int Combo3Hash = Animator.StringToHash("Combo3");
     #endregion
 
 
@@ -196,6 +202,9 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.pulandoCotoco: return PulandoCotocoHash;
             case PlayerAnimState.fallingCotoco: return FallingCotocoHash;
             case PlayerAnimState.recarregando: return ReloadingHash;
+            case PlayerAnimState.Combo1: return Combo1Hash;
+            case PlayerAnimState.Combo2: return Combo2Hash;
+            case PlayerAnimState.Combo3: return Combo3Hash;
             default: return ParadoHash;
         }
     }

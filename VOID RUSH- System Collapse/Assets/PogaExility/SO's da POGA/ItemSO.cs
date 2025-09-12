@@ -56,10 +56,10 @@ public class ItemSO : ScriptableObject
     public int pierceCount = 0;
     public float damageFalloff = 0.3f;
 
+    [Header("Meelee")]
     [Tooltip("Tempo em segundos que o combo fica 'aberto' antes de resetar para o primeiro golpe.")]
     public float comboResetTime = 0.8f;
-    public float lungeDuration = 0.15f; // Duração do movimento de avanço.
-
+    public float lungeDuration = 0.15f;
     [Tooltip("A lista de golpes que compõem a sequência de combo desta arma.")]
     public List<ComboStepData> comboSteps;
 

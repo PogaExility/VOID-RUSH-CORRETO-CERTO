@@ -74,7 +74,7 @@ public class MeeleeWeapon : WeaponBase
         canContinueCombo = false;
 
         playerController.PerformLunge(currentStepData.lungeDistance, weaponData.lungeDuration);
-        animatorController.PlayStateByName(AnimatorTarget.PlayerBody, currentStepData.comboBodyAnimation.name);
+        animatorController.PlayState(AnimatorTarget.PlayerBody, currentStepData.comboBodyAnimation);
 
         if (currentSlashInstance != null)
         {
@@ -95,7 +95,7 @@ public class MeeleeWeapon : WeaponBase
             SlashEffect slashScript = currentSlashInstance.GetComponent<SlashEffect>();
             if (slashScript != null)
             {
-                slashScript.Initialize(currentStepData.damage, currentStepData.knockbackPower, currentStepData.slashAnimation.name);
+                slashScript.Initialize(currentStepData.damage, currentStepData.knockbackPower, currentStepData.slashAnimation);
             }
         }
 

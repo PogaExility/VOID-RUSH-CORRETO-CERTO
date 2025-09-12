@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: d341f2d32dffc3149a1b9d0c9fcf21e3
+guid: 2f6f40975be37c443aa710a408a2ad60
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1626634614656230650
-    second: combo2True5_0
+      213: -3674912955441811881
+    second: Combo2T2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: combo2True5_0
+      name: Combo2T2_0
       rect:
         serializedVersion: 2
-        x: 6
-        y: 5
-        width: 19
-        height: 22
+        x: 10
+        y: 0
+        width: 14
+        height: 21
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: af460f15097f29610800000000000000
-      internalID: 1626634614656230650
+      spriteID: 75ee8663326100dc0800000000000000
+      internalID: -3674912955441811881
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      combo2True5_0: 1626634614656230650
+      Combo2T2_0: -3674912955441811881
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
