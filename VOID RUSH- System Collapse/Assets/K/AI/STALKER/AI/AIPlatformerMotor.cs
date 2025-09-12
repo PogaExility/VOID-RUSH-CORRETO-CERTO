@@ -10,9 +10,10 @@ public class AIPlatformerMotor : MonoBehaviour
     [HideInInspector] public float currentFacingDirection = 1f;
     [HideInInspector] public bool isFacingRight = true;
 
-    private float _currentSpeed = 0f;
-    private float _originalGravityScale;
+    // Tornada pública para que o Controller a possa verificar
+    [HideInInspector] public float _currentSpeed = 0f;
 
+    private float _originalGravityScale;
     private Vector2 _standingColliderSize;
     private Vector2 _crouchingColliderSize;
 
@@ -22,11 +23,8 @@ public class AIPlatformerMotor : MonoBehaviour
 
     #region CONFIGURATION
     [Header("▶ Atributos de Movimento")]
-    [Tooltip("A velocidade com que a IA ganha velocidade.")]
     public float acceleration = 5f;
-    [Tooltip("A velocidade com que a IA perde velocidade ao parar.")]
     public float deceleration = 8f;
-    [Tooltip("A velocidade de escalada.")]
     public float climbSpeed = 4f;
 
     [Header("▶ Atributos Físicos")]
@@ -51,7 +49,6 @@ public class AIPlatformerMotor : MonoBehaviour
 
     void FixedUpdate()
     {
-        // A física deve ser aplicada no FixedUpdate para consistência.
         if (!IsClimbing)
         {
             _rb.linearVelocity = new Vector2(_currentSpeed * currentFacingDirection, _rb.linearVelocity.y);
@@ -60,20 +57,20 @@ public class AIPlatformerMotor : MonoBehaviour
     #endregion
 
     #region PUBLIC API (COMMANDS)
-    /// <summary>
-    /// Acelera gradualmente até à velocidade máxima desejada.
-    /// </summary>
     public void Move(float topSpeed)
     {
         _currentSpeed = Mathf.MoveTowards(_currentSpeed, topSpeed, acceleration * Time.deltaTime);
     }
 
-    /// <summary>
-    /// Desacelera gradualmente até parar.
-    /// </summary>
     public void Stop()
     {
         _currentSpeed = Mathf.MoveTowards(_currentSpeed, 0, deceleration * Time.deltaTime);
+    }
+
+    public void HardStop()
+    {
+        _currentSpeed = 0;
+        _rb.linearVelocity = new Vector2(0, _rb.linearVelocity.y);
     }
 
     public void Brake()
@@ -81,42 +78,26 @@ public class AIPlatformerMotor : MonoBehaviour
         _currentSpeed = Mathf.MoveTowards(_currentSpeed, 0, deceleration * Time.deltaTime);
     }
 
-    /// <summary>
-    /// Aplica uma força de salto se estiver no chão.
-    /// </summary>
     public void Jump(float jumpForce)
     {
-        if (IsGrounded())
-        {
-            Debug.Log("[Motor] A executar SALTO!");
-            _rb.AddForce(new Vector2(0f, jumpForce), ForceMode2D.Impulse);
-        }
+        if (IsGrounded()) { _rb.AddForce(new Vector2(0f, jumpForce), ForceMode2D.Impulse); }
     }
 
-    /// <summary>
-    /// Inicia o estado de escalada, desativando a gravidade.
-    /// </summary>
     public void StartClimb()
     {
         if (IsClimbing) return;
         IsClimbing = true;
         _rb.gravityScale = 0;
-        _currentSpeed = 0; // Para o movimento horizontal
+        _currentSpeed = 0;
         _rb.linearVelocity = Vector2.zero;
     }
 
-    /// <summary>
-    /// Move o corpo verticalmente enquanto escala.
-    /// </summary>
     public void Climb(float verticalDirection)
     {
         if (!IsClimbing) return;
         _rb.linearVelocity = new Vector2(0, verticalDirection * climbSpeed);
     }
 
-    /// <summary>
-    /// Termina o estado de escalada, reativando a gravidade.
-    /// </summary>
     public void StopClimb()
     {
         if (!IsClimbing) return;
@@ -124,9 +105,6 @@ public class AIPlatformerMotor : MonoBehaviour
         _rb.gravityScale = _originalGravityScale;
     }
 
-    /// <summary>
-    /// Altera o colisor para o estado de agachado.
-    /// </summary>
     public void StartCrouch()
     {
         if (IsCrouching) return;
@@ -134,9 +112,6 @@ public class AIPlatformerMotor : MonoBehaviour
         _collider.size = _crouchingColliderSize;
     }
 
-    /// <summary>
-    /// Restaura o colisor para o estado normal.
-    /// </summary>
     public void StopCrouch()
     {
         if (!IsCrouching) return;
@@ -144,9 +119,6 @@ public class AIPlatformerMotor : MonoBehaviour
         _collider.size = _standingColliderSize;
     }
 
-    /// <summary>
-    /// Vira o corpo 180 graus.
-    /// </summary>
     public void Flip()
     {
         isFacingRight = !isFacingRight;
@@ -156,9 +128,6 @@ public class AIPlatformerMotor : MonoBehaviour
     #endregion
 
     #region PUBLIC API (QUERIES)
-    /// <summary>
-    /// Verifica se a IA está a tocar no chão.
-    /// </summary>
     public bool IsGrounded() => groundCheck != null && Physics2D.Raycast(groundCheck.position, Vector2.down, groundCheckDistance, groundLayer);
     #endregion
 }
