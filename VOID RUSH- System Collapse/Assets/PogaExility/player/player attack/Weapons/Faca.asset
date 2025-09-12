@@ -45,19 +45,19 @@ MonoBehaviour:
   comboSteps:
   - playerAnimationState: 19
     slashAnimationState: 2
-    playerAnimationClip: {fileID: 7400000, guid: 56f8c4f7756c76644a53e65c962d6484, type: 2}
+    playerAnimationClip: {fileID: 7400000, guid: 9c5cce670f717304e8a5c7bc54cdbd92, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 872cabe68352dcc4dbee48ff6544bed1, type: 3}
     damage: 10
     knockbackPower: 1
-    lungeDistance: 1
-    comboWindow: 1
+    lungeDistance: 5
+    comboWindow: 0.4
   - playerAnimationState: 20
     slashAnimationState: 3
     playerAnimationClip: {fileID: 7400000, guid: 412c1ca60930e824d86bd7e05ff40327, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 0ad855eb5e4c7c3469a385d1550fe5fb, type: 3}
     damage: 12
     knockbackPower: 0.5
-    lungeDistance: 0
+    lungeDistance: 5
     comboWindow: 0.7
   - playerAnimationState: 21
     slashAnimationState: 4
@@ -65,8 +65,8 @@ MonoBehaviour:
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 760f9e14a7f667c4e9bcde7c3ed7871f, type: 3}
     damage: 15
     knockbackPower: 2
-    lungeDistance: 3
-    comboWindow: 0
+    lungeDistance: 10
+    comboWindow: 0.1
   chargeTime: 0
   energyCostPerChargeSecond: 0
   baseEnergyCost: 0

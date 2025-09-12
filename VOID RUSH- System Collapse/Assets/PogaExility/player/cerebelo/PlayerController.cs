@@ -38,6 +38,7 @@ public class PlayerController : MonoBehaviour
     public SkillSO blockSkill;
 
     public bool IsAttacking { get; set; }
+    public bool BlockCombatInput { get; set; }
     private bool isInventoryOpen = false;
     private SkillSO activeJumpSkill;
     private SkillSO activeDashSkill;
@@ -102,6 +103,8 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
     }
 
+
+   
 
     private Coroutine lungeCoroutine;
 
@@ -186,21 +189,37 @@ public class PlayerController : MonoBehaviour
 
     private void HandleSkillInput()
     {
-        if (activeDashSkill.triggerKeys.Any(key => Input.GetKeyDown(key)))
+        // Se alguma skill for ativada, ela retornará 'true'.
+        if (TryActivateMovementSkills())
         {
-            skillRelease.SetDashBuffer(dashJumpSkill.dashJump_InputBuffer);
+            // Se uma skill de movimento foi ativada, bloqueia o combate por um curto período.
+            StartCoroutine(CombatBlockCoroutine(0.1f)); // Bloqueia por 0.1s após o dash/pulo
         }
-
-        if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
-        if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
-        if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
-        if (skillRelease.TryActivateSkill(wallDashSkill)) return;
-        if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
-        if (skillRelease.TryActivateSkill(activeJumpSkill)) return;
-        if (skillRelease.TryActivateSkill(activeDashSkill)) return;
     }
-     private void HandleCombatInput()
+
+    // Crie esta nova função auxiliar
+    private bool TryActivateMovementSkills()
     {
+        if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(dashJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(wallJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(wallDashSkill)) return true;
+        if (skillRelease.TryActivateSkill(wallSlideSkill)) return true;
+        if (skillRelease.TryActivateSkill(activeJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(activeDashSkill)) return true;
+        return false;
+    }
+
+    // Crie esta nova corrotina
+    private IEnumerator CombatBlockCoroutine(float duration)
+    {
+        BlockCombatInput = true;
+        yield return new WaitForSeconds(duration);
+        BlockCombatInput = false;
+    }
+    private void HandleCombatInput()
+    {
+        if (weaponHandler.IsReloading || BlockCombatInput) return;
         if (weaponHandler.IsReloading) return;
 
         // ADICIONE a verificação "!IsAttacking" aqui.
