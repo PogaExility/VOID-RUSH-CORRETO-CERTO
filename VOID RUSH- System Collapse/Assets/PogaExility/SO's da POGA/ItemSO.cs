@@ -60,8 +60,10 @@ public class ItemSO : ScriptableObject
     [Tooltip("Tempo em segundos que o combo fica 'aberto' antes de resetar para o primeiro golpe.")]
     public float comboResetTime = 0.8f;
     public float lungeDuration = 0.15f;
+
+    // A lista que usa nosso "molde" para desenhar a interface correta.
     [Tooltip("A lista de golpes que compõem a sequência de combo desta arma.")]
-    public List<ComboStepData> comboSteps;
+    public System.Collections.Generic.List<ComboStepData> comboSteps = new System.Collections.Generic.List<ComboStepData>();
 
     [Header("Buster")]
     public float chargeTime;

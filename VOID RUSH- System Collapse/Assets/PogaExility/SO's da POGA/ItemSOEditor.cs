@@ -113,16 +113,13 @@ public class ItemSOEditor : Editor
             EditorGUILayout.LabelField("Munições aceitas", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("acceptedAmmo"), true);
         }
+
         else if (item.weaponType == WeaponType.Meelee)
         {
-            // --- INÍCIO DA MODIFICAÇÃO ---
             EditorGUILayout.LabelField("Meelee", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("comboResetTime"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("lungeDuration"));
-
-            // Esta linha desenha a lista inteira com a interface da Unity (expandir, +, -)
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("comboSteps"), true);
-            // --- FIM DA MODIFICAÇÃO ---
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("comboSteps"), true); 
         }
         else if (item.weaponType == WeaponType.Buster)
         {

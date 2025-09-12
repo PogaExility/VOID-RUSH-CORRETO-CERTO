@@ -30,7 +30,7 @@ public class WeaponHandler : MonoBehaviour
     public event Action OnWeaponSlotsChanged;
     private Vector3 initialWeaponSocketScale;
     public bool IsReloading;
-    private Transform attackPoint;
+    public Transform attackPoint;
     void Awake()
     {
         Instance = this;

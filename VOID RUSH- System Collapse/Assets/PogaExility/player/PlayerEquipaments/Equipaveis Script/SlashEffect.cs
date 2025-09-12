@@ -37,14 +37,16 @@ public class SlashEffect : MonoBehaviour
     /// Função de inicialização chamada pela MeeleeWeapon logo após a instanciação.
     /// Configura o dano, o knockback e a animação a ser tocada.
     /// </summary>
-    public void Initialize(float damageAmount, float knockbackForce, string animationToPlay)
+      // DENTRO DE SlashEffect.cs
+
+    public void Initialize(float damageAmount, float knockbackForce, ProjectileAnimState animationToPlay)
     {
         this.damage = damageAmount;
         this.knockbackPower = knockbackForce;
 
-        // Comanda o nosso "maestro" de animação para tocar o clipe correto.
-        if (projectileAnimator != null && !string.IsNullOrEmpty(animationToPlay))
+        if (projectileAnimator != null)
         {
+            // CORREÇÃO: Chama a função PlayAnimation que agora aceita o ENUM.
             projectileAnimator.PlayAnimation(animationToPlay);
         }
     }
