@@ -27,13 +27,13 @@ public class ItemSO : ScriptableObject
 
     [Header("Configurações de Combate (se for Arma)")]
     public WeaponType weaponType;
-    public float attackRate = 0.5f;
-    public bool useAimMode = false;
+   
 
     [Header("Ranger (Arma)")]
     public int magazineSize;
     public float reloadTime;
-
+    public float attackRate = 0.5f;
+    public bool useAimMode = false;
     // ADICIONE ESTAS 3 LINHAS PARA O RECOIL
     [Header("Recoil")]
     public float recoilDistance = 0.5f; // O quão para trás a arma vai
@@ -60,8 +60,6 @@ public class ItemSO : ScriptableObject
     [Tooltip("Tempo em segundos que o combo fica 'aberto' antes de resetar para o primeiro golpe.")]
     public float comboResetTime = 0.8f;
     public float lungeDuration = 0.15f;
-
-    // A lista que usa nosso "molde" para desenhar a interface correta.
     [Tooltip("A lista de golpes que compõem a sequência de combo desta arma.")]
     public System.Collections.Generic.List<ComboStepData> comboSteps = new System.Collections.Generic.List<ComboStepData>();
 

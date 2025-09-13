@@ -13,5 +13,7 @@ public class ComboStepData
     public float damage;
     public float knockbackPower;
     public float lungeDistance;
+    public float lungeSpeed;
     public float comboWindow = 0.5f;
+    public float comboSpeed = 1f;
 }

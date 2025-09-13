@@ -89,8 +89,6 @@ public class ItemSOEditor : Editor
     {
         EditorGUILayout.LabelField("Configurações de Arma", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("weaponType"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("attackRate"));
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("useAimMode"));
         EditorGUILayout.Space(4);
 
         if (item.weaponType == WeaponType.Ranger)
@@ -98,6 +96,8 @@ public class ItemSOEditor : Editor
             EditorGUILayout.LabelField("Ranger", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("magazineSize"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("reloadTime"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("attackRate"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("useAimMode"));
             EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("Recoil", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("recoilDistance"));
@@ -118,8 +118,8 @@ public class ItemSOEditor : Editor
         {
             EditorGUILayout.LabelField("Meelee", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("comboResetTime"));
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("lungeDuration"));
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("comboSteps"), true); 
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("lungeDuration")); 
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("comboSteps"), true);
         }
         else if (item.weaponType == WeaponType.Buster)
         {

@@ -226,7 +226,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     void Update()
     {
-
+        Debug.Log("Estou no ar? " + CheckState(PlayerState.IsInAir));
+        Debug.Log("Estou tocando a parede? " + CheckState(PlayerState.IsTouchingWall));
+        // FIM DA ADIÇÃO
         if (physicsControlDisabled)
         {
             UpdateTimers();
@@ -250,21 +252,16 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         if (physicsControlDisabled)
         {
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            //rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
             return;
         }
-
-        CheckCollisions(); // A variável isTouchingWall é atualizada aqui.
-
-        // --- ADICIONE ESTA VERIFICAÇÃO AQUI ---
-        // Se o jogador está no estado de WallSlide, mas não está mais tocando uma parede,
-        // ou se ele tocou o chão, a skill deve ser interrompida.
         if (isWallSliding && (!IsTouchingWall() || IsGrounded()))
         {
             StopWallSlide();
         }
         // --- FIM DA CORREÇÃO ---
 
+        CheckCollisions();
         HandleMovement();
         HandleGravity();
     }
@@ -468,7 +465,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private void HandleMovement()
     {
         // ADICIONE A VERIFICAÇÃO "isInKnockback" AQUI
-        if (isDashing || isWallJumping || isWallSliding || isInKnockback)
+        if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback)
         {
             return;
         }
