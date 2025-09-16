@@ -30,7 +30,7 @@ public class WeaponHandler : MonoBehaviour
     public event Action OnWeaponSlotsChanged;
     private Vector3 initialWeaponSocketScale;
     public bool IsReloading;
-    public Transform attackPoint;
+    private Transform attackPoint;
     void Awake()
     {
         Instance = this;
@@ -70,12 +70,8 @@ public class WeaponHandler : MonoBehaviour
         }
     }
 
-    public bool IsWeaponObjectActive()
-    {
-        // Retorna 'true' apenas se a instância da arma existir E o seu GameObject estiver ativo na cena.
-        return activeWeaponInstance != null && activeWeaponInstance.gameObject.activeInHierarchy;
-    }
 
+   
     private void AimLogic()
     {
         if (activeWeaponInstance == null) return;

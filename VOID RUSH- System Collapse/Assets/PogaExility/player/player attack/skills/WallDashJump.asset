@@ -42,7 +42,7 @@ MonoBehaviour:
   dashJump_GravityScaleOnFall: 2.5
   wallDashJump_LaunchForceX: 25
   wallDashJump_LaunchForceY: 15
-  wallDashJump_InputBuffer: 0.2
+  wallDashJump_InputBuffer: 0.02
   wallDashJump_ParabolaDamping: 1
   wallDashJump_GravityScaleOnFall: 2
   block_ParryWindow: 0.15

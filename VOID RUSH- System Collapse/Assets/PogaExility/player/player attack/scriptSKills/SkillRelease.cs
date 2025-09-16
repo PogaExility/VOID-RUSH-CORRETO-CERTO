@@ -154,8 +154,7 @@ public class SkillRelease : MonoBehaviour
 
             if (group.logicType == ConditionLogic.AllOf)
             {
-                if (!group.states.All(state =>
-                {
+                if (!group.states.All(state => {
                     bool result = movement.CheckState(state);
                     if (isDebugging) Debug.Log($"  - Checando se '{state}' é verdadeiro... Resultado: {result}");
                     return result;
@@ -167,8 +166,7 @@ public class SkillRelease : MonoBehaviour
             }
             else if (group.logicType == ConditionLogic.AnyOf)
             {
-                if (!group.states.Any(state =>
-                {
+                if (!group.states.Any(state => {
                     bool result = movement.CheckState(state);
                     if (isDebugging) Debug.Log($"  - Checando se '{state}' é verdadeiro... Resultado: {result}");
                     return result;
@@ -221,7 +219,9 @@ public class SkillRelease : MonoBehaviour
                 return true;
 
 
-            case MovementSkillType.WallDash:
+
+            case MovementSkillType.WallDash: // <-- FAÇA O WALLDASH "CAIR" PARA O DASH
+                                             // Ambos agora usam a MESMA corotina, que já está corrigida.
                 currentActionCoroutine = StartCoroutine(ExecuteDashCoroutine(skill));
                 return true;
 
@@ -262,74 +262,63 @@ public class SkillRelease : MonoBehaviour
         return false;
     }
 
-    // DENTRO DE SkillRelease.cs
-
     private IEnumerator ExecuteDashCoroutine(SkillSO skill)
     {
-        // Pega o estado e o Rigidbody ANTES de qualquer coisa.
+        // --- LÓGICA DE ATIVAÇÃO DE ESTADO ---
         bool isWallDash = skill.actionToPerform == MovementSkillType.WallDash;
-        Rigidbody2D rb = movement.GetRigidbody();
-        float originalGravity = rb.gravityScale;
+        if (isWallDash)
+            movement.OnWallDashStart();
+        else
+            movement.OnDashStart();
+        // --------------------------------------
 
-        try
+        Vector2 direction;
+        float inputX = Input.GetAxisRaw("Horizontal");
+
+        if (Mathf.Abs(inputX) > 0.1f && !isWallDash) // Modificado para ignorar input no WallDash
         {
-            // --- FASE DE EXECUÇÃO ---
-            // Tudo que modifica o estado do jogador vai dentro do "try".
-
-            if (isWallDash)
-                movement.OnWallDashStart();
-            else
-                movement.OnDashStart();
-
-            Vector2 direction;
-            float inputX = Input.GetAxisRaw("Horizontal");
-
-            if (Mathf.Abs(inputX) > 0.1f && !isWallDash)
-            {
-                direction = new Vector2(Mathf.Sign(inputX), 0);
-            }
-            else
-            {
-                direction = movement.GetFacingDirection();
-            }
-
-            if (isWallDash)
-            {
-                movement.StopWallSlide();
-                direction = movement.GetWallEjectDirection();
-            }
-
-            if ((direction.x > 0 && !movement.IsFacingRight()) || (direction.x < 0 && movement.IsFacingRight()))
-            {
-                movement.Flip();
-            }
-
-            rb.gravityScale = 0f;
-            float timer = 0f;
-            while (timer < skill.dashDuration)
-            {
-                if (movement.IsTouchingWall() && timer > 0.1f) break;
-
-                rb.linearVelocity = new Vector2(direction.x * skill.dashSpeed, 0);
-
-                timer += Time.deltaTime;
-                yield return null;
-            }
+            direction = new Vector2(Mathf.Sign(inputX), 0);
         }
-        finally
+        else
         {
-            // --- FASE DE LIMPEZA (GARANTIDA) ---
-            // Este bloco SEMPRE será executado.
-
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-            rb.gravityScale = originalGravity;
-
-            if (isWallDash)
-                movement.OnWallDashEnd(); // <<-- Garante que isWallDashing vira false
-            else
-                movement.OnDashEnd();
-
-            currentActionCoroutine = null; // Libera para a próxima skill
+            direction = movement.GetFacingDirection();
         }
+
+        if (isWallDash)
+        {
+            movement.StopWallSlide();
+            direction = movement.GetWallEjectDirection();
+        }
+
+        if ((direction.x > 0 && !movement.IsFacingRight()) || (direction.x < 0 && movement.IsFacingRight()))
+        {
+            movement.Flip();
+        }
+
+        float originalGravity = movement.GetRigidbody().gravityScale;
+        movement.SetGravityScale(0f);
+        float timer = 0f;
+        while (timer < skill.dashDuration)
+        {
+            if (movement.IsTouchingWall() && timer > 0.1f) break;
+
+            // CORREÇÃO: A velocidade em Y deve ser 0 durante o dash para um movimento reto.
+            movement.SetVelocity(direction.x * skill.dashSpeed, 0);
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        movement.SetVelocity(0, movement.GetRigidbody().linearVelocity.y);
+        movement.SetGravityScale(originalGravity);
+
+        // --- LÓGICA DE DESATIVAÇÃO DE ESTADO ---
+        if (isWallDash)
+            movement.OnWallDashEnd();
+        else
+            movement.OnDashEnd();
+        // -----------------------------------------
+
+        currentActionCoroutine = null;
     }
 }

@@ -1,19 +1,14 @@
-// NOME DO ARQUIVO: ComboStepData.cs
+using UnityEngine;
+
 [System.Serializable]
 public class ComboStepData
 {
-    // Usaremos ENUMS para a performance dos Hashes
-    public PlayerAnimState playerAnimationState;
-    public ProjectileAnimState slashAnimationState;
+    public PlayerAnimState comboBodyAnimation; // << MUDANÇA AQUI
+    public ProjectileAnimState slashAnimation; // << MUDANÇA AQUI
 
-    // E o AnimationClip para pegar a duração
-    public UnityEngine.AnimationClip playerAnimationClip;
-
-    public UnityEngine.GameObject slashEffectPrefab;
+    public GameObject slashEffectPrefab;
     public float damage;
     public float knockbackPower;
     public float lungeDistance;
-    public float lungeSpeed;
     public float comboWindow = 0.5f;
-    public float comboSpeed = 1f;
 }

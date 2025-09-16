@@ -12,7 +12,7 @@ public class GunpowderExplosion : MonoBehaviour
     void Start()
     {
         // A primeira coisa que ele faz é pedir ao maestro para tocar a animação "polvora".
-        GetComponent<ProjectileAnimatorController>().PlayAnimation(ProjectileAnimState.polvora);
+        GetComponent<ProjectileAnimatorController>().PlayAnimation("polvora");
     }
 
     /// <summary>

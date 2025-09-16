@@ -16,8 +16,8 @@ MonoBehaviour:
   cooldownDuration: 0
   energyCost: 0
   skillClass: 0
-  requiredKeys: 
-  triggerKeys: 71000000
+  requiredKeys: 71000000
+  triggerKeys: 
   cancelIfKeysHeld: 20000000
   actionToPerform: 6
   combatActionToPerform: 0
