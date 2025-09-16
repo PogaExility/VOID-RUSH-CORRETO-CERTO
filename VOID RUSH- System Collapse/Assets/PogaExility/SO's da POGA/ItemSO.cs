@@ -34,6 +34,7 @@ public class ItemSO : ScriptableObject
     public float reloadTime;
     public float attackRate = 0.5f;
     public bool useAimMode = false;
+
     // ADICIONE ESTAS 3 LINHAS PARA O RECOIL
     [Header("Recoil")]
     public float recoilDistance = 0.5f; // O quão para trás a arma vai
@@ -44,6 +45,7 @@ public class ItemSO : ScriptableObject
     public GameObject gunpowderPrefab; // ADICIONE ESTA LINHA PARA O PREFAB DA EXPLOSÃO
     public float powderDamage = 2f;
     public float powderRange = 2f;
+    public float powderKnockback = 3f;
     public ItemSO[] acceptedAmmo;
     [Tooltip("A distância para frente do cano onde o efeito de pólvora vai aparecer.")]
     public float gunpowderSpawnOffset = 0.5f;
@@ -53,6 +55,7 @@ public class ItemSO : ScriptableObject
     public float bulletDamage = 10f;
     public float bulletSpeed = 20f;
     public float bulletLifetime = 3f;
+    public float bulletKnockback = 5f;
     public int pierceCount = 0;
     public float damageFalloff = 0.3f;
 

@@ -26,17 +26,30 @@ public class AIMotor_Basic : MonoBehaviour
 
     // EM: AIMotor_Basic.cs, #region Comandos de Ação (Músculos)
 
-    public void ExecuteKnockback(float force, Vector2 attackDirection, float upwardModifier = 0.2f)
+    public void ExecuteKnockback(float force, Vector2 direction)
     {
-        // Zera a velocidade atual para garantir que o knockback seja limpo e consistente.
+        // Verificação de segurança crucial!
+        if (rb == null)
+        {
+            Debug.LogError("Não há Rigidbody2D para aplicar o knockback!");
+            return;
+        }
+
+        // Se o Rigidbody for Kinematic, ele não será afetado por forças!
+        // Ele PRECISA ser do tipo "Dynamic" para o knockback funcionar.
+        if (rb.bodyType == RigidbodyType2D.Kinematic)
+        {
+            Debug.LogWarning("Rigidbody é Kinematic e não pode receber força de knockback.");
+            return;
+        }
+
+        // Zera a velocidade atual para que o knockback seja mais impactante e consistente.
         rb.linearVelocity = Vector2.zero;
 
-        // Calcula a direção da repulsão (para longe do ataque) e adiciona o impulso para cima.
-        Vector2 knockbackDirection = -attackDirection.normalized;
-        knockbackDirection.y += upwardModifier;
+        // Adiciona a força. ForceMode2D.Impulse aplica a força instantaneamente, como um soco.
+        rb.AddForce(direction * force, ForceMode2D.Impulse);
 
-        // Aplica a força final como um impulso instantâneo.
-        rb.AddForce(knockbackDirection.normalized * force, ForceMode2D.Impulse);
+        Debug.Log($"[AIMotor] Força de {force} aplicada na direção {direction}!");
     }
     // --- COMANDOS DE MOVIMENTO ---
     public void Move(float direction, float speed) { rb.linearVelocity = new Vector2(direction * speed, rb.linearVelocity.y); }

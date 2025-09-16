@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1439513453072422599
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5447919002429391680}
+  m_Layer: 0
+  m_Name: atackPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5447919002429391680
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1439513453072422599}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.298, y: -0.056, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6882396487554057975}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3157336458601120192
 GameObject:
   m_ObjectHideFlags: 0
@@ -25,7 +56,7 @@ Transform:
   m_GameObject: {fileID: 3157336458601120192}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -61,12 +92,13 @@ Transform:
   m_GameObject: {fileID: 5082244870820680162}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -3.616, y: 0.148, z: 0.093899325}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -3.2071, y: 0.9974, z: 0.093899325}
+  m_LocalScale: {x: 2.2325556, y: 2.1374872, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 543498886968346149}
   - {fileID: 6483937537223164791}
+  - {fileID: 5447919002429391680}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &5054082563986727206
@@ -140,12 +172,12 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 5919f5b9459751d4a87d64c54db99ec9, type: 3}
+  m_Sprite: {fileID: -1077358520582270867, guid: f807f49f77db94b4ca497d3bc4cb21cd, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 2, y: 2}
+  m_Size: {x: 0.718, y: 0.96}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -185,8 +217,8 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
-  m_Size: {x: 1, y: 2}
+  m_Offset: {x: -0.0021493447, y: 0}
+  m_Size: {x: 0.7443851, y: 1.1407722}
   m_Direction: 0
 --- !u!114 &5079238309791322305
 MonoBehaviour:
@@ -221,15 +253,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44b1b13c00b1dbf429b884f672486be1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  eyes: {fileID: 6483937537223164791}
   maxHealth: 100
-  moveSpeed: 3
-  climbSpeed: 3
+  patrolSpeed: 3
+  combatSpeed: 5
+  attackKnockbackPower: 5
+  knockbackResistance: 2
+  attackType: 0
+  attackPoint: {fileID: 5447919002429391680}
   attackDamage: 15
   attackRange: 1.5
   attackCooldown: 1.5
+  projectilePrefab: {fileID: 3379033899337861306, guid: d2e86b86c0aa121438f4a1d6c5954a3e, type: 3}
+  projectileSpeed: 10
+  playerTarget: {fileID: 0}
+  eyes: {fileID: 6483937537223164791}
   visionRange: 10
   visionAngle: 90
+  memoryDuration: 5
+  patrolPauseDuration: 1.5
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
@@ -261,7 +302,7 @@ Transform:
   m_GameObject: {fileID: 5121129668197160119}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5, y: 0.3, z: 0}
+  m_LocalPosition: {x: 0, y: 0.3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -292,7 +333,7 @@ Transform:
   m_GameObject: {fileID: 7127933840020313715}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -1, z: 0}
+  m_LocalPosition: {x: 0, y: -0.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

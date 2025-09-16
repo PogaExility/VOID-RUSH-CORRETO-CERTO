@@ -22,16 +22,17 @@ MonoBehaviour:
   maxStack: 1
   isLostOnDeathDuringQuest: 0
   weaponType: 1
-  attackRate: 0.2
-  useAimMode: 1
   magazineSize: 10
   reloadTime: 2
+  attackRate: 0.3
+  useAimMode: 1
   recoilDistance: 0.003
   recoilSpeed: 0.05
   returnSpeed: 0.05
   gunpowderPrefab: {fileID: 4850390941570321052, guid: 4a85c060fc75f184eb278eea55da5829, type: 3}
-  powderDamage: 2
+  powderDamage: 1
   powderRange: 1.8
+  powderKnockback: 10
   acceptedAmmo:
   - {fileID: 11400000, guid: 0121d8d5195f0124da361bb77420f161, type: 2}
   gunpowderSpawnOffset: 0.5
@@ -39,11 +40,12 @@ MonoBehaviour:
   bulletDamage: 10
   bulletSpeed: 20
   bulletLifetime: 3
+  bulletKnockback: 5
   pierceCount: 0
   damageFalloff: 0.3
-  damage: 0
-  comboAnimations: []
-  slashEffectPrefab: {fileID: 0}
+  comboResetTime: 0.8
+  lungeDuration: 0.15
+  comboSteps: []
   chargeTime: 0
   energyCostPerChargeSecond: 0
   baseEnergyCost: 0

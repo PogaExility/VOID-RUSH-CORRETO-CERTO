@@ -56,27 +56,46 @@ public override void Attack()
     lastAttackTime = Time.time;
 }
 
-// A função DesperationAttack (ou FirePowder) foi simplificada.
-// Ela não cria mais um prefab, apenas causa o dano.
-private void DesperationAttack()
-{
-    Debug.Log("Ataque de curto alcance sem munição!");
+    // Dentro de RangedWeapon.cs
 
-    // Cria uma área de dano invisível na frente da arma.
-    Collider2D[] hits = Physics2D.OverlapCircleAll(muzzlePoint.position, weaponData.powderRange);
-
-    foreach (var hit in hits)
+    private void DesperationAttack()
     {
-        if (hit.TryGetComponent<AIController_Basic>(out AIController_Basic enemy))
+        Debug.Log("Ataque de curto alcance sem munição!");
+
+        // --- PARTE VISUAL CORRIGIDA ---
+        if (weaponData.gunpowderPrefab != null)
         {
-            Vector2 knockbackDirection = (hit.transform.position - muzzlePoint.position).normalized;
-            enemy.TakeDamage(weaponData.powderDamage, knockbackDirection);
+            // Ao instanciar, passamos 'muzzlePoint' como o segundo argumento.
+            // Isso automaticamente torna o efeito um filho do muzzlePoint, fazendo-o segui-lo.
+            GameObject explosionGO = Instantiate(weaponData.gunpowderPrefab, muzzlePoint);
+
+            // Pega o script para passar os dados de dano/knockback (esta parte já estava implícita, mas é bom garantir)
+            GunpowderExplosion explosionScript = explosionGO.GetComponent<GunpowderExplosion>();
+            if (explosionScript != null)
+            {
+                // Usa os dados do ItemSO para inicializar a explosão.
+                explosionScript.Initialize(weaponData.powderDamage, weaponData.powderRange);
+            }
+        }
+
+        // --- PARTE DA FÍSICA (PERMANECE IGUAL) ---
+        // A área de dano invisível ainda é necessária para registrar os acertos.
+        Collider2D[] hits = Physics2D.OverlapCircleAll(muzzlePoint.position, weaponData.powderRange);
+
+        foreach (var hit in hits)
+        {
+            if (hit.TryGetComponent<AIController_Basic>(out AIController_Basic enemy))
+            {
+                Vector2 knockbackDirection = (hit.transform.position - muzzlePoint.position).normalized;
+                enemy.TakeDamage(weaponData.powderDamage, knockbackDirection, weaponData.powderKnockback);
+            }
         }
     }
-}
 
-// ADICIONE a corrotina do Recoil
-private IEnumerator RecoilCoroutine()
+
+
+    // ADICIONE a corrotina do Recoil
+    private IEnumerator RecoilCoroutine()
 {
     Vector3 originalPosition = Vector3.zero; // A posição inicial da arma é sempre (0,0,0) em relação ao socket
     Vector3 recoilPosition = new Vector3(-weaponData.recoilDistance, 0, 0);
@@ -131,7 +150,9 @@ private void FireBullet()
             weaponData.bulletSpeed,
             weaponData.bulletLifetime,
             weaponData.pierceCount,
-            weaponData.damageFalloff
+            weaponData.damageFalloff,
+               weaponData.bulletKnockback
+
         );
     }
 }

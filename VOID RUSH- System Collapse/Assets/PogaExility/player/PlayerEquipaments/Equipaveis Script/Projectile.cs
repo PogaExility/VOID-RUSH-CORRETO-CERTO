@@ -8,6 +8,7 @@ public class Projectile : MonoBehaviour
     private float damage;
     private int pierceCount;
     private float damageFalloff;
+    private float knockbackPower;
 
     private Rigidbody2D rb;
 
@@ -24,53 +25,45 @@ public class Projectile : MonoBehaviour
     }
 
     // A função Initialize agora aceita todos os dados da "ficha técnica".
-    public void Initialize(float damage, float speed, float lifetime, int pierceCount, float damageFalloff)
+
+    public void Initialize(float damage, float speed, float lifetime, int pierceCount, float damageFalloff, float knockback)
     {
         this.damage = damage;
         this.pierceCount = pierceCount;
         this.damageFalloff = damageFalloff;
-
-        // A lógica de movimento e tempo de vida foi movida para cá.
+        this.knockbackPower = knockback;
         rb.linearVelocity = transform.right * speed;
         Destroy(gameObject, lifetime);
     }
 
+
     void OnTriggerEnter2D(Collider2D other)
     {
-        // Se a bala colidir com o chão, ela se destrói.
+        Debug.Log($"[Projectile] Colidi com: {other.gameObject.name}");
         if (other.gameObject.layer == groundLayer)
         {
             Destroy(gameObject);
-            return; // Para a execução da função aqui.
+            return;
         }
 
-        // Se a bala colidir com um inimigo...
-        if (other.CompareTag(ENEMY_TAG))
+        // Tenta pegar o componente do inimigo.
+        if (other.TryGetComponent<AIController_Basic>(out var enemyAI))
         {
-            // Tenta pegar o componente de vida do inimigo.
-            // TODO: Substitua 'EnemyHealth' pelo nome real do seu script de vida do inimigo.
-            // var enemyHealth = other.GetComponent<EnemyHealth>();
-            // if (enemyHealth != null)
-            // {
-            //     enemyHealth.TakeDamage(this.damage);
-            // }
-            Debug.Log($"Atingiu {other.name} com {this.damage} de dano.");
+            Debug.Log($"[Projectile] Inimigo '{other.gameObject.name}' detectado! Enviando comando de dano.");
+            Vector2 attackDirection = rb.linearVelocity.normalized;
+            Debug.Log($"[Projectile] Enviando Knockback: {this.knockbackPower} na direção {attackDirection}");
+     
+            enemyAI.TakeDamage(this.damage, attackDirection, this.knockbackPower);
 
-            // Verifica se ainda pode perfurar.
             if (pierceCount > 0)
             {
-                pierceCount--; // Gasta uma perfuração.
-                damage *= (1 - damageFalloff); // Aplica a redução (ou aumento) de dano.
-
-                // Não se destrói e continua voando.
+                pierceCount--;
+                damage *= (1 - damageFalloff);
             }
             else
             {
-                // Se não pode mais perfurar, se destrói.
                 Destroy(gameObject);
             }
         }
-
-        // Se colidir com qualquer outra coisa (outro projétil, item, etc.), não faz nada.
     }
 }

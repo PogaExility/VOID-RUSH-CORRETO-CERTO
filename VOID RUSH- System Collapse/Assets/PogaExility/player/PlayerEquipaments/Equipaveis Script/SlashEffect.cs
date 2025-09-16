@@ -37,7 +37,7 @@ public class SlashEffect : MonoBehaviour
     /// <summary>
     /// Função de inicialização chamada pela MeeleeWeapon logo após a instanciação.
     /// Configura o dano, o knockback e a animação a ser tocada.
-    /// </summary>
+    /// </summary>a
     public void Initialize(float damageAmount, float knockbackForce, ProjectileAnimState animationToPlay)
     {
         this.damage = damageAmount;

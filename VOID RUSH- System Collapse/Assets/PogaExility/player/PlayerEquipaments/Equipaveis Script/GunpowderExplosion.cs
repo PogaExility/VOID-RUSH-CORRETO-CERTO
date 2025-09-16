@@ -1,33 +1,32 @@
-// GunpowderExplosion.cs - VERSÃO COMPLETA E CORRIGIDA
 using UnityEngine;
 
 [RequireComponent(typeof(Animator), typeof(ProjectileAnimatorController))]
 public class GunpowderExplosion : MonoBehaviour
 {
-    // Variáveis para guardar os dados recebidos da arma
     private float damage;
     private float radius;
+    private float knockbackPower; // <<< VARIÁVEL ADICIONADA
     [SerializeField] private LayerMask enemyLayer;
 
     void Start()
     {
-        // A primeira coisa que ele faz é pedir ao maestro para tocar a animação "polvora".
         GetComponent<ProjectileAnimatorController>().PlayAnimation(ProjectileAnimState.polvora);
     }
 
-    /// <summary>
-    /// ESTA É A FUNÇÃO QUE ESTAVA FALTANDO. 
-    /// A RangedWeapon chama esta função para passar os dados de dano e raio.
-    /// </summary>
-    public void Initialize(float damageAmount, float explosionRadius)
+    // A assinatura desta função MUDOU para aceitar o knockback
+    public void Initialize(float damageAmount, float explosionRadius, float knockback)
     {
         this.damage = damageAmount;
         this.radius = explosionRadius;
+        this.knockbackPower = knockback; // <<< VALOR GUARDADO
     }
 
-    /// <summary>
-    /// Esta função causa o dano. Ela será chamada pelo Animation Event.
-    /// </summary>
+    // Sobrecarga para manter compatibilidade, caso seja chamada sem knockback
+    public void Initialize(float damageAmount, float explosionRadius)
+    {
+        Initialize(damageAmount, explosionRadius, 0f);
+    }
+
     public void TriggerDamage()
     {
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, radius, enemyLayer);
@@ -36,17 +35,16 @@ public class GunpowderExplosion : MonoBehaviour
             if (hit.TryGetComponent<AIController_Basic>(out AIController_Basic enemy))
             {
                 Vector2 knockbackDirection = (hit.transform.position - transform.position).normalized;
-                enemy.TakeDamage(this.damage, knockbackDirection);
+
+                // --- CHAMADA CORRIGIDA ---
+                // Agora chama a função TakeDamage completa, passando o knockbackPower.
+                enemy.TakeDamage(this.damage, knockbackDirection, this.knockbackPower);
             }
         }
     }
 
-    /// <summary>
-    /// Esta função destrói o objeto. Ela será chamada pelo Animation Event no final.
-    /// </summary>
     public void DestroySelf()
     {
         Destroy(gameObject);
     }
-
 }

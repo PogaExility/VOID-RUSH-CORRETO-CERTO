@@ -68,6 +68,15 @@ public class WeaponHandler : MonoBehaviour
         {
             AimLogic();
         }
+        if (isInAimMode) // Só desenha quando estiver mirando
+        {
+            // Linha VERMELHA: Mostra para onde a arma está apontando (a direção do tiro)
+            Debug.DrawRay(weaponSocket.position, weaponSocket.right * 3f, Color.red);
+
+            // Linha VERDE: Mostra para onde o coice VAI empurrar o jogador
+            Vector2 recoilDirection = weaponSocket.right.normalized; // A versão corrigida
+            Debug.DrawRay(playerController.transform.position, recoilDirection * 2f, Color.green);
+        }
     }
 
     public bool IsWeaponObjectActive()
@@ -99,13 +108,16 @@ public class WeaponHandler : MonoBehaviour
         weaponSocket.rotation = Quaternion.Euler(0, 0, angle);
     }
 
+    // Dentro de WeaponHandler.cs
+
     public void HandleAttackInput()
     {
-        if (activeWeaponInstance != null)
-        {
-            // A versão correta que não passa parâmetros.
-            activeWeaponInstance.Attack();
-        }
+        if (activeWeaponInstance == null) return;
+        var weaponData = GetActiveWeaponSlot()?.item;
+        if (weaponData == null) return;
+
+        activeWeaponInstance.Attack();
+
     }
 
     public void ForceExitAimMode()

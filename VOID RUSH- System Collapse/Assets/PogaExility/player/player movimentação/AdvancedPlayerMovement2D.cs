@@ -270,7 +270,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public void Unfreeze() { rb.bodyType = RigidbodyType2D.Dynamic; }
 
 
-    // O novo método público que o PlayerStats irá chamar.
     public void ExecuteKnockback(float force, Vector2 attackDirection, float upwardModifier = 0.5f, float duration = 0.2f)
     {
         if (knockbackCoroutine != null)
@@ -280,25 +279,37 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         knockbackCoroutine = StartCoroutine(ExecuteKnockbackCoroutine(force, attackDirection, upwardModifier, duration));
     }
 
-    private IEnumerator ExecuteKnockbackCoroutine(float force, Vector2 attackDirection, float upwardModifier, float duration)
+    // --- ESTA É A CORROTINA QUE PRECISA SER SUBSTITUÍDA ---
+    // Substitua sua corrotina de knockback por esta versão corrigida
+
+    private IEnumerator ExecuteKnockbackCoroutine(float force, Vector2 direction, float upwardModifier, float duration)
     {
+        // LIGA o estado de stun.
         isInKnockback = true;
 
-        // Zera a velocidade para garantir que o impulso do knockback seja limpo e consistente.
-        rb.linearVelocity = Vector2.zero;
+        try
+        {
+            // 1. Preserva a gravidade, zerando apenas a velocidade horizontal.
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
 
-        // Calcula a direção da repulsão (para longe do ataque) e adiciona um componente para cima.
-        Vector2 knockbackDirection = -attackDirection.normalized;
-        knockbackDirection.y += upwardModifier;
+            // 2. Calcula a direção final do impulso.
+            Vector2 finalDirection = new Vector2(direction.x, direction.y + upwardModifier).normalized;
 
-        // Aplica a força calculada como um impulso instantâneo.
-        rb.AddForce(knockbackDirection.normalized * force, ForceMode2D.Impulse);
+            // 3. Aplica a força como um impulso único e instantâneo.
+            rb.AddForce(finalDirection * force, ForceMode2D.Impulse);
 
-        // Aguarda a duração do knockback, durante a qual o jogador está travado.
-        yield return new WaitForSeconds(duration);
-
-        isInKnockback = false;
-        knockbackCoroutine = null;
+            // 4. Espera a duração do "stun". Durante este tempo, a checagem em HandleMovement()
+            //    estará bloqueando o input do jogador.
+            yield return new WaitForSeconds(duration);
+        }
+        finally
+        {
+            // 5. DESLIGA o estado de stun.
+            // O bloco 'finally' garante que esta linha SEMPRE será executada,
+            // mesmo se a corrotina for interrompida, devolvendo o controle ao jogador.
+            isInKnockback = false;
+            knockbackCoroutine = null;
+        }
     }
 
 
@@ -520,7 +531,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public bool IsInParabolaArc() { return isInParabolaArc; }
     public float GetVerticalVelocity() { return rb.linearVelocity.y; }
     public bool IsMoving() { return Mathf.Abs(moveInput) > 0.1f; }
-    public Vector2 GetFacingDirection() { return isFacingRight ? Vector2.right : Vector2.left; }
+    public Vector2 GetFacingDirection()
+    {
+        return isFacingRight ? Vector2.right : Vector2.left;
+    }
     public void SetGravityScale(float scale) { rb.gravityScale = scale; }
     public void SetVelocity(float x, float y) { rb.linearVelocity = new Vector2(x, y); }
     public bool CanJumpFromGround() { return coyoteTimeCounter > 0f; }
