@@ -38,6 +38,7 @@ public class PlayerController : MonoBehaviour
     public SkillSO blockSkill;
 
     public bool IsAttacking { get; set; }
+    private bool attackBuffered = false;
     private bool isInventoryOpen = false;
     private SkillSO activeJumpSkill;
     private SkillSO activeDashSkill;
@@ -93,58 +94,99 @@ public class PlayerController : MonoBehaviour
         if (isInventoryOpen) { movementScript.SetMoveInput(0); return; }
 
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
+
+        // --- LÓGICA DE DETECÇÃO DE POUSO ---
+        // Checa se o jogador pousou NESTE frame.
+        bool isGroundedNow = movementScript.IsGrounded();
+        if (isGroundedNow && !wasGroundedLastFrame)
+        {
+            // Se não estávamos no chão no frame passado, mas estamos agora, então acabamos de pousar.
+            isLanding = true;
+        }
+        // --- FIM DA LÓGICA DE POUSO ---
+
         HandlePowerModeToggle();
         HandleSkillInput();
         HandleCombatInput();
+        ProcessAttackBuffer();
         HandleWeaponSwitching();
         UpdateAnimations();
-        wasGroundedLastFrame = movementScript.IsGrounded();
+
+        // Atualiza o estado do frame anterior DEPOIS de toda a lógica ter rodado.
+        wasGroundedLastFrame = isGroundedNow;
+
         if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
     }
 
 
+
+
     private Coroutine lungeCoroutine;
 
-    public void PerformLunge(float distance, float duration)
-    {
-        // Garante que qualquer lunge anterior seja parado antes de iniciar um novo.
-        if (lungeCoroutine != null)
+        public void PerformLunge(float distance, float duration)
         {
-            StopCoroutine(lungeCoroutine);
-        }
-        lungeCoroutine = StartCoroutine(LungeCoroutine(distance, duration));
-    }
+            if (lungeCoroutine != null) StopCoroutine(lungeCoroutine);
+            lungeCoroutine = StartCoroutine(LungeCoroutine(distance, duration));
 
-    public void CancelLunge()
+        }
+
+    // DENTRO DE PlayerController.cs
+
+    // DENTRO DE PlayerController.cs
+
+    private IEnumerator LungeCoroutine(float distance, float duration)
     {
-        if (lungeCoroutine != null)
+        // Guarda de segurança
+        if (distance <= 0f || duration <= 0.01f)
         {
-            StopCoroutine(lungeCoroutine);
-            movementScript.EnablePhysicsControl(); // Libera o controle da física imediatamente.
+            yield break;
+        }
+
+        Rigidbody2D rb = movementScript.GetRigidbody();
+
+        try
+        {
+            // --- FASE DE EXECUÇÃO ---
+
+            movementScript.DisablePhysicsControl();
+
+            // Calcula a velocidade horizontal necessária para cobrir a distância na duração exata.
+            // Fórmula: v = d / t
+            float requiredSpeed = distance / duration;
+
+            // Pega a velocidade vertical atual (causada pela gravidade).
+            float currentVerticalSpeed = rb.linearVelocity.y;
+
+            // Define a velocidade inicial do lunge, combinando o impulso horizontal com a velocidade vertical existente.
+            rb.linearVelocity = new Vector2(movementScript.GetFacingDirection().x * requiredSpeed, currentVerticalSpeed);
+
+            // Espera a duração do lunge. Durante este tempo, a gravidade e o atrito do Rigidbody
+            // (se houver algum configurado em 'Linear Drag') agirão naturalmente.
+            yield return new WaitForSeconds(duration);
+        }
+        finally
+        {
+            // --- FASE DE LIMPEZA (GARANTIDA) ---
+
+            // Ao final, zera a velocidade HORIZONTAL para uma parada precisa, mas mantém a velocidade vertical.
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+
+            // Devolve o controle ao jogador.
+            movementScript.EnablePhysicsControl();
+
             lungeCoroutine = null;
         }
     }
 
-    private IEnumerator LungeCoroutine(float distance, float duration)
-    {
-        // 1. Remove o controle do jogador e prepara o lunge.
-        movementScript.DisablePhysicsControl();
-
-        // 2. Calcula a velocidade necessária para cobrir a distância no tempo desejado.
-        float speed = distance / duration;
-        Vector2 direction = movementScript.GetFacingDirection();
-
-        // 3. Aplica a velocidade. A velocidade vertical do Rigidbody é preservada.
-        movementScript.SetVelocity(direction.x * speed, movementScript.GetRigidbody().linearVelocity.y);
-
-        // 4. Aguarda a duração do lunge.
-        yield return new WaitForSeconds(duration);
-
-        // 5. Zera a velocidade horizontal e devolve o controle ao jogador.
-        movementScript.SetVelocity(0, movementScript.GetRigidbody().linearVelocity.y);
-        movementScript.EnablePhysicsControl();
-        lungeCoroutine = null;
-    }
+    public void CancelLunge()
+        {
+            if (lungeCoroutine != null)
+            {
+                StopCoroutine(lungeCoroutine);
+                movementScript.EnablePhysicsControl(); // Libera o controle da física imediatamente.
+                lungeCoroutine = null;
+            }
+        }
 
     private void HandleWeaponSwitching()
     {
@@ -186,35 +228,59 @@ public class PlayerController : MonoBehaviour
 
     private void HandleSkillInput()
     {
-        if (activeDashSkill.triggerKeys.Any(key => Input.GetKeyDown(key)))
-        {
-            skillRelease.SetDashBuffer(dashJumpSkill.dashJump_InputBuffer);
-        }
-
-        if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return;
-        if (skillRelease.TryActivateSkill(dashJumpSkill)) return;
-        if (skillRelease.TryActivateSkill(wallJumpSkill)) return;
-        if (skillRelease.TryActivateSkill(wallDashSkill)) return;
-        if (skillRelease.TryActivateSkill(wallSlideSkill)) return;
-        if (skillRelease.TryActivateSkill(activeJumpSkill)) return;
-        if (skillRelease.TryActivateSkill(activeDashSkill)) return;
+        // A função agora apenas chama a lógica de skills, sem se preocupar com bloqueio de combate.
+        TryActivateMovementSkills();
     }
-     private void HandleCombatInput()
+
+    // Crie esta nova função auxiliar
+    private bool TryActivateMovementSkills()
+    {
+        if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(dashJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(wallJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(wallDashSkill)) return true;
+        if (skillRelease.TryActivateSkill(wallSlideSkill)) return true;
+        if (skillRelease.TryActivateSkill(activeJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(activeDashSkill)) return true;
+        return false;
+    }
+
+
+
+    // DENTRO DE PlayerController.cs
+
+    private void HandleCombatInput()
     {
         if (weaponHandler.IsReloading) return;
 
-        // ADICIONE a verificação "!IsAttacking" aqui.
-        if (Input.GetButton("Fire1") && !IsAttacking)
+        // Pega a arma ativa para saber o tipo dela
+        var activeWeapon = weaponHandler.GetActiveWeaponSlot()?.item;
+        if (activeWeapon == null) return;
+
+
+        // LÓGICA HÍBRIDA DE INPUT
+        if (activeWeapon.weaponType == WeaponType.Meelee)
         {
-            weaponHandler.HandleAttackInput();
+            // Para MEELEE, usamos GetButtonDown para registrar um único clique.
+            if (Input.GetButtonDown("Fire1"))
+            {
+                attackBuffered = true;
+            }
+        }
+        else // Para Ranger, Buster, etc.
+        {
+            // Para RANGER, usamos GetButton para permitir segurar o botão.
+            if (Input.GetButton("Fire1"))
+            {
+                attackBuffered = true;
+            }
         }
 
-        // ... o resto da função permanece igual ...
+        // A lógica de recarga e defesa continua a mesma.
         if (Input.GetKeyDown(KeyCode.R))
         {
             weaponHandler.HandleReloadInput();
         }
-
         if (Input.GetKeyDown(KeyCode.F))
         {
             defenseHandler.StartBlock(blockSkill);
@@ -225,13 +291,32 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Em PlayerController.cs
+    private void ProcessAttackBuffer()
+    {
+        if (!attackBuffered)
+        {
+            return;
+        }
+
+        // Condições para poder atacar (são as mesmas para ambos os tipos)
+        bool canAttackNow = !IsAttacking &&
+                            !movementScript.IsDashing() &&
+                            weaponHandler.IsWeaponObjectActive();
+
+        if (canAttackNow)
+        {
+            weaponHandler.HandleAttackInput();
+            attackBuffered = false; // Consome o buffer
+        }
+    }
 
     private void UpdateAnimations()
     {
+        // Trava de ataque meelee (continua igual)
+        if (IsAttacking) return;
+
         // --- ETAPA 1: DETERMINAR O ESTADO DESEJADO DA BASE LAYER ---
         PlayerAnimState desiredState;
-        if (IsAttacking) return;
 
         if (playerStats.IsDead()) { desiredState = PlayerAnimState.morrendo; }
         else if (isLanding) { desiredState = PlayerAnimState.pousando; }
@@ -239,7 +324,7 @@ public class PlayerController : MonoBehaviour
         else if (!movementScript.IsGrounded())
         {
             if (movementScript.IsWallSliding()) desiredState = PlayerAnimState.derrapagem;
-            else if (movementScript.IsDashing()) desiredState = PlayerAnimState.dashAereo;
+            else if (movementScript.IsDashing() || movementScript.IsWallDashing()) desiredState = PlayerAnimState.dashAereo;
             else if (movementScript.GetVerticalVelocity() > 0.1f) desiredState = PlayerAnimState.pulando;
             else desiredState = PlayerAnimState.falling;
         }
@@ -254,7 +339,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // --- ETAPA 2: LÓGICA DE MEMÓRIA E INTERRUPÇÃO (O CÉREBRO) ---
+    
         bool isDesiredStateAnAction = IsActionState(desiredState);
 
         if (isDesiredStateAnAction)
@@ -277,7 +362,6 @@ public class PlayerController : MonoBehaviour
         // --- ETAPA 3: TOCAR A ANIMAÇÃO CORRETA ---
         if (isInAimMode)
         {
-            // A CotocoLayer agora tem a lógica completa
             if (!movementScript.IsGrounded())
             {
                 if (movementScript.GetVerticalVelocity() > 0.1f)

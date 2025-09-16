@@ -22,10 +22,10 @@ MonoBehaviour:
   maxStack: 999
   isLostOnDeathDuringQuest: 0
   weaponType: 0
-  attackRate: 0.5
-  useAimMode: 0
   magazineSize: 0
   reloadTime: 0
+  attackRate: 1
+  useAimMode: 0
   recoilDistance: 0.5
   recoilSpeed: 20
   returnSpeed: 5
@@ -41,29 +41,38 @@ MonoBehaviour:
   pierceCount: 0
   damageFalloff: 0.3
   comboResetTime: 0.8
-  lungeDuration: 0.15
+  lungeDuration: 0.3
   comboSteps:
-  - comboBodyAnimation: {fileID: 7400000, guid: 56f8c4f7756c76644a53e65c962d6484, type: 2}
-    slashAnimation: {fileID: 7400000, guid: 848e6652a298926469d0853400e57883, type: 2}
+  - playerAnimationState: 19
+    slashAnimationState: 2
+    playerAnimationClip: {fileID: 7400000, guid: 9c5cce670f717304e8a5c7bc54cdbd92, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 872cabe68352dcc4dbee48ff6544bed1, type: 3}
     damage: 10
     knockbackPower: 1
-    lungeDistance: 1
-    comboWindow: 2
-  - comboBodyAnimation: {fileID: 7400000, guid: 412c1ca60930e824d86bd7e05ff40327, type: 2}
-    slashAnimation: {fileID: 7400000, guid: ccebc83de372f4d4fb358953bbd637a6, type: 2}
+    lungeDistance: 0.5
+    lungeSpeed: 1000
+    comboWindow: 0.4
+    comboSpeed: 5
+  - playerAnimationState: 20
+    slashAnimationState: 3
+    playerAnimationClip: {fileID: 7400000, guid: 412c1ca60930e824d86bd7e05ff40327, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 0ad855eb5e4c7c3469a385d1550fe5fb, type: 3}
     damage: 12
     knockbackPower: 0.5
-    lungeDistance: 0.5
-    comboWindow: 2
-  - comboBodyAnimation: {fileID: 7400000, guid: 24bbab3eaa3cef348b1b824eff39f905, type: 2}
-    slashAnimation: {fileID: 7400000, guid: 36a9aed3dc15b9842a1869f2e839044c, type: 2}
+    lungeDistance: 0.3
+    lungeSpeed: 1000
+    comboWindow: 0.4
+    comboSpeed: 2
+  - playerAnimationState: 21
+    slashAnimationState: 4
+    playerAnimationClip: {fileID: 7400000, guid: 24bbab3eaa3cef348b1b824eff39f905, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 760f9e14a7f667c4e9bcde7c3ed7871f, type: 3}
     damage: 15
-    knockbackPower: 3
-    lungeDistance: 3
-    comboWindow: 2
+    knockbackPower: 2
+    lungeDistance: 2
+    lungeSpeed: 1000
+    comboWindow: 0
+    comboSpeed: 2
   chargeTime: 0
   energyCostPerChargeSecond: 0
   baseEnergyCost: 0

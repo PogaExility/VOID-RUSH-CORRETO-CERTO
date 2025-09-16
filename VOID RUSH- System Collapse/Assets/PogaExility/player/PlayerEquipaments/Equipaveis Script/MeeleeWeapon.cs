@@ -1,164 +1,131 @@
-// NOME DO ARQUIVO: MeeleeWeapon.cs
+// NOME DO ARQUIVO: MeeleeWeapon.cs - VERSÃO FINAL CORRIGIDA
 
 using UnityEngine;
 using System.Collections;
 
 public class MeeleeWeapon : WeaponBase
 {
-    // --- Referências Injetadas ---
     private PlayerController playerController;
     private PlayerAnimatorController animatorController;
-    private Transform attackPoint;
 
-    // --- Estado do Combo ---
-    private int comboStep = 0;
-    private float lastAttackTime;
-    private bool canContinueCombo = false;
+    private int comboCounter = 0;
+    private float timeSinceLastAttack = float.MaxValue;
+    private bool attackBuffered = false; // Flag para registrar o input do jogador para o PRÓXIMO ataque
     private Coroutine attackCoroutine;
     private GameObject currentSlashInstance;
 
-    /// <summary>
-    /// Função de inicialização específica para armas Meelee, chamada pelo WeaponHandler.
-    /// </summary>
     public void InitializeMeelee(PlayerController pc, PlayerAnimatorController animCtrl)
     {
         this.playerController = pc;
-        this.animatorController = animCtrl;
+        this.animatorController = animCtrl; 
     }
 
     private void Update()
     {
-        // GUARDA DE INICIALIZAÇÃO:
-        // Se o PlayerController ainda não foi fornecido pelo WeaponHandler,
-        // não executa nenhuma lógica de Update para evitar erros.
-        if (playerController == null)
+        if (playerController == null) return;
+        if (!playerController.IsAttacking)
         {
-            return;
+            timeSinceLastAttack += Time.deltaTime;
         }
-
-        // Se o jogador não está atacando e passou tempo suficiente desde o último golpe, reseta o combo.
-        if (!playerController.IsAttacking && Time.time > lastAttackTime + weaponData.comboResetTime)
+        if (timeSinceLastAttack > weaponData.comboResetTime)
         {
-            comboStep = 0;
+            comboCounter = 0;
+            attackBuffered = false; // Limpa o buffer se o combo resetar
         }
     }
 
     public override void Attack()
     {
-        // Pega o AttackPoint diretamente do WeaponHandler no momento do ataque.
-        Transform attackPoint = WeaponHandler.Instance.GetAttackPoint();
-        if (attackPoint == null)
+        // Se o jogador não está atacando, inicia o combo
+        if (!playerController.IsAttacking)
         {
-            Debug.LogError("MeeleeWeapon não conseguiu encontrar o AttackPoint através do WeaponHandler.");
-            return;
+            // Consome o buffer e inicia o ataque
+            attackBuffered = false;
+            StartAttack();
         }
-
-        // --- A LÓGICA DO COMBO CONTINUA EXATAMENTE A MESMA DAQUI PARA BAIXO ---
-
-        // Validações Iniciais
-        if (weaponData.comboSteps == null || weaponData.comboSteps.Count == 0)
+        // Se o jogador JÁ está atacando, bufferiza o próximo clique
+        else
         {
-            Debug.LogError($"A arma '{weaponData.itemName}' não tem nenhum combo configurado no ItemSO!");
-            return;
+            attackBuffered = true;
         }
+    }
 
-        // Determina o passo do combo
-        if (canContinueCombo && comboStep < weaponData.comboSteps.Count) { }
-        else { comboStep = 0; }
+    private void StartAttack()
+    {
+        if (weaponData.comboSteps == null || weaponData.comboSteps.Count == 0) return;
+        if (comboCounter >= weaponData.comboSteps.Count) comboCounter = 0;
 
-        ComboStepData currentStepData = weaponData.comboSteps[comboStep];
-
-        // Orquestração
+        ComboStepData currentStepData = weaponData.comboSteps[comboCounter];
+        if (attackCoroutine != null) StopCoroutine(attackCoroutine);
+        attackCoroutine = StartCoroutine(AttackFlowCoroutine(currentStepData));
+    }
+    private IEnumerator AttackFlowCoroutine(ComboStepData currentStep)
+    {
         playerController.IsAttacking = true;
-        lastAttackTime = Time.time;
-        canContinueCombo = false;
+        timeSinceLastAttack = 0f;
 
-        playerController.PerformLunge(currentStepData.lungeDistance, weaponData.lungeDuration);
-        animatorController.PlayState(AnimatorTarget.PlayerBody, currentStepData.comboBodyAnimation);
+        float speedMultiplier = Mathf.Max(0.1f, currentStep.comboSpeed);
+        animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, speedMultiplier);
 
-        if (currentSlashInstance != null)
+        Transform attackPoint = WeaponHandler.Instance.GetAttackPoint();
+        bool isFacingRight = playerController.movementScript.IsFacingRight();
+        playerController.PerformLunge(currentStep.lungeDistance, weaponData.lungeDuration);
+        animatorController.PlayState(AnimatorTarget.PlayerBody, currentStep.playerAnimationState);
+
+        if (currentSlashInstance != null) Destroy(currentSlashInstance);
+        if (currentStep.slashEffectPrefab != null && attackPoint != null)
         {
-            Destroy(currentSlashInstance);
-        }
-        if (currentStepData.slashEffectPrefab != null)
-        {
-            currentSlashInstance = Instantiate(currentStepData.slashEffectPrefab, attackPoint.position, attackPoint.rotation);
+            // Instancia o corte na posição e rotação GLOBAIS do AttackPoint, mas SEM parentesco.
+            // Isso evita problemas de dupla rotação ou escala.
+            currentSlashInstance = Instantiate(currentStep.slashEffectPrefab, attackPoint);
 
-            if (!playerController.movementScript.IsFacingRight())
-            {
-                currentSlashInstance.transform.localScale = new Vector3(
-                    -currentSlashInstance.transform.localScale.x,
-                    currentSlashInstance.transform.localScale.y,
-                    currentSlashInstance.transform.localScale.z);
-            }
+            // Agora que o corte está "solto" no mundo, sua rotação é a correta, herdada
+            // do attackPoint no momento da criação. Não precisamos fazer mais nada para o flip.
 
             SlashEffect slashScript = currentSlashInstance.GetComponent<SlashEffect>();
             if (slashScript != null)
             {
-                slashScript.Initialize(currentStepData.damage, currentStepData.knockbackPower, currentStepData.slashAnimation);
+                slashScript.Initialize(currentStep.damage, currentStep.knockbackPower, currentStep.slashAnimationState);
+                slashScript.SetSpeed(speedMultiplier);
             }
         }
 
-        if (attackCoroutine != null) StopCoroutine(attackCoroutine);
-
-        if (this.isActiveAndEnabled)
+        if (currentStep.playerAnimationClip == null)
         {
-            attackCoroutine = StartCoroutine(AttackFlowCoroutine(currentStepData));
-        }
-
-        comboStep++;
-    }
-
-
-    private IEnumerator AttackFlowCoroutine(ComboStepData currentStep)
-    {
-        // Espera pela janela de tempo para poder continuar o combo
-        yield return new WaitForSeconds(currentStep.comboWindow);
-        canContinueCombo = true;
-
-        // Espera o resto da animação do jogador terminar
-        float remainingTime = currentStep.comboBodyAnimation.length - currentStep.comboWindow;
-        if (remainingTime > 0)
-        {
-            yield return new WaitForSeconds(remainingTime);
-        }
-
-        // Se o combo não foi continuado, finaliza o estado de ataque.
-        if (canContinueCombo)
-        {
+            Debug.LogError("Player Animation Clip não configurado no SO para o golpe " + comboCounter);
             FinishAttack();
+            yield break;
+        }
+        float animationDuration = currentStep.playerAnimationClip.length / speedMultiplier;
+        yield return new WaitForSeconds(animationDuration);
+
+        comboCounter++;
+        FinishAttack();
+
+        if (attackBuffered)
+        {
+            attackBuffered = false;
+            StartAttack();
         }
     }
 
-    /// <summary>
-    /// Limpa o estado de ataque do jogador.
-    /// </summary>
     private void FinishAttack()
     {
         playerController.IsAttacking = false;
-        canContinueCombo = false;
+        animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
     }
 
-    /// <summary>
-    /// Interrompe e reseta completamente o estado de ataque. Chamado de fora.
-    /// </summary>
     public void CancelAttack()
     {
-        if (attackCoroutine != null)
-        {
-            StopCoroutine(attackCoroutine);
-        }
-        if (currentSlashInstance != null)
-        {
-            Destroy(currentSlashInstance);
-        }
-
+        if (attackCoroutine != null) StopCoroutine(attackCoroutine);
+        if (currentSlashInstance != null) Destroy(currentSlashInstance);
         if (playerController.IsAttacking)
         {
             playerController.CancelLunge();
-            FinishAttack();
         }
-
-        comboStep = 0;
+        FinishAttack(); // Chama a função de limpeza
+        comboCounter = 0; // Reseta o combo
+        attackBuffered = false;
+        timeSinceLastAttack = float.MaxValue;
     }
 }

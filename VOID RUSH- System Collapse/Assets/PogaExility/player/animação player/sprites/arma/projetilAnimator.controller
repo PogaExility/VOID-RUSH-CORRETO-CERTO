@@ -7,7 +7,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: 'Corte2_Anim '
+  m_Name: Corte3_Anim
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
@@ -152,7 +152,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 4e0cb1c1f0c9db94b94aad7c27e72072, type: 2}
+  m_Motion: {fileID: 7400000, guid: be5017f2c6dd0ca4ba88685ca38b9540, type: 2}
   m_Tag: 
   m_SpeedParameter: ReloadSpeedMultiplier
   m_MirrorParameter: 
