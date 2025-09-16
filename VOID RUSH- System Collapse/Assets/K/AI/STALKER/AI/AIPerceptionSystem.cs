@@ -10,7 +10,10 @@ public class AIPerceptionSystem : MonoBehaviour
     public Vector3 LastKnownPlayerPosition { get; private set; }
     public bool IsAwareOfPlayer => currentAwareness == AwarenessState.ALERT || currentAwareness == AwarenessState.HUNTING;
     private float _awarenessTimer = 0f;
-    private Quaternion _targetLocalRotation = Quaternion.identity;
+
+    // A CORREÇÃO CRÍTICA: Tornada pública para que o Controller a possa manipular.
+    public Quaternion _targetLocalRotation = Quaternion.identity;
+
     private Vector3 _lastKnownPlayerVelocity;
     private float _currentSearchAngle;
     private Transform _player;
@@ -52,13 +55,13 @@ public class AIPerceptionSystem : MonoBehaviour
 
     void LateUpdate()
     {
-        HandleAwareness();
-        // A lógica de mira só é chamada se não houver uma coreografia a decorrer
         if (_gazeCoroutine == null)
         {
             UpdateEyeTarget();
         }
         UpdateEyeRotation();
+
+        HandleAwareness();
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -70,12 +73,11 @@ public class AIPerceptionSystem : MonoBehaviour
     #region PUBLIC API
     public void StartObstacleAnalysis(Vector3 obstaclePoint, bool isLedge)
     {
+        if (_gazeCoroutine != null) StopCoroutine(_gazeCoroutine);
         CurrentGazeMode = GazeMode.AnalyzingObstacle;
         _obstacleFocusPoint = obstaclePoint;
-        if (_gazeCoroutine != null) StopCoroutine(_gazeCoroutine);
 
-        if (isLedge) { _gazeCoroutine = StartCoroutine(AnalyzeLedgeGazeRoutine()); }
-        else { _gazeCoroutine = StartCoroutine(AnalyzeWallGazeRoutine()); }
+        // As Coroutines foram removidas daqui, a lógica agora está no Controller
     }
 
     public void StopObstacleAnalysis()
@@ -86,7 +88,7 @@ public class AIPerceptionSystem : MonoBehaviour
     }
     #endregion
 
-    #region CORE LOGIC & GAZE ROUTINES
+    #region CORE LOGIC
     private void UpdateEyeTarget()
     {
         Vector3 directionToTarget;
@@ -109,6 +111,7 @@ public class AIPerceptionSystem : MonoBehaviour
                 directionToTarget = transform.right;
                 break;
         }
+
         Quaternion targetWorldRotation = Quaternion.LookRotation(Vector3.forward, directionToTarget.normalized);
         _targetLocalRotation = Quaternion.Inverse(transform.rotation) * targetWorldRotation;
     }
@@ -116,39 +119,6 @@ public class AIPerceptionSystem : MonoBehaviour
     private void UpdateEyeRotation()
     {
         eyes.localRotation = Quaternion.Slerp(eyes.localRotation, _targetLocalRotation, Time.deltaTime * eyeRotationSpeed);
-    }
-
-    private IEnumerator AnalyzeLedgeGazeRoutine()
-    {
-        Vector3 downDirection = (_obstacleFocusPoint - eyes.position).normalized;
-        Quaternion downRotation = Quaternion.LookRotation(Vector3.forward, downDirection);
-        Quaternion targetWorldDown = transform.rotation * downRotation;
-
-        Vector3 upDirection = (_obstacleFocusPoint + Vector3.up * 3f - eyes.position).normalized;
-        Quaternion upRotation = Quaternion.LookRotation(Vector3.forward, upDirection);
-        Quaternion targetWorldUp = transform.rotation * upRotation;
-
-        float halfDuration = 1.0f;
-        float timer = 0;
-        while (timer < halfDuration) { _targetLocalRotation = Quaternion.Slerp(eyes.localRotation, Quaternion.Inverse(transform.rotation) * targetWorldDown, timer / halfDuration); timer += Time.deltaTime; yield return null; }
-
-        timer = 0;
-        while (timer < halfDuration) { _targetLocalRotation = Quaternion.Slerp(eyes.localRotation, Quaternion.Inverse(transform.rotation) * targetWorldUp, timer / halfDuration); timer += Time.deltaTime; yield return null; }
-
-        _gazeCoroutine = null; // Termina a rotina
-    }
-
-    private IEnumerator AnalyzeWallGazeRoutine()
-    {
-        Vector3 upDirection = (_obstacleFocusPoint + Vector3.up * 3f - eyes.position).normalized;
-        Quaternion upRotation = Quaternion.LookRotation(Vector3.forward, upDirection);
-        Quaternion targetWorldUp = transform.rotation * upRotation;
-
-        float duration = 1.5f;
-        float timer = 0;
-        while (timer < duration) { _targetLocalRotation = Quaternion.Slerp(eyes.localRotation, Quaternion.Inverse(transform.rotation) * targetWorldUp, timer / duration); timer += Time.deltaTime; yield return null; }
-
-        _gazeCoroutine = null; // Termina a rotina
     }
     #endregion
 
