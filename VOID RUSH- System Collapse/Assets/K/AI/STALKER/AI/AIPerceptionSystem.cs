@@ -4,21 +4,18 @@ using System.Collections;
 
 public class AIPerceptionSystem : MonoBehaviour
 {
+    // ... (nenhuma mudança nas variáveis) ...
     #region REFERENCES & STATE
-    private GazeMode _currentGazeMode = GazeMode.Idle;
+    public GazeMode CurrentGazeMode { get; private set; } = GazeMode.Idle;
     private Vector3 _obstacleFocusPoint;
     public Vector3 LastKnownPlayerPosition { get; private set; }
     public bool IsAwareOfPlayer => currentAwareness == AwarenessState.ALERT || currentAwareness == AwarenessState.HUNTING;
     private float _awarenessTimer = 0f;
-
-    // A CORREÇÃO CRÍTICA: Tornada pública para que o Controller a possa manipular.
     public Quaternion _targetLocalRotation = Quaternion.identity;
-
     private Vector3 _lastKnownPlayerVelocity;
     private float _currentSearchAngle;
     private Transform _player;
     private Rigidbody2D _playerRb;
-    public GazeMode CurrentGazeMode { get; private set; } = GazeMode.Idle;
     private Coroutine _gazeCoroutine;
     #endregion
 
@@ -45,22 +42,19 @@ public class AIPerceptionSystem : MonoBehaviour
     public bool showDebugGizmos = true;
     #endregion
 
+    // ... (nenhuma mudança em Start, LateUpdate, OnTriggerEnter2D) ...
     #region UNITY LIFECYCLE
     void Start()
     {
         _player = AIManager.Instance.playerTarget;
-        _playerRb = _player.GetComponent<Rigidbody2D>();
+        if (_player != null) _playerRb = _player.GetComponent<Rigidbody2D>();
         if (eyes == null) { this.enabled = false; return; }
     }
 
     void LateUpdate()
     {
-        if (_gazeCoroutine == null)
-        {
-            UpdateEyeTarget();
-        }
+        if (_gazeCoroutine == null) { UpdateEyeTarget(); }
         UpdateEyeRotation();
-
         HandleAwareness();
     }
 
@@ -70,32 +64,37 @@ public class AIPerceptionSystem : MonoBehaviour
     }
     #endregion
 
+
     #region PUBLIC API
     public void StartObstacleAnalysis(Vector3 obstaclePoint, bool isLedge)
     {
+        // --- DEBUG ---
+        Debug.Log($"[PERCEPTION] Command: StartObstacleAnalysis(isLedge: {isLedge})");
         if (_gazeCoroutine != null) StopCoroutine(_gazeCoroutine);
         CurrentGazeMode = GazeMode.AnalyzingObstacle;
         _obstacleFocusPoint = obstaclePoint;
-
-        // As Coroutines foram removidas daqui, a lógica agora está no Controller
+        _gazeCoroutine = isLedge ? StartCoroutine(AnalyzeLedgeGazeRoutine()) : StartCoroutine(AnalyzeWallGazeRoutine());
     }
 
     public void StopObstacleAnalysis()
     {
+        // --- DEBUG ---
+        Debug.Log("[PERCEPTION] Command: StopObstacleAnalysis()");
         if (_gazeCoroutine != null) StopCoroutine(_gazeCoroutine);
         _gazeCoroutine = null;
         CurrentGazeMode = GazeMode.Idle;
     }
     #endregion
 
-    #region CORE LOGIC
+    // ... (nenhuma mudança em CORE LOGIC & GAZE ROUTINES) ...
+    #region CORE LOGIC & GAZE ROUTINES
     private void UpdateEyeTarget()
     {
         Vector3 directionToTarget;
         switch (CurrentGazeMode)
         {
             case GazeMode.TargetTracking:
-                if (currentAwareness == AwarenessState.HUNTING) { directionToTarget = _player.position - eyes.position; }
+                if (currentAwareness == AwarenessState.HUNTING && _player != null) { directionToTarget = _player.position - eyes.position; }
                 else
                 {
                     if (Vector3.Distance(eyes.position, LastKnownPlayerPosition) < lkpSafeZoneRadius) { directionToTarget = _lastKnownPlayerVelocity.normalized; }
@@ -111,14 +110,41 @@ public class AIPerceptionSystem : MonoBehaviour
                 directionToTarget = transform.right;
                 break;
         }
-
         Quaternion targetWorldRotation = Quaternion.LookRotation(Vector3.forward, directionToTarget.normalized);
         _targetLocalRotation = Quaternion.Inverse(transform.rotation) * targetWorldRotation;
     }
 
-    private void UpdateEyeRotation()
+    private void UpdateEyeRotation() { eyes.localRotation = Quaternion.Slerp(eyes.localRotation, _targetLocalRotation, Time.deltaTime * eyeRotationSpeed); }
+
+    private IEnumerator AnalyzeLedgeGazeRoutine()
     {
-        eyes.localRotation = Quaternion.Slerp(eyes.localRotation, _targetLocalRotation, Time.deltaTime * eyeRotationSpeed);
+        float halfDuration = 1.0f;
+        float timer = 0;
+        Quaternion startRotation = eyes.localRotation;
+        Vector3 downDirection = (_obstacleFocusPoint - eyes.position).normalized;
+        Quaternion targetWorldDown = Quaternion.LookRotation(Vector3.forward, downDirection);
+        Quaternion targetLocalDown = Quaternion.Inverse(transform.rotation) * targetWorldDown;
+        while (timer < halfDuration) { _targetLocalRotation = Quaternion.Slerp(startRotation, targetLocalDown, timer / halfDuration); timer += Time.deltaTime; yield return null; }
+
+        timer = 0;
+        startRotation = eyes.localRotation;
+        Vector3 upDirection = (_obstacleFocusPoint + Vector3.up * 3f - eyes.position).normalized;
+        Quaternion targetWorldUp = Quaternion.LookRotation(Vector3.forward, upDirection);
+        Quaternion targetLocalUp = Quaternion.Inverse(transform.rotation) * targetWorldUp;
+        while (timer < halfDuration) { _targetLocalRotation = Quaternion.Slerp(startRotation, targetLocalUp, timer / halfDuration); timer += Time.deltaTime; yield return null; }
+        _gazeCoroutine = null;
+    }
+
+    private IEnumerator AnalyzeWallGazeRoutine()
+    {
+        float duration = 1.5f;
+        float timer = 0;
+        Quaternion startRotation = eyes.localRotation;
+        Vector3 upDirection = (_obstacleFocusPoint + Vector3.up * 3f - eyes.position).normalized;
+        Quaternion targetWorldUp = Quaternion.LookRotation(Vector3.forward, upDirection);
+        Quaternion targetLocalUp = Quaternion.Inverse(transform.rotation) * targetWorldUp;
+        while (timer < duration) { _targetLocalRotation = Quaternion.Slerp(startRotation, targetLocalUp, timer / duration); timer += Time.deltaTime; yield return null; }
+        _gazeCoroutine = null;
     }
     #endregion
 
@@ -136,13 +162,14 @@ public class AIPerceptionSystem : MonoBehaviour
     private void ChangeAwareness(AwarenessState newState)
     {
         if (currentAwareness == newState) return;
+        // --- DEBUG ---
+        Debug.Log($"[PERCEPTION] Awareness Change: {currentAwareness} -> {newState}");
         var oldState = currentAwareness;
         currentAwareness = newState;
-
         if (newState == AwarenessState.PATROLLING) { CurrentGazeMode = GazeMode.Idle; }
         if (newState == AwarenessState.HUNTING || newState == AwarenessState.ALERT) { CurrentGazeMode = GazeMode.TargetTracking; }
-        if (newState == AwarenessState.HUNTING) { LastKnownPlayerPosition = _player.position; if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity; _awarenessTimer = memoryDuration; }
-        if (oldState == AwarenessState.HUNTING && newState == AwarenessState.ALERT) { LastKnownPlayerPosition = _player.position; if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity; _currentSearchAngle = 0f; }
+        if (newState == AwarenessState.HUNTING) { LastKnownPlayerPosition = _player.position; if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity; _awarenessTimer = memoryDuration; Debug.Log($"[PERCEPTION] Player spotted! LKP updated to {LastKnownPlayerPosition}"); }
+        if (oldState == AwarenessState.HUNTING && newState == AwarenessState.ALERT) { LastKnownPlayerPosition = _player.position; if (_playerRb != null) _lastKnownPlayerVelocity = _playerRb.linearVelocity; _currentSearchAngle = 0f; Debug.Log($"[PERCEPTION] Lost sight of player! LKP is {LastKnownPlayerPosition}"); }
     }
 
     public bool CanSeePlayer()
