@@ -13,8 +13,7 @@ public class AIController_Stalker : MonoBehaviour
     private AINavigationSystem _navigation;
     private Transform _player;
     private bool _canFlip = true;
-    private bool _isAnalyzingLedge = false;
-    private bool _isAnalyzingWall = false;
+    private bool _isAnalyzing = false;
     #endregion
 
     #region CONFIGURATION
@@ -42,67 +41,77 @@ public class AIController_Stalker : MonoBehaviour
 
         _rootNode = new Selector(new List<Node>
         {
+            new ActionNode(ProcessAnalysisTriggers),
             new ActionNode(ProcessClimbingLogic),
             new Sequence(new List<Node>
             {
                 new ActionNode(CheckIfAwareOfPlayer),
                 new ActionNode(ProcessCombatLogic)
             }),
-            // A ORDEM É IMPORTANTE: Primeiro ele verifica se precisa de analisar, depois patrulha.
-            new ActionNode(ProcessAnalysisTriggers),
             new ActionNode(ProcessPatrolLogic)
         });
     }
 
     void Update()
     {
-        // Se uma rotina de análise está a decorrer, ela tem controlo exclusivo.
-        // A Árvore de Comportamento está efetivamente em pausa.
-        if (_isAnalyzingLedge || _isAnalyzingWall) return;
-
-        _rootNode?.Evaluate();
+        // A Árvore de Comportamento só é executada se nenhuma análise estiver a decorrer
+        if (!_isAnalyzing)
+        {
+            _rootNode?.Evaluate();
+        }
     }
     #endregion
 
     #region BEHAVIOR TREE NODES
     private NodeState CheckIfAwareOfPlayer() => _perception.IsAwareOfPlayer ? NodeState.SUCCESS : NodeState.FAILURE;
 
-    private NodeState ProcessClimbingLogic() { /* ...código inalterado... */ return NodeState.FAILURE; }
+    private NodeState ProcessClimbingLogic() { /* Implementação futura */ return NodeState.FAILURE; }
 
-    private NodeState ProcessCombatLogic() { /* ...código inalterado... */ return NodeState.RUNNING; }
+    private NodeState ProcessCombatLogic()
+    {
+        FaceTarget(_player.position);
+        if (Vector2.Distance(transform.position, _player.position) <= attackRange) { _motor.Stop(); }
+        else
+        {
+            var query = _navigation.QueryEnvironment();
+            if (query.isAtLedge || query.dangerLedgeAhead) { _motor.HardStop(); }
+            else if (query.anticipationLedgeAhead) { _motor.Brake(); }
+            else
+            {
+                if (query.climbableWallAhead) _motor.StartClimb();
+                else if (query.contactWallAhead) _motor.Jump(jumpForce);
+                else _motor.Move(huntTopSpeed);
+            }
+        }
+        return NodeState.RUNNING;
+    }
 
-    // NÓ DE GATILHO UNIFICADO PARA ANÁLISE
+    // NÓ DE GATILHO PARA TODAS AS ANÁLISES
     private NodeState ProcessAnalysisTriggers()
     {
-        // Se já está a analisar, este nó não faz nada
-        if (_isAnalyzingLedge || _isAnalyzingWall) return NodeState.FAILURE;
-
         var query = _navigation.QueryEnvironment();
 
-        // Gatilho para análise de precipício
         if (query.isAtLedge)
         {
             StartCoroutine(AnalyzeLedgeRoutine());
-            return NodeState.SUCCESS; // A análise foi iniciada
+            return NodeState.SUCCESS;
         }
 
-        // Gatilho para análise de parede
         if (query.contactWallAhead && !query.climbableWallAhead && query.isGrounded)
         {
             StartCoroutine(AnalyzeWallRoutine());
-            return NodeState.SUCCESS; // A análise foi iniciada
+            return NodeState.SUCCESS;
         }
 
-        return NodeState.FAILURE; // Nenhum gatilho de análise foi ativado
+        return NodeState.FAILURE;
     }
 
+    // A LÓGICA DE PATRULHA INTELIGENTE RESTAURADA
     private NodeState ProcessPatrolLogic()
     {
         var query = _navigation.QueryEnvironment();
 
-        // A PATRULHA REAGE AO AMBIENTE, MAS NÃO INICIA A ANÁLISE
-        if (query.isAtLedge || query.contactWallAhead) { _motor.HardStop(); }
-        else if (query.dangerLedgeAhead || query.dangerWallAhead) { _motor.Brake(); }
+        if (query.dangerLedgeAhead || query.dangerWallAhead) { _motor.Brake(); }
         else if (query.anticipationLedgeAhead || query.anticipationWallAhead) { _motor.Move(patrolTopSpeed / 2); }
         else
         {
@@ -114,21 +123,19 @@ public class AIController_Stalker : MonoBehaviour
     }
     #endregion
 
-    #region HELPER ROUTINES & LOGIC
+    #region HELPER ROUTINES (COM A COREOGRAFIA RESTAURADA)
     private IEnumerator AnalyzeWallRoutine()
     {
-        _isAnalyzingWall = true;
+        _isAnalyzing = true;
         _motor.HardStop();
 
         _perception.StartObstacleAnalysis(_navigation.contactWallProbeOrigin.position, isLedge: false);
         yield return new WaitForSeconds(wallAnalysisDuration);
-        _perception.StopObstacleAnalysis();
 
         _motor.Flip();
         StartCoroutine(FlipCooldownRoutine());
-        yield return new WaitForSeconds(0.2f); // Pausa
+        yield return new WaitForSeconds(0.2f);
 
-        // Fase de Recuo Tático Preciso
         float retreatEndTime = Time.time + (wallRetreatDistance / patrolTopSpeed);
         while (Time.time < retreatEndTime)
         {
@@ -140,13 +147,15 @@ public class AIController_Stalker : MonoBehaviour
         _motor.Flip();
         StartCoroutine(FlipCooldownRoutine());
 
-        _isAnalyzingWall = false;
+        _perception.StopObstacleAnalysis();
+        _isAnalyzing = false;
     }
 
     private IEnumerator AnalyzeLedgeRoutine()
     {
-        _isAnalyzingLedge = true;
+        _isAnalyzing = true;
         _motor.HardStop();
+
         _perception.StartObstacleAnalysis(_navigation.ledgeProbeOrigin.position, isLedge: true);
         yield return new WaitForSeconds(ledgeAnalysisDuration);
 
@@ -154,7 +163,7 @@ public class AIController_Stalker : MonoBehaviour
         StartCoroutine(FlipCooldownRoutine());
 
         _perception.StopObstacleAnalysis();
-        _isAnalyzingLedge = false;
+        _isAnalyzing = false;
     }
 
     private void FaceTarget(Vector3 targetPosition)
