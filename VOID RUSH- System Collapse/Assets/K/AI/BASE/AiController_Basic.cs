@@ -40,6 +40,10 @@ public class AIController_Basic : MonoBehaviour
     // NOVO CAMPO PARA A PAUSA NA PATRULHA
     [Tooltip("Quanto tempo (em segundos) a IA para para 'analisar' um obstáculo antes de virar.")]
     public float patrolPauseDuration = 1.5f;
+    [Tooltip("O ângulo (em graus) que os olhos escaneiam para cima e para baixo durante a análise.")]
+    public float patrolScanAngle = 45f; // <<< LINHA FALTANDO
+    [Tooltip("A velocidade da rotação dos olhos durante o escaneamento.")]
+    public float patrolScanSpeed = 2f; // <<< LINHA FALTANDO
     public LayerMask playerLayer;
     public LayerMask visionBlockers;
     #endregion
@@ -214,15 +218,13 @@ public class AIController_Basic : MonoBehaviour
 
     private IEnumerator AnalyzeObstacleRoutine()
     {
-        isExecutingAction = true; // Pausa a lógica do Update
+        isExecutingAction = true;
         ChangeState(State.Analyzing);
 
-        // A IA para e "pensa" por um momento.
-        yield return new WaitForSeconds(patrolPauseDuration);
+        // Chama a nova rotina para escanear com os olhos
+        yield return StartCoroutine(ScanSurroundingsRoutine());
 
-        Flip(); // Vira para a outra direção
-
-        // Volta a patrulhar
+        Flip();
         isExecutingAction = false;
         ChangeState(State.Patrolling);
     }
@@ -260,7 +262,43 @@ public class AIController_Basic : MonoBehaviour
 
 
 
+    private IEnumerator ScanSurroundingsRoutine()
+    {
+        Quaternion initialRotation = eyes.localRotation;
+        Quaternion upRotation = Quaternion.Euler(0, 0, patrolScanAngle);
+        Quaternion downRotation = Quaternion.Euler(0, 0, -patrolScanAngle);
 
+        // Usa um terço do tempo total de pausa para cada movimento
+        float segmentDuration = patrolPauseDuration / 3f;
+
+        // Olha para cima
+        float timer = 0f;
+        while (timer < segmentDuration)
+        {
+            eyes.localRotation = Quaternion.Slerp(initialRotation, upRotation, timer / segmentDuration);
+            timer += Time.deltaTime * patrolScanSpeed;
+            yield return null;
+        }
+
+        // Olha para baixo
+        timer = 0f;
+        while (timer < segmentDuration)
+        {
+            eyes.localRotation = Quaternion.Slerp(upRotation, downRotation, timer / segmentDuration);
+            timer += Time.deltaTime * patrolScanSpeed;
+            yield return null;
+        }
+
+        // Volta ao normal
+        timer = 0f;
+        while (timer < segmentDuration)
+        {
+            eyes.localRotation = Quaternion.Slerp(downRotation, initialRotation, timer / segmentDuration);
+            timer += Time.deltaTime * patrolScanSpeed;
+            yield return null;
+        }
+        eyes.localRotation = initialRotation;
+    }
 
     private IEnumerator AttackCoroutine()
     {
@@ -270,7 +308,6 @@ public class AIController_Basic : MonoBehaviour
 
         if (attackType == AttackType.Melee)
         {
-            // O ataque agora se origina do attackPoint
             Collider2D[] targetsHit = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, playerLayer);
             foreach (Collider2D target in targetsHit)
             {
@@ -285,13 +322,16 @@ public class AIController_Basic : MonoBehaviour
         {
             if (projectilePrefab != null && playerTarget != null)
             {
-                // O projétil agora se origina do attackPoint
                 Vector2 fireDirection = (playerTarget.position - attackPoint.position).normalized;
                 float angle = Mathf.Atan2(fireDirection.y, fireDirection.x) * Mathf.Rad2Deg;
                 Quaternion projectileRotation = Quaternion.Euler(0, 0, angle);
-                Instantiate(projectilePrefab, attackPoint.position, projectileRotation);
-                // A velocidade é aplicada pelo script do próprio projétil agora, se necessário, ou aqui:
-                // GameObject p = Instantiate(...); p.GetComponent<Rigidbody2D>().velocity = fireDirection * projectileSpeed;
+
+                // CRIA E APLICA VELOCIDADE
+                GameObject projectile = Instantiate(projectilePrefab, attackPoint.position, projectileRotation);
+                if (projectile.TryGetComponent<Rigidbody2D>(out var projRb))
+                {
+                    projRb.linearVelocity = fireDirection * projectileSpeed;
+                }
             }
         }
 
@@ -331,43 +371,38 @@ public class AIController_Basic : MonoBehaviour
     #region Gizmos de Percepção
     void OnDrawGizmosSelected()
     {
-        // --- CAMPO DE ATAQUE (Círculo Vermelho) ---
-        // Determina a origem do círculo de ataque. Se 'attackPoint' foi definido, usa ele.
-        // Se não, usa a posição principal do inimigo como fallback.
+        if (eyes == null) return;
+
         Vector3 attackOrigin = (attackPoint != null) ? attackPoint.position : transform.position;
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(attackOrigin, attackRange);
 
-        // Se não houver 'eyes', não podemos desenhar os outros gizmos de visão.
-        if (eyes == null) return;
-
-        // --- CAMPO DE VISÃO (Cone Amarelo) ---
-        Gizmos.color = Color.yellow;
-        // Determina a direção 'para frente' com base na escala do objeto (funciona no editor e em jogo)
         Vector3 forward = (Application.isPlaying ? isFacingRight : transform.localScale.x > 0) ? Vector3.right : Vector3.left;
-        // Calcula os vetores para as bordas superior e inferior do cone de visão
-        Vector3 up = Quaternion.Euler(0, 0, visionAngle / 2) * forward;
-        Vector3 down = Quaternion.Euler(0, 0, -visionAngle / 2) * forward;
-        // Desenha as linhas do cone de visão
-        Gizmos.DrawLine(eyes.position, eyes.position + up * visionRange);
-        Gizmos.DrawLine(eyes.position, eyes.position + down * visionRange);
 
-        // --- GIZMOS DE ESTADO (Apenas em Play Mode) ---
-        if (Application.isPlaying)
+        // Desenha o leque de visão com Raycasts
+        float stepCount = 20; // Mais steps = cone mais suave
+        float stepAngle = visionAngle / stepCount;
+
+        for (float angle = -visionAngle / 2; angle <= visionAngle / 2; angle += stepAngle)
         {
-            // Gizmo para o estado de busca (Círculo Ciano)
-            if (currentState == State.Searching)
-            {
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawWireSphere(lastKnownPlayerPosition, 1f);
-            }
+            Quaternion rotation = Quaternion.Euler(0, 0, angle);
+            Vector3 direction = rotation * forward;
 
-            // Linha de visão para o jogador (Linha Vermelha Sólida)
-            if (CanSeePlayer())
+            RaycastHit2D hit = Physics2D.Raycast(eyes.position, direction, visionRange, visionBlockers);
+
+            Vector3 endPoint = eyes.position + direction * visionRange;
+            if (hit.collider != null)
             {
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(eyes.position, playerTarget.position);
+                endPoint = hit.point;
             }
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(eyes.position, endPoint);
+        }
+
+        if (Application.isPlaying && currentState == State.Searching)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(lastKnownPlayerPosition, 1f);
         }
     }
     #endregion

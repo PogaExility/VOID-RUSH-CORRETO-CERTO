@@ -40,7 +40,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9221731014855316367}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: WallCheck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -76,9 +76,9 @@ GameObject:
   - component: {fileID: 7502982176693055856}
   - component: {fileID: 5079238309791322305}
   - component: {fileID: 9135765219872640656}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: "Crian\xE7a"
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -271,6 +271,8 @@ MonoBehaviour:
   visionAngle: 90
   memoryDuration: 5
   patrolPauseDuration: 1.5
+  patrolScanAngle: 45
+  patrolScanSpeed: 2
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
@@ -286,7 +288,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6483937537223164791}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Eyes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -317,7 +319,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3788960539033739152}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: GroundCheckA
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -348,7 +350,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 543498886968346149}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Detection Rig
   m_TagString: Untagged
   m_Icon: {fileID: 0}

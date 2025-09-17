@@ -24,7 +24,7 @@ MonoBehaviour:
   weaponType: 1
   magazineSize: 10
   reloadTime: 2
-  attackRate: 0.3
+  attackRate: 0.2
   useAimMode: 1
   recoilDistance: 0.003
   recoilSpeed: 0.05
