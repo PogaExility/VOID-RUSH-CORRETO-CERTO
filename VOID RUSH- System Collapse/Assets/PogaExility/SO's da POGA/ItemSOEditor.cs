@@ -118,6 +118,7 @@ public class ItemSOEditor : Editor
         else if (item.weaponType == WeaponType.Meelee)
         {
             EditorGUILayout.LabelField("Meelee", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("attackCooldown"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("comboResetTime"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("lungeDuration")); 
             EditorGUILayout.PropertyField(serializedObject.FindProperty("comboSteps"), true);

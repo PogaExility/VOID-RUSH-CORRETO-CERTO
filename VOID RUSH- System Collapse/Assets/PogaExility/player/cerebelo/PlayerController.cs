@@ -37,7 +37,7 @@ public class PlayerController : MonoBehaviour
     [Header("Skills de Combate")]
     public SkillSO blockSkill;
 
-    public bool IsAttacking { get; set; }
+  
     private bool attackBuffered = false;
     private bool isInventoryOpen = false;
     private SkillSO activeJumpSkill;
@@ -50,6 +50,25 @@ public class PlayerController : MonoBehaviour
     public bool inventoryLocked = false;
     private PlayerAnimState previousBodyState;
     private bool isActionInterruptingAim = false;
+    private bool _isAttacking;
+    public bool IsAttacking
+    {
+        get { return _isAttacking; }
+        set
+        {
+            _isAttacking = value;
+            // Quando IsAttacking é setado para TRUE, desabilita a física do movimento.
+            // Quando é setado para FALSE, habilita a física novamente.
+            if (value)
+            {
+                movementScript.DisablePhysicsControl();
+            }
+            else
+            {
+                movementScript.EnablePhysicsControl();
+            }
+        }
+    }
     void Awake()
     {
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
@@ -93,17 +112,22 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
         if (isInventoryOpen) { movementScript.SetMoveInput(0); return; }
 
+        // --- TRAVA DE INPUT CORRIGIDA ---
+        if (IsAttacking)
+        {
+            // Zera o input para parar o deslize e ignora o resto dos inputs de movimento/skills.
+            movementScript.SetMoveInput(0);
+            return;
+        }
+
+        // O resto da lógica de Update só roda se não estiver atacando.
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
 
-        // --- LÓGICA DE DETECÇÃO DE POUSO ---
-        // Checa se o jogador pousou NESTE frame.
         bool isGroundedNow = movementScript.IsGrounded();
         if (isGroundedNow && !wasGroundedLastFrame)
         {
-            // Se não estávamos no chão no frame passado, mas estamos agora, então acabamos de pousar.
             isLanding = true;
         }
-        // --- FIM DA LÓGICA DE POUSO ---
 
         HandlePowerModeToggle();
         HandleSkillInput();
@@ -112,32 +136,36 @@ public class PlayerController : MonoBehaviour
         HandleWeaponSwitching();
         UpdateAnimations();
 
-        // Atualiza o estado do frame anterior DEPOIS de toda a lógica ter rodado.
         wasGroundedLastFrame = isGroundedNow;
 
         if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
     }
 
 
-
-
     private Coroutine lungeCoroutine;
 
-        public void PerformLunge(float distance, float duration)
-        {
-            if (lungeCoroutine != null) StopCoroutine(lungeCoroutine);
-            lungeCoroutine = StartCoroutine(LungeCoroutine(distance, duration));
-
-        }
-
-    // DENTRO DE PlayerController.cs
-
-    // DENTRO DE PlayerController.cs
-
-    private IEnumerator LungeCoroutine(float distance, float duration)
+    // A função agora aceita DISTÂNCIA e VELOCIDADE.
+    public void PerformLunge(float distance, float speed)
     {
-        // Guarda de segurança
-        if (distance <= 0f || duration <= 0.01f)
+        if (lungeCoroutine != null) StopCoroutine(lungeCoroutine);
+        lungeCoroutine = StartCoroutine(LungeCoroutine(distance, speed));
+    }
+
+    public void CancelLunge()
+    {
+        if (lungeCoroutine != null)
+        {
+            StopCoroutine(lungeCoroutine);
+            // A limpeza agora é feita pelo 'finally', mas garantimos aqui por segurança.
+            movementScript.EnablePhysicsControl();
+            lungeCoroutine = null;
+        }
+    }
+
+    private IEnumerator LungeCoroutine(float distance, float speed)
+    {
+        // Se a velocidade for muito baixa, não faz nada para evitar erros.
+        if (Mathf.Abs(speed) < 0.1f)
         {
             yield break;
         }
@@ -147,46 +175,37 @@ public class PlayerController : MonoBehaviour
         try
         {
             // --- FASE DE EXECUÇÃO ---
-
             movementScript.DisablePhysicsControl();
 
-            // Calcula a velocidade horizontal necessária para cobrir a distância na duração exata.
-            // Fórmula: v = d / t
-            float requiredSpeed = distance / duration;
+            // Calcula a duração com base na distância e velocidade.
+            float duration = Mathf.Abs(distance / speed);
 
-            // Pega a velocidade vertical atual (causada pela gravidade).
-            float currentVerticalSpeed = rb.linearVelocity.y;
+            // Determina a direção do lunge (para frente ou para trás).
+            float lungeDirection = Mathf.Sign(distance);
+            float finalDirectionX = movementScript.GetFacingDirection().x * lungeDirection;
 
-            // Define a velocidade inicial do lunge, combinando o impulso horizontal com a velocidade vertical existente.
-            rb.linearVelocity = new Vector2(movementScript.GetFacingDirection().x * requiredSpeed, currentVerticalSpeed);
+            float horizontalVelocity = finalDirectionX * speed;
 
-            // Espera a duração do lunge. Durante este tempo, a gravidade e o atrito do Rigidbody
-            // (se houver algum configurado em 'Linear Drag') agirão naturalmente.
-            yield return new WaitForSeconds(duration);
+            // Loop que força a velocidade a cada frame, mas preserva a gravidade.
+            float timeElapsed = 0f;
+            while (timeElapsed < duration)
+            {
+                float currentVerticalSpeed = rb.linearVelocity.y;
+                rb.linearVelocity = new Vector2(horizontalVelocity, currentVerticalSpeed);
+
+                timeElapsed += Time.fixedDeltaTime;
+                yield return new WaitForFixedUpdate();
+            }
         }
         finally
         {
             // --- FASE DE LIMPEZA (GARANTIDA) ---
-
-            // Ao final, zera a velocidade HORIZONTAL para uma parada precisa, mas mantém a velocidade vertical.
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-
-            // Devolve o controle ao jogador.
+            // Este bloco SEMPRE roda, mesmo se a corrotina for interrompida.
+            movementScript.SetVelocity(0, rb.linearVelocity.y);
             movementScript.EnablePhysicsControl();
-
             lungeCoroutine = null;
         }
     }
-
-    public void CancelLunge()
-        {
-            if (lungeCoroutine != null)
-            {
-                StopCoroutine(lungeCoroutine);
-                movementScript.EnablePhysicsControl(); // Libera o controle da física imediatamente.
-                lungeCoroutine = null;
-            }
-        }
 
     private void HandleWeaponSwitching()
     {

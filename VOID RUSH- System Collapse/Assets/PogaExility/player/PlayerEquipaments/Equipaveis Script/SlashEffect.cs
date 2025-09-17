@@ -61,6 +61,8 @@ public class SlashEffect : MonoBehaviour
         }
     }
 
+    // DENTRO DE SlashEffect.cs
+
     void OnTriggerEnter2D(Collider2D other)
     {
         // Se já atingimos este alvo, ignora.
@@ -76,10 +78,11 @@ public class SlashEffect : MonoBehaviour
             // Adiciona o alvo à lista para não atingi-lo novamente.
             targetsHit.Add(other);
 
-            // Calcula a direção do ataque para o knockback.
+            // Calcula a direção do ataque para o knockback (do centro do corte para o inimigo).
             Vector2 attackDirection = (other.transform.position - transform.position).normalized;
 
-            // Chama a função TakeDamage da IA, passando todos os dados do ataque.
+            // --- A LINHA QUE FALTAVA ---
+            // Chama a função TakeDamage da IA, passando o dano E o knockbackPower.
             enemyAI.TakeDamage(damage, attackDirection, knockbackPower);
         }
     }

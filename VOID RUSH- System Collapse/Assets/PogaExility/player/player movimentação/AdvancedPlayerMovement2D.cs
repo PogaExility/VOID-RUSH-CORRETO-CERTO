@@ -8,6 +8,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     [Header("Referências")]
     public PlayerAnimatorController animatorController;
+    public PlayerController playerController;
     public Camera mainCamera;
     public TextMeshProUGUI stateCheckText;
     public LayerMask collisionLayer;
@@ -219,6 +220,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         capsuleCollider = GetComponent<CapsuleCollider2D>();
+        if (playerController == null) playerController = GetComponent<PlayerController>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         currentGravityScaleOnFall = gravityScaleOnFall;
         defenseHandler = GetComponent<DefenseHandler>();
@@ -475,6 +477,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     // Em AdvancedPlayerMovement2D.cs
     private void HandleMovement()
     {
+        if (playerController != null && playerController.IsAttacking)
+        {
+            return;
+        }
         // ADICIONE A VERIFICAÇÃO "isInKnockback" AQUI
         if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback)
         {

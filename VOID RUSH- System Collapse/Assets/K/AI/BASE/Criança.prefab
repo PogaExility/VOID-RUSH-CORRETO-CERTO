@@ -263,7 +263,7 @@ MonoBehaviour:
   attackDamage: 15
   attackRange: 1.5
   attackCooldown: 1.5
-  projectilePrefab: {fileID: 3379033899337861306, guid: d2e86b86c0aa121438f4a1d6c5954a3e, type: 3}
+  projectilePrefab: {fileID: 2861424395413929264, guid: 744c717f510f3dc46bfb6bdef9589ce7, type: 3}
   projectileSpeed: 10
   playerTarget: {fileID: 0}
   eyes: {fileID: 6483937537223164791}

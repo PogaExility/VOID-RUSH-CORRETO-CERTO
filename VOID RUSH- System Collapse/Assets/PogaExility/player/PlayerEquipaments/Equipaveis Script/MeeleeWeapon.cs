@@ -34,16 +34,17 @@ public class MeeleeWeapon : WeaponBase
         }
     }
 
+    // DENTRO DE MeeleeWeapon.cs
+
     public override void Attack()
     {
-        // Se o jogador não está atacando, inicia o combo
-        if (!playerController.IsAttacking)
+        // Se o jogador não está atacando E o cooldown do último ataque já passou...
+        if (!playerController.IsAttacking && timeSinceLastAttack > weaponData.attackCooldown)
         {
-            // Consome o buffer e inicia o ataque
             attackBuffered = false;
             StartAttack();
         }
-        // Se o jogador JÁ está atacando, bufferiza o próximo clique
+        // ...senão, bufferiza o próximo clique para continuar o combo.
         else
         {
             attackBuffered = true;
@@ -59,29 +60,33 @@ public class MeeleeWeapon : WeaponBase
         if (attackCoroutine != null) StopCoroutine(attackCoroutine);
         attackCoroutine = StartCoroutine(AttackFlowCoroutine(currentStepData));
     }
+    // DENTRO DE MeeleeWeapon.cs
+
     private IEnumerator AttackFlowCoroutine(ComboStepData currentStep)
     {
         playerController.IsAttacking = true;
         timeSinceLastAttack = 0f;
+        attackBuffered = false;
+
+        playerController.movementScript.SetVelocity(0, playerController.movementScript.GetRigidbody().linearVelocity.y);
 
         float speedMultiplier = Mathf.Max(0.1f, currentStep.comboSpeed);
         animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, speedMultiplier);
 
         Transform attackPoint = WeaponHandler.Instance.GetAttackPoint();
-        bool isFacingRight = playerController.movementScript.IsFacingRight();
-        playerController.PerformLunge(currentStep.lungeDistance, weaponData.lungeDuration);
+
+        playerController.PerformLunge(currentStep.lungeDistance, currentStep.lungeSpeed);
         animatorController.PlayState(AnimatorTarget.PlayerBody, currentStep.playerAnimationState);
 
+        // --- LÓGICA DE CORTE FINAL E SIMPLIFICADA ---
         if (currentSlashInstance != null) Destroy(currentSlashInstance);
         if (currentStep.slashEffectPrefab != null && attackPoint != null)
         {
-            // Instancia o corte na posição e rotação GLOBAIS do AttackPoint, mas SEM parentesco.
-            // Isso evita problemas de dupla rotação ou escala.
+            // 1. Instancia o corte como FILHO do attackPoint.
+            // A posição, rotação e escala serão herdadas automaticamente.
             currentSlashInstance = Instantiate(currentStep.slashEffectPrefab, attackPoint);
 
-            // Agora que o corte está "solto" no mundo, sua rotação é a correta, herdada
-            // do attackPoint no momento da criação. Não precisamos fazer mais nada para o flip.
-
+            // 2. Inicializa o corte. Nenhuma manipulação de transform é necessária.
             SlashEffect slashScript = currentSlashInstance.GetComponent<SlashEffect>();
             if (slashScript != null)
             {
@@ -89,6 +94,7 @@ public class MeeleeWeapon : WeaponBase
                 slashScript.SetSpeed(speedMultiplier);
             }
         }
+        // --- FIM DA LÓGICA DE CORTE ---
 
         if (currentStep.playerAnimationClip == null)
         {

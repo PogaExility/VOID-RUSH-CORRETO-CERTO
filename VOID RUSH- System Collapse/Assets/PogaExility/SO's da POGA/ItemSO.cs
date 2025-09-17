@@ -60,6 +60,8 @@ public class ItemSO : ScriptableObject
     public float damageFalloff = 0.3f;
 
     [Header("Meelee")]
+    [Tooltip("Cooldown em segundos APÓS o último golpe de um combo antes que um novo possa começar.")]
+    public float attackCooldown = 0.2f; // <<-- ADICIONE ESTA LINHA
     [Tooltip("Tempo em segundos que o combo fica 'aberto' antes de resetar para o primeiro golpe.")]
     public float comboResetTime = 0.8f;
     public float lungeDuration = 0.15f;
