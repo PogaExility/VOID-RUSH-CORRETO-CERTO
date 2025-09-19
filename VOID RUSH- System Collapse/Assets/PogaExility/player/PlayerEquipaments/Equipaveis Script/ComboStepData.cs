@@ -1,4 +1,13 @@
-// NOME DO ARQUIVO: ComboStepData.cs
+
+public enum MeeleeKnockbackDirection
+{
+    Frente,
+    Cima,
+    CimaDiagonal,
+    Baixo,
+    BaixoDiagonal
+}
+
 [System.Serializable]
 public class ComboStepData
 {
@@ -12,6 +21,7 @@ public class ComboStepData
     public UnityEngine.GameObject slashEffectPrefab;
     public float damage;
     public float knockbackPower;
+    public MeeleeKnockbackDirection knockbackDirection;
     public float lungeDistance;
     public float lungeSpeed;
     public float comboWindow = 0.5f;

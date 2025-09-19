@@ -110,6 +110,7 @@ public class ItemSOEditor : Editor
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderDamage"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderRange"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("powderKnockback"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("powderKnockbackDirection"));
             EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("Munições aceitas", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("acceptedAmmo"), true);
@@ -138,6 +139,7 @@ public class ItemSOEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("bulletSpeed"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("bulletLifetime"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("bulletKnockback"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("bulletKnockbackDirection"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("pierceCount"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("damageFalloff"));
     }

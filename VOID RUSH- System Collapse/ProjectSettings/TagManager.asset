@@ -8,6 +8,7 @@ TagManager:
   - Item
   - Fundo
   - Enemy
+  - VirtualCamera
   layers:
   - Default
   - TransparentFX
@@ -21,8 +22,8 @@ TagManager:
   - Fundo
   - Enemy
   - Post
-  - 
-  - 
+  - VirtualCamera
+  - MainCamera
   - 
   - 
   - 

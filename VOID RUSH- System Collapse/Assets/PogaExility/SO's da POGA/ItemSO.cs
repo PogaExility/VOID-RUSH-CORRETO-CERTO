@@ -2,8 +2,10 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+
 public enum ItemType { Consumable, KeyItem, Weapon, Ammo, Material, Utility }
 public enum WeaponType { Meelee, Ranger, Buster }
+public enum RangedKnockbackDirection { Frente }
 
 [CreateAssetMenu(fileName = "NewItem", menuName = "NEXUS/Itens/Novo Item", order = 0)]
 public class ItemSO : ScriptableObject
@@ -46,6 +48,7 @@ public class ItemSO : ScriptableObject
     public float powderDamage = 2f;
     public float powderRange = 2f;
     public float powderKnockback = 3f;
+    public RangedKnockbackDirection powderKnockbackDirection;
     public ItemSO[] acceptedAmmo;
     [Tooltip("A distância para frente do cano onde o efeito de pólvora vai aparecer.")]
     public float gunpowderSpawnOffset = 0.5f;
@@ -56,6 +59,7 @@ public class ItemSO : ScriptableObject
     public float bulletSpeed = 20f;
     public float bulletLifetime = 3f;
     public float bulletKnockback = 5f;
+    public RangedKnockbackDirection bulletKnockbackDirection;
     public int pierceCount = 0;
     public float damageFalloff = 0.3f;
 
