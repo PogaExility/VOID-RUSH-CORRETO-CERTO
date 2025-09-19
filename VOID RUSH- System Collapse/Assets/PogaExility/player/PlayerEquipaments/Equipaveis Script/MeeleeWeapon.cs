@@ -78,19 +78,23 @@ public class MeeleeWeapon : WeaponBase
         playerController.PerformLunge(currentStep.lungeDistance, currentStep.lungeSpeed);
         animatorController.PlayState(AnimatorTarget.PlayerBody, currentStep.playerAnimationState);
 
-        // --- LÓGICA DE CORTE FINAL E SIMPLIFICADA ---
+        // --- LÓGICA DE CORTE MODIFICADA ---
         if (currentSlashInstance != null) Destroy(currentSlashInstance);
         if (currentStep.slashEffectPrefab != null && attackPoint != null)
         {
             // 1. Instancia o corte como FILHO do attackPoint.
-            // A posição, rotação e escala serão herdadas automaticamente.
             currentSlashInstance = Instantiate(currentStep.slashEffectPrefab, attackPoint);
 
-            // 2. Inicializa o corte. Nenhuma manipulação de transform é necessária.
+            // 2. Inicializa o corte com a nova direção de knockback.
             SlashEffect slashScript = currentSlashInstance.GetComponent<SlashEffect>();
             if (slashScript != null)
             {
-                slashScript.Initialize(currentStep.damage, currentStep.knockbackPower, currentStep.slashAnimationState);
+                // Pega a direção do knockback do SO e a converte em um vetor, já considerando o flip do jogador.
+                Vector2 knockbackDirection = GetKnockbackDirectionVector(currentStep.knockbackDirection);
+
+                // Passa o vetor de direção pré-calculado para o efeito de corte.
+                // (Isto causará um erro até atualizarmos o SlashEffect.cs)
+                slashScript.Initialize(currentStep.damage, currentStep.knockbackPower, knockbackDirection, currentStep.slashAnimationState);
                 slashScript.SetSpeed(speedMultiplier);
             }
         }
@@ -113,6 +117,51 @@ public class MeeleeWeapon : WeaponBase
             attackBuffered = false;
             StartAttack();
         }
+    }
+    /// <summary>
+    /// Converte a direção de knockback do Enum em um vetor Vector2,
+    /// ajustando para a direção em que o jogador está virado.
+    /// </summary>
+    /// <param name="direction">A direção definida no ComboStepData.</param>
+    /// <returns>Um vetor de direção normalizado.</returns>
+    private Vector2 GetKnockbackDirectionVector(MeeleeKnockbackDirection direction)
+    {
+        Vector2 knockbackDir = Vector2.zero;
+
+        switch (direction)
+        {
+            case MeeleeKnockbackDirection.Frente:
+                knockbackDir = Vector2.right; // (1, 0)
+                break;
+            case MeeleeKnockbackDirection.Cima:
+                knockbackDir = Vector2.up; // (0, 1)
+                break;
+            case MeeleeKnockbackDirection.CimaDiagonal:
+                knockbackDir = new Vector2(1, 1);
+                break;
+            case MeeleeKnockbackDirection.Baixo:
+                knockbackDir = Vector2.down; // (0, -1)
+                break;
+            case MeeleeKnockbackDirection.BaixoDiagonal:
+                knockbackDir = new Vector2(1, -1);
+                break;
+        }
+
+        // Ajusta o componente X do vetor se o jogador estiver virado para a esquerda.
+        // Isso só afeta as direções que têm um componente horizontal.
+        if (playerController.transform.localScale.x < 0)
+        {
+            if (direction == MeeleeKnockbackDirection.Frente ||
+                direction == MeeleeKnockbackDirection.CimaDiagonal ||
+                direction == MeeleeKnockbackDirection.BaixoDiagonal)
+            {
+                knockbackDir.x *= -1;
+            }
+        }
+
+        // Normalizamos o vetor para que ele represente apenas a direção.
+        // A força será aplicada pela variável knockbackPower.
+        return knockbackDir.normalized;
     }
 
     private void FinishAttack()

@@ -1,7 +1,6 @@
 using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections;
-using System.Collections.Generic; // Necessário para usar List
 
 [RequireComponent(typeof(Collider2D))]
 public class RoomBoundary : MonoBehaviour
@@ -15,10 +14,6 @@ public class RoomBoundary : MonoBehaviour
     public float minOrthographicSize = 5f;
     [Tooltip("O valor máximo que o zoom automático da sala pode atingir.")]
     public float maxOrthographicSize = 20f;
-
-    [Header("Configuração das Portas")]
-    [Tooltip("Arraste para cá todos os Colliders que funcionarão como 'portas' para esta sala.")]
-    public List<Collider2D> doorTriggers;
 
     // --- CÉREBRO COMPARTILHADO ---
     private static CinemachineConfiner2D activeConfiner;
@@ -34,67 +29,30 @@ public class RoomBoundary : MonoBehaviour
     {
         roomCollider = GetComponent<Collider2D>();
         roomCollider.isTrigger = true;
-
-        // Garante que todas as portas também sejam triggers.
-        foreach (var door in doorTriggers)
-        {
-            if (door != null) door.isTrigger = true;
-        }
-
         CalculateOptimalZoom();
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!other.CompareTag("Player")) return;
-
-        // --- PONTO DE VERIFICAÇÃO 1 ---
-        Debug.Log($"Jogador entrou no trigger '{other.gameObject.name}' DENTRO da área de '{gameObject.name}'.");
-
-        if (doorTriggers.Contains(other))
+        if (other.CompareTag("Player"))
         {
-            SetFollowMode();
-            return;
-        }
-
-        if (other == roomCollider)
-        {
+            // Se o jogador entrou nesta sala e ela não é a sala ativa, ativa-a.
             if (currentActiveRoom != this)
             {
-                // --- PONTO DE VERIFICAÇÃO 2 ---
-                Debug.Log($"Condição para ativar a sala '{gameObject.name}' foi satisfeita. Chamando ActivateRoom...");
                 ActivateRoom();
-            }
-            else
-            {
-                // --- PONTO DE VERIFICAÇÃO (EXTRA) ---
-                Debug.Log($"Jogador entrou na sala '{gameObject.name}', mas ela já é a sala ativa. Nenhuma ação necessária.");
             }
         }
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (!other.CompareTag("Player")) return;
-
-        // Se o jogador está saindo do collider principal da sala...
-        if (other == roomCollider)
+        if (other.CompareTag("Player"))
         {
-            // ... e esta era a sala ativa, ela deixa de ser.
+            // Se o jogador está saindo da sala que estava ativa, entra em modo livre.
             if (currentActiveRoom == this)
             {
                 currentActiveRoom = null;
-                // Ao sair da sala, ativa o modo livre imediatamente.
                 SetFollowMode();
-            }
-        }
-        // Se o jogador está saindo de uma porta...
-        else if (doorTriggers.Contains(other))
-        {
-            // ...e ainda está dentro do collider desta sala, reativa a sala.
-            if (roomCollider.bounds.Contains(other.transform.position))
-            {
-                ActivateRoom();
             }
         }
     }
@@ -103,51 +61,49 @@ public class RoomBoundary : MonoBehaviour
     {
         Bounds bounds = roomCollider.bounds;
         float screenRatio = (float)Screen.width / Screen.height;
-        float requiredSizeX = (bounds.size.x / screenRatio) / 2f * 1.1f; // 10% padding
-        float requiredSizeY = bounds.size.y / 2f * 1.1f; // 10% padding
+        float requiredSizeX = (bounds.size.x / screenRatio) / 2f * 1.1f;
+        float requiredSizeY = bounds.size.y / 2f * 1.1f;
 
         float optimalSize = Mathf.Max(requiredSizeX, requiredSizeY);
         calculatedOrthographicSize = Mathf.Clamp(optimalSize, minOrthographicSize, maxOrthographicSize);
     }
 
-    private void ActivateRoom()
+    // Tornamos este método público para que o script da porta possa chamá-lo.
+    public void ActivateRoom()
     {
-        // --- PONTO DE VERIFICAÇÃO 3 ---
-        Debug.Log($"Iniciando ActivateRoom para '{gameObject.name}'.");
-
         currentActiveRoom = this;
         InitializeCameraReferences();
 
         if (activeConfiner != null)
         {
-            // --- PONTO DE VERIFICAÇÃO 4 ---
-            Debug.Log($"'activeConfiner' encontrado! Atribuindo '{roomCollider.name}' ao BoundingShape2D.");
             activeConfiner.BoundingShape2D = roomCollider;
             StartZoomTransition(calculatedOrthographicSize);
-        }
-        else
-        {
-            // --- PONTO DE VERIFICAÇÃO DE FALHA ---
-            Debug.LogError($"FALHA em ActivateRoom para '{gameObject.name}': 'activeConfiner' é NULO. A câmera não foi encontrada ou não tem o componente Confiner2D.");
+            Debug.Log($"Sala '{gameObject.name}' ativada. Zoom: {calculatedOrthographicSize}.");
         }
     }
 
-
-    private void SetFollowMode()
+    // Tornamos este método estático para ser chamado de qualquer lugar.
+    public static void SetFollowMode()
     {
-        // Se o jogador sai para o modo livre, esta sala não pode mais ser a ativa.
-        if (currentActiveRoom == this) currentActiveRoom = null;
-
+        currentActiveRoom = null; // Se estamos em modo livre, nenhuma sala está ativa.
         InitializeCameraReferences();
+
         if (activeConfiner != null)
         {
             activeConfiner.BoundingShape2D = null;
-            StartZoomTransition(followOrthographicSize);
-            Debug.Log("Modo 'Follow' ativado pela porta/saída.");
+            // Usa o primeiro RoomBoundary que encontrar para pegar os valores de zoom e velocidade.
+            // Isso assume que os valores de follow são os mesmos para todas as salas.
+            RoomBoundary anyRoom = FindObjectOfType<RoomBoundary>();
+            if (anyRoom != null)
+            {
+                StartZoomTransition(anyRoom.followOrthographicSize, anyRoom.zoomTransitionSpeed);
+            }
+            Debug.Log("Modo 'Follow' ativado.");
         }
     }
 
-    private void StartZoomTransition(float targetSize)
+    // Tornamos estático para ser chamado pelo SetFollowMode.
+    public static void StartZoomTransition(float targetSize, float transitionSpeed)
     {
         InitializeCameraReferences();
         if (activeVirtualCamera == null) return;
@@ -156,14 +112,14 @@ public class RoomBoundary : MonoBehaviour
         {
             activeVirtualCamera.StopCoroutine(activeZoomCoroutine);
         }
-        activeZoomCoroutine = activeVirtualCamera.StartCoroutine(SmoothZoomCoroutine(targetSize));
+        activeZoomCoroutine = activeVirtualCamera.StartCoroutine(SmoothZoomCoroutine(targetSize, transitionSpeed));
     }
 
-    private IEnumerator SmoothZoomCoroutine(float targetSize)
+    private static IEnumerator SmoothZoomCoroutine(float targetSize, float transitionSpeed)
     {
         while (activeVirtualCamera != null && !Mathf.Approximately(activeVirtualCamera.Lens.OrthographicSize, targetSize))
         {
-            float newSize = Mathf.MoveTowards(activeVirtualCamera.Lens.OrthographicSize, targetSize, zoomTransitionSpeed * Time.deltaTime);
+            float newSize = Mathf.MoveTowards(activeVirtualCamera.Lens.OrthographicSize, targetSize, transitionSpeed * Time.deltaTime);
             activeVirtualCamera.Lens.OrthographicSize = newSize;
             yield return null;
         }
@@ -175,21 +131,12 @@ public class RoomBoundary : MonoBehaviour
     {
         if (activeVirtualCamera == null)
         {
-            // --- PONTO DE VERIFICAÇÃO 5 ---
-            Debug.Log("Tentando inicializar referências da câmera...");
             GameObject vcamObject = GameObject.FindGameObjectWithTag("VirtualCamera");
             if (vcamObject != null)
             {
-                Debug.Log("Objeto com a tag 'VirtualCamera' foi encontrado com sucesso!", vcamObject);
                 activeVirtualCamera = vcamObject.GetComponent<CinemachineCamera>();
                 activeConfiner = vcamObject.GetComponent<CinemachineConfiner2D>();
             }
-            else
-            {
-                // --- PONTO DE VERIFICAÇÃO DE FALHA GRAVE ---
-                Debug.LogError("ERRO CRÍTICO: Nenhum objeto com a tag 'VirtualCamera' foi encontrado na cena.");
-            }
         }
     }
-
 }
