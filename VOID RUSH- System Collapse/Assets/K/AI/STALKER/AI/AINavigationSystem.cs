@@ -4,6 +4,7 @@ public class AINavigationSystem : MonoBehaviour
 {
     #region REFERENCES & STATE
     private AIPlatformerMotor _motor;
+    private CapsuleCollider2D _collider; // Referência para o colisor
     #endregion
 
     #region CONFIGURATION
@@ -18,6 +19,9 @@ public class AINavigationSystem : MonoBehaviour
     public Transform jumpProbeOrigin;
     public Transform climbProbeOrigin;
     public Transform ledgeMantleProbeOrigin;
+    [Tooltip("Sensor que aponta para CIMA para verificar se é seguro levantar.")]
+    public Transform standUpProbeOrigin;
+
     [Header("▶ Configuração das Sondas")]
     public LayerMask groundLayer;
     public LayerMask climbableLayer;
@@ -29,13 +33,18 @@ public class AINavigationSystem : MonoBehaviour
     public float ledgeMantleDistance = 1.0f;
     [Header("▶ Depuração Visual")]
     public bool showDebugGizmos = true;
+    public float gizmoCubeSize = 0.1f; // Tamanho dos cubos de diagnóstico
     #endregion
 
     #region UNITY LIFECYCLE
     void Awake()
     {
         _motor = GetComponent<AIPlatformerMotor>();
-        if (_motor == null) Debug.LogError("[NAVIGATION] ERRO CRÍTICO: AIPlatformerMotor não encontrado!");
+        if (_motor == null)
+        {
+            Debug.LogError("ERRO CRÍTICO: AIPlatformerMotor não encontrado no AINavigationSystem!", this);
+            this.enabled = false;
+        }
     }
     #endregion
 
@@ -43,60 +52,82 @@ public class AINavigationSystem : MonoBehaviour
     public struct NavQueryResult
     {
         public bool anticipationWallAhead, dangerWallAhead, contactWallAhead, ceilingAhead, anticipationLedgeAhead, dangerLedgeAhead, isAtLedge, jumpablePlatformAhead, climbableWallAhead, canMantleLedge, isGrounded;
-
-        // --- DEBUG --- Helper para logar o estado
-        public override string ToString()
-        {
-            return $"AW:{anticipationWallAhead}, DW:{dangerWallAhead}, CW:{contactWallAhead} | AL:{anticipationLedgeAhead}, DL:{dangerLedgeAhead}, @Ledge:{isAtLedge} | Grounded:{isGrounded}, Climb:{climbableWallAhead}";
-        }
+        public bool isClearToStandUp;
     }
 
     public NavQueryResult QueryEnvironment()
     {
         if (_motor == null) return new NavQueryResult();
-        var result = new NavQueryResult
+        return new NavQueryResult
         {
             anticipationWallAhead = ProbeForWall(anticipationWallProbeOrigin),
             dangerWallAhead = ProbeForWall(dangerWallProbeOrigin),
             contactWallAhead = ProbeForWall(contactWallProbeOrigin),
-            ceilingAhead = ProbeForCeiling(),
+            ceilingAhead = ProbeForCeiling(ceilingProbeOrigin),
             anticipationLedgeAhead = ProbeForLedge(anticipationLedgeProbeOrigin),
             dangerLedgeAhead = ProbeForLedge(dangerLedgeProbeOrigin),
             isAtLedge = ProbeForLedge(ledgeProbeOrigin),
             jumpablePlatformAhead = ProbeForJumpablePlatform(),
             climbableWallAhead = ProbeForClimbableWall(),
             canMantleLedge = ProbeForLedgeMantle(),
-            isGrounded = _motor.IsGrounded()
+            isGrounded = _motor.IsGrounded(),
+            isClearToStandUp = ProbeForStandUpClearance()
         };
-        // --- DEBUG --- Logar o resultado completo da consulta ambiental
-        Debug.Log($"[NAVIGATION] Query Result: {result.ToString()}");
-        return result;
     }
     #endregion
 
     #region SONDAS INTERNAS
     private bool ProbeForWall(Transform origin) => origin != null && Physics2D.Raycast(origin.position, transform.right, wallProbeDistance, groundLayer);
     private bool ProbeForLedge(Transform origin) => origin != null && !Physics2D.Raycast(origin.position, Vector2.down, 1.0f, groundLayer);
-    private bool ProbeForCeiling() => ceilingProbeOrigin != null && Physics2D.Raycast(ceilingProbeOrigin.position, transform.right, ceilingProbeDistance, groundLayer);
-    private bool ProbeForJumpablePlatform() { if (jumpProbeOrigin == null) return false; RaycastHit2D hit = Physics2D.Raycast(jumpProbeOrigin.position, transform.right, jumpProbeDistance, groundLayer); return hit.collider && (hit.point.y - transform.position.y) < maxJumpHeight; }
-    private bool ProbeForClimbableWall() => climbProbeOrigin != null && Physics2D.Raycast(climbProbeOrigin.position, transform.right, wallProbeDistance, climbableLayer);
-    private bool ProbeForLedgeMantle() => ledgeMantleProbeOrigin != null && _motor.IsClimbing && !Physics2D.Raycast(ledgeMantleProbeOrigin.position, transform.right, ledgeMantleDistance, groundLayer);
+    private bool ProbeForCeiling(Transform origin) => origin != null && Physics2D.Raycast(origin.position, transform.right, ceilingProbeDistance, groundLayer);
+    private bool ProbeForStandUpClearance() => standUpProbeOrigin != null && !Physics2D.Raycast(standUpProbeOrigin.position, Vector2.up, _motor.StandingHeight, groundLayer);
+    private bool ProbeForJumpablePlatform() { /* ... */ return false; }
+    private bool ProbeForClimbableWall() { /* ... */ return false; }
+    private bool ProbeForLedgeMantle() { /* ... */ return false; }
     #endregion
 
-    #region VISUALIZAÇÃO
+    #region VISUALIZAÇÃO DIDÁTICA
+    // =================================================================================================
+    // CÓDIGO DE GIZMOS ATUALIZADO PARA MÁXIMA VISIBILIDADE
+    // LEGENDA:
+    // - LINHA: Raio de detecção
+    // - CUBO SÓLIDO: A sonda está ATIVA (retornando TRUE)
+    // - VERDE: Antecipação / Escalável
+    // - AMARELO: Perigo
+    // - VERMELHO: Contato / Parada
+    // - CIANO: Espaço livre para levantar
+    // =================================================================================================
     void OnDrawGizmosSelected()
     {
-        if (!showDebugGizmos || !Application.isPlaying) return;
-        if (anticipationWallProbeOrigin) { Gizmos.color = ProbeForWall(anticipationWallProbeOrigin) ? Color.green : new Color(0, 0.5f, 0); Gizmos.DrawLine(anticipationWallProbeOrigin.position, anticipationWallProbeOrigin.position + transform.right * wallProbeDistance); }
-        if (dangerWallProbeOrigin) { Gizmos.color = ProbeForWall(dangerWallProbeOrigin) ? Color.yellow : new Color(0.5f, 0.5f, 0); Gizmos.DrawLine(dangerWallProbeOrigin.position, dangerWallProbeOrigin.position + transform.right * wallProbeDistance); }
-        if (contactWallProbeOrigin) { Gizmos.color = ProbeForWall(contactWallProbeOrigin) ? Color.red : new Color(0.5f, 0, 0); Gizmos.DrawLine(contactWallProbeOrigin.position, contactWallProbeOrigin.position + transform.right * wallProbeDistance); }
-        if (anticipationLedgeProbeOrigin) { Gizmos.color = ProbeForLedge(anticipationLedgeProbeOrigin) ? Color.green : new Color(0, 0.5f, 0); Gizmos.DrawLine(anticipationLedgeProbeOrigin.position, anticipationLedgeProbeOrigin.position + Vector3.down * 1.0f); }
-        if (dangerLedgeProbeOrigin) { Gizmos.color = ProbeForLedge(dangerLedgeProbeOrigin) ? Color.yellow : new Color(0.5f, 0.5f, 0); Gizmos.DrawLine(dangerLedgeProbeOrigin.position, dangerLedgeProbeOrigin.position + Vector3.down * 1.0f); }
-        if (ledgeProbeOrigin) { Gizmos.color = ProbeForLedge(ledgeProbeOrigin) ? Color.red : new Color(0.5f, 0, 0); Gizmos.DrawLine(ledgeProbeOrigin.position, ledgeProbeOrigin.position + Vector3.down * 1.0f); }
-        if (ceilingProbeOrigin) { Gizmos.color = ProbeForCeiling() ? Color.yellow : new Color(0.5f, 0.5f, 0); Gizmos.DrawLine(ceilingProbeOrigin.position, ceilingProbeOrigin.position + transform.right * ceilingProbeDistance); }
-        if (jumpProbeOrigin) { Gizmos.color = ProbeForJumpablePlatform() ? Color.magenta : new Color(0.5f, 0, 0.5f); Gizmos.DrawLine(jumpProbeOrigin.position, jumpProbeOrigin.position + transform.right * jumpProbeDistance); }
-        if (climbProbeOrigin) { Gizmos.color = ProbeForClimbableWall() ? Color.green : new Color(0, 0.5f, 0); Gizmos.DrawLine(climbProbeOrigin.position, climbProbeOrigin.position + transform.right * wallProbeDistance); }
-        if (ledgeMantleProbeOrigin) { Gizmos.color = Color.white; Gizmos.DrawLine(ledgeMantleProbeOrigin.position, ledgeMantleProbeOrigin.position + transform.right * ledgeMantleDistance); }
+        if (!showDebugGizmos || !Application.isPlaying || _motor == null) return;
+
+        // --- SONDAS DE PAREDE ---
+        DrawProbeGizmo(anticipationWallProbeOrigin, transform.right, wallProbeDistance, ProbeForWall(anticipationWallProbeOrigin), Color.green);
+        DrawProbeGizmo(dangerWallProbeOrigin, transform.right, wallProbeDistance, ProbeForWall(dangerWallProbeOrigin), Color.yellow);
+        DrawProbeGizmo(contactWallProbeOrigin, transform.right, wallProbeDistance, ProbeForWall(contactWallProbeOrigin), Color.red);
+
+        // --- SONDAS DE BORDA ---
+        DrawProbeGizmo(anticipationLedgeProbeOrigin, Vector3.down, 1.0f, ProbeForLedge(anticipationLedgeProbeOrigin), Color.green);
+        DrawProbeGizmo(dangerLedgeProbeOrigin, Vector3.down, 1.0f, ProbeForLedge(dangerLedgeProbeOrigin), Color.yellow);
+        DrawProbeGizmo(ledgeProbeOrigin, Vector3.down, 1.0f, ProbeForLedge(ledgeProbeOrigin), Color.red);
+
+        // --- SONDAS DE VERTICALIDADE ---
+        DrawProbeGizmo(ceilingProbeOrigin, transform.right, ceilingProbeDistance, ProbeForCeiling(ceilingProbeOrigin), Color.yellow);
+        DrawProbeGizmo(standUpProbeOrigin, Vector3.up, _motor.StandingHeight, ProbeForStandUpClearance(), Color.cyan);
+    }
+
+    private void DrawProbeGizmo(Transform origin, Vector3 direction, float distance, bool isActive, Color activeColor)
+    {
+        if (origin == null) return;
+
+        Color inactiveColor = new Color(activeColor.r * 0.3f, activeColor.g * 0.3f, activeColor.b * 0.3f, 0.5f);
+        Gizmos.color = isActive ? activeColor : inactiveColor;
+
+        Gizmos.DrawLine(origin.position, origin.position + direction * distance);
+        if (isActive)
+        {
+            Gizmos.DrawCube(origin.position, Vector3.one * gizmoCubeSize);
+        }
     }
     #endregion
 }
