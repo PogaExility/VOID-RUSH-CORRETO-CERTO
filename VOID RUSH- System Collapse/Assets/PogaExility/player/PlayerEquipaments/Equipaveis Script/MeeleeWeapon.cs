@@ -131,25 +131,25 @@ public class MeeleeWeapon : WeaponBase
         switch (direction)
         {
             case MeeleeKnockbackDirection.Frente:
-                knockbackDir = Vector2.right; // (1, 0)
+                knockbackDir = Vector2.right;
                 break;
             case MeeleeKnockbackDirection.Cima:
-                knockbackDir = Vector2.up; // (0, 1)
+                knockbackDir = Vector2.up;
                 break;
             case MeeleeKnockbackDirection.CimaDiagonal:
                 knockbackDir = new Vector2(1, 1);
                 break;
             case MeeleeKnockbackDirection.Baixo:
-                knockbackDir = Vector2.down; // (0, -1)
+                knockbackDir = Vector2.down;
                 break;
             case MeeleeKnockbackDirection.BaixoDiagonal:
                 knockbackDir = new Vector2(1, -1);
                 break;
         }
 
-        // Ajusta o componente X do vetor se o jogador estiver virado para a esquerda.
-        // Isso só afeta as direções que têm um componente horizontal.
-        if (playerController.transform.localScale.x < 0)
+        // A FORMA CORRETA E DIRETA:
+        // Se o movementScript NÃO estiver virado para a direita (!IsFacingRight), inverta o knockback.
+        if (!playerController.movementScript.IsFacingRight())
         {
             if (direction == MeeleeKnockbackDirection.Frente ||
                 direction == MeeleeKnockbackDirection.CimaDiagonal ||
@@ -159,8 +159,6 @@ public class MeeleeWeapon : WeaponBase
             }
         }
 
-        // Normalizamos o vetor para que ele represente apenas a direção.
-        // A força será aplicada pela variável knockbackPower.
         return knockbackDir.normalized;
     }
 

@@ -33,6 +33,7 @@ MonoBehaviour:
   powderDamage: 2
   powderRange: 2
   powderKnockback: 3
+  powderKnockbackDirection: 0
   acceptedAmmo: []
   gunpowderSpawnOffset: 0.5
   bulletPrefab: {fileID: 0}
@@ -40,6 +41,7 @@ MonoBehaviour:
   bulletSpeed: 20
   bulletLifetime: 3
   bulletKnockback: 5
+  bulletKnockbackDirection: 0
   pierceCount: 0
   damageFalloff: 0.3
   attackCooldown: 0.15
@@ -52,6 +54,7 @@ MonoBehaviour:
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 872cabe68352dcc4dbee48ff6544bed1, type: 3}
     damage: 10
     knockbackPower: 20
+    knockbackDirection: 0
     lungeDistance: 0
     lungeSpeed: 1000
     comboWindow: 0.4
@@ -62,7 +65,8 @@ MonoBehaviour:
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 0ad855eb5e4c7c3469a385d1550fe5fb, type: 3}
     damage: 12
     knockbackPower: 30
-    lungeDistance: -2
+    knockbackDirection: 0
+    lungeDistance: 0
     lungeSpeed: 15
     comboWindow: 0.4
     comboSpeed: 2
@@ -72,7 +76,8 @@ MonoBehaviour:
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 760f9e14a7f667c4e9bcde7c3ed7871f, type: 3}
     damage: 15
     knockbackPower: 15
-    lungeDistance: 4
+    knockbackDirection: 0
+    lungeDistance: 2
     lungeSpeed: 20
     comboWindow: 0
     comboSpeed: 1
