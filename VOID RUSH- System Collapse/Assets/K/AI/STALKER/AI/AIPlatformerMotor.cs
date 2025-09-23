@@ -124,6 +124,25 @@ public class AIPlatformerMotor : MonoBehaviour
         // --- ALTERAÇÃO: Inicia a corrotina de imunidade ---
         StartCoroutine(StateTransitionCooldownRoutine());
     }
+    public void EnterTunnel(float entrySpeed, float entryDuration)
+    {
+        if (!IsClimbing) return; // Só pode ser executado a partir do estado de escalada
+
+        IsClimbing = false; // Deixa de escalar
+                            // Não reativa a gravidade ainda
+
+        // Aplica um impulso horizontal para entrar
+        _rb.linearVelocity = new Vector2(entrySpeed * currentFacingDirection, 0);
+
+        // Inicia uma rotina para reativar a gravidade após um curto período
+        StartCoroutine(ReEnableGravityRoutine(entryDuration));
+    }
+
+    private IEnumerator ReEnableGravityRoutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        _rb.gravityScale = _originalGravityScale;
+    }
 
     // --- ALTERAÇÃO: Nova corrotina para o período de carência ---
     private IEnumerator StateTransitionCooldownRoutine()
