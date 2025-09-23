@@ -7,26 +7,27 @@ public class GunpowderExplosion : MonoBehaviour
     private float damage;
     private float radius;
     private float knockbackPower;
-    private RangedKnockbackDirection knockbackDirection; // <-- VARIÁVEL ADICIONADA
+    private RangedKnockbackDirection knockbackDirection;
+    private Vector2 shotDirection; // <-- VARIÁVEL ADICIONADA PARA GUARDAR A DIREÇÃO DO TIRO
 
     [SerializeField] private LayerMask enemyLayer;
 
     void Start()
     {
-        // Toca a animação de explosão assim que o objeto é criado.
         GetComponent<ProjectileAnimatorController>().PlayAnimation(ProjectileAnimState.polvora);
     }
 
     /// <summary>
-    /// Função de inicialização chamada pela RangedWeapon.
-    /// Configura todos os parâmetros da explosão de uma só vez.
+    /// Função de inicialização final, chamada pela RangedWeapon.
+    /// Configura todos os parâmetros da explosão, incluindo a direção do cano da arma.
     /// </summary>
-    public void Initialize(float damageAmount, float explosionRadius, float knockbackForce, RangedKnockbackDirection knockbackDir)
+    public void Initialize(float damageAmount, float explosionRadius, float knockbackForce, RangedKnockbackDirection knockbackDir, Vector2 fireDirection)
     {
         this.damage = damageAmount;
         this.radius = explosionRadius;
         this.knockbackPower = knockbackForce;
         this.knockbackDirection = knockbackDir;
+        this.shotDirection = fireDirection; // <-- ARMAZENA A DIREÇÃO RECEBIDA
     }
 
     /// <summary>
@@ -41,21 +42,15 @@ public class GunpowderExplosion : MonoBehaviour
             {
                 Vector2 finalKnockbackDirection;
 
-                // Decide qual vetor de direção usar com base na instrução recebida.
                 switch (knockbackDirection)
                 {
                     case RangedKnockbackDirection.Frente:
-                        // Para uma explosão, "Frente" significa empurrar do centro para fora.
-                        finalKnockbackDirection = (hit.transform.position - transform.position).normalized;
-                        // Garante que a direção não seja zero se o inimigo estiver exatamente no centro.
-                        if (finalKnockbackDirection == Vector2.zero)
-                        {
-                            finalKnockbackDirection = Vector2.up; // Empurra para cima como padrão.
-                        }
+                        // LÓGICA CORRIGIDA: Usa a direção do cano da arma que foi guardada.
+                        finalKnockbackDirection = this.shotDirection;
                         break;
 
-                    // Futuramente, outros 'cases' poderiam ser adicionados aqui.
                     default:
+                        // Comportamento padrão: empurra do centro para fora.
                         finalKnockbackDirection = (hit.transform.position - transform.position).normalized;
                         break;
                 }

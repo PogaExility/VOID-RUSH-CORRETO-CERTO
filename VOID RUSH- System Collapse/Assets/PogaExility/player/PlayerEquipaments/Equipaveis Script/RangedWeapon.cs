@@ -17,73 +17,65 @@ public class RangedWeapon : WeaponBase
         base.Initialize(data, savedAmmo);
         CurrentAmmo = (savedAmmo == -1) ? weaponData.magazineSize : savedAmmo;
     }
+      // Função `Attack` alterada para evitar a duplicação de prefabs de pólvora.
     public override void Attack()
     {
         if (Time.time < lastAttackTime + weaponData.attackRate || isReloading) return;
+        
+        lastAttackTime = Time.time;
 
-        // --- AÇÕES QUE ACONTECEM EM TODOS OS TIROS ---
-
-        // 1. Recoil: Continua igual.
+        // --- Recoil acontece em todos os tiros ---
         if (recoilCoroutine != null) StopCoroutine(recoilCoroutine);
         recoilCoroutine = StartCoroutine(RecoilCoroutine());
-
-        // 2. Efeito Visual da Pólvora (LÓGICA CORRIGIDA)
-        if (weaponData.gunpowderPrefab != null)
-        {
-            // A. Calculamos a posição para frente.
-            Vector3 spawnPosition = muzzlePoint.position + (muzzlePoint.right * weaponData.gunpowderSpawnOffset);
-
-            // B. Instanciamos o objeto na posição e rotação certas.
-            GameObject gunpowderGO = Instantiate(weaponData.gunpowderPrefab, spawnPosition, muzzlePoint.rotation);
-
-            // C. A MÁGICA: Imediatamente removemos qualquer parentesco.
-            // Isso garante que ele não herde nenhuma escala e fique fixo no espaço.
-            gunpowderGO.transform.SetParent(null);
-        }
-
-        // --- AÇÕES QUE DEPENDEM DA MUNIÇÃO (continua igual) ---
-
+        
+        // --- Lógica de Disparo e Efeitos Visuais ---
         if (CurrentAmmo > 0)
         {
+            // Efeito visual de pólvora SÓ para o tiro com bala.
+            if (weaponData.gunpowderPrefab != null)
+            {
+                Vector3 spawnPosition = muzzlePoint.position + (muzzlePoint.right * weaponData.gunpowderSpawnOffset);
+                GameObject gunpowderGO = Instantiate(weaponData.gunpowderPrefab, spawnPosition, muzzlePoint.rotation);
+                gunpowderGO.transform.SetParent(null); // Desvincula para não herdar escala/movimento
+            }
             FireBullet();
         }
         else
         {
+            // O Ataque de Desespero instancia seu PRÓPRIO prefab, que conterá la lógica de dano.
             DesperationAttack();
         }
-
-        lastAttackTime = Time.time;
     }
 
+    // Função `DesperationAttack` alterada para enviar a direção do cano da arma.
     private void DesperationAttack()
     {
         Debug.Log("Ataque de curto alcance sem munição!");
 
-        // --- PARTE VISUAL E LÓGICA DE FÍSICA AGORA CENTRALIZADA EM GunpowderExplosion ---
         if (weaponData.gunpowderPrefab != null)
         {
-            // Ao instanciar, passamos 'muzzlePoint' como o segundo argumento.
-            // Isso automaticamente torna o efeito um filho do muzzlePoint, fazendo-o segui-lo.
-            GameObject explosionGO = Instantiate(weaponData.gunpowderPrefab, muzzlePoint.position, muzzlePoint.rotation); // Use muzzlePoint.position diretamente
+            // --- LÓGICA DE POSICIONAMENTO ADICIONADA AQUI ---
+            // Calcula a posição de spawn com o offset, igual ao tiro normal.
+            Vector3 spawnPosition = muzzlePoint.position + (muzzlePoint.right * weaponData.gunpowderSpawnOffset);
+
+            // Instancia o prefab na nova posição calculada.
+            GameObject explosionGO = Instantiate(weaponData.gunpowderPrefab, spawnPosition, muzzlePoint.rotation);
+            // --- FIM DA MUDANÇA ---
 
             GunpowderExplosion explosionScript = explosionGO.GetComponent<GunpowderExplosion>();
             if (explosionScript != null)
             {
-                // Usa os dados do ItemSO para inicializar a explosão, incluindo a força e a direção do knockback.
-                // (Isto causará um novo erro até atualizarmos o GunpowderExplosion.cs)
+                // O resto da função permanece igual.
                 explosionScript.Initialize(
                     weaponData.powderDamage,
                     weaponData.powderRange,
-                    weaponData.powderKnockback,         // <-- PARÂMETRO ADICIONADO
-                    weaponData.powderKnockbackDirection // <-- PARÂMETRO ADICIONADO
+                    weaponData.powderKnockback,
+                    weaponData.powderKnockbackDirection,
+                    muzzlePoint.right
                 );
             }
         }
-        // --- LÓGICA DE FÍSICA ANTIGA REMOVIDA DAQUI ---
-        // A lógica de Physics2D.OverlapCircleAll e enemy.TakeDamage foi movida para GunpowderExplosion.cs
     }
-
-    // ADICIONE a corrotina do Recoil
     private IEnumerator RecoilCoroutine()
     {
         Vector3 originalPosition = Vector3.zero; // A posição inicial da arma é sempre (0,0,0) em relação ao socket
