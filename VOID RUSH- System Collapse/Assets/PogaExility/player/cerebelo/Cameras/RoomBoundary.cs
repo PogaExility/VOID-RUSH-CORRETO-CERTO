@@ -36,7 +36,6 @@ public class RoomBoundary : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            // Se o jogador entrou nesta sala e ela não é a sala ativa, ativa-a.
             if (currentActiveRoom != this)
             {
                 ActivateRoom();
@@ -48,7 +47,6 @@ public class RoomBoundary : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            // Se o jogador está saindo da sala que estava ativa, entra em modo livre.
             if (currentActiveRoom == this)
             {
                 currentActiveRoom = null;
@@ -68,7 +66,6 @@ public class RoomBoundary : MonoBehaviour
         calculatedOrthographicSize = Mathf.Clamp(optimalSize, minOrthographicSize, maxOrthographicSize);
     }
 
-    // Tornamos este método público para que o script da porta possa chamá-lo.
     public void ActivateRoom()
     {
         currentActiveRoom = this;
@@ -77,23 +74,22 @@ public class RoomBoundary : MonoBehaviour
         if (activeConfiner != null)
         {
             activeConfiner.BoundingShape2D = roomCollider;
-            StartZoomTransition(calculatedOrthographicSize);
+            // CORREÇÃO 1: Fornecendo o segundo argumento necessário.
+            StartZoomTransition(calculatedOrthographicSize, zoomTransitionSpeed);
             Debug.Log($"Sala '{gameObject.name}' ativada. Zoom: {calculatedOrthographicSize}.");
         }
     }
 
-    // Tornamos este método estático para ser chamado de qualquer lugar.
     public static void SetFollowMode()
     {
-        currentActiveRoom = null; // Se estamos em modo livre, nenhuma sala está ativa.
+        currentActiveRoom = null;
         InitializeCameraReferences();
 
         if (activeConfiner != null)
         {
             activeConfiner.BoundingShape2D = null;
-            // Usa o primeiro RoomBoundary que encontrar para pegar os valores de zoom e velocidade.
-            // Isso assume que os valores de follow são os mesmos para todas as salas.
-            RoomBoundary anyRoom = FindObjectOfType<RoomBoundary>();
+            // CORREÇÃO 2: Usando o método moderno para encontrar um objeto.
+            RoomBoundary anyRoom = FindAnyObjectByType<RoomBoundary>();
             if (anyRoom != null)
             {
                 StartZoomTransition(anyRoom.followOrthographicSize, anyRoom.zoomTransitionSpeed);
@@ -102,7 +98,6 @@ public class RoomBoundary : MonoBehaviour
         }
     }
 
-    // Tornamos estático para ser chamado pelo SetFollowMode.
     public static void StartZoomTransition(float targetSize, float transitionSpeed)
     {
         InitializeCameraReferences();

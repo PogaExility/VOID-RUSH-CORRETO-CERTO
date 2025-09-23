@@ -10,6 +10,7 @@ public class SlashEffect : MonoBehaviour
     // --- Dados do Ataque (recebidos da MeeleeWeapon) ---
     private float damage;
     private float knockbackPower;
+    private Vector2 precalculatedKnockbackDirection; // <-- NOVA VARIÁVEL para guardar a direção
 
     // --- Componentes & Referências ---
     private ProjectileAnimatorController projectileAnimator;
@@ -36,12 +37,13 @@ public class SlashEffect : MonoBehaviour
 
     /// <summary>
     /// Função de inicialização chamada pela MeeleeWeapon logo após a instanciação.
-    /// Configura o dano, o knockback e a animação a ser tocada.
-    /// </summary>a
-    public void Initialize(float damageAmount, float knockbackForce, ProjectileAnimState animationToPlay)
+    /// Configura o dano, o knockback, a direção pré-calculada e a animação a ser tocada.
+    /// </summary>
+    public void Initialize(float damageAmount, float knockbackForce, Vector2 knockbackDir, ProjectileAnimState animationToPlay)
     {
         this.damage = damageAmount;
         this.knockbackPower = knockbackForce;
+        this.precalculatedKnockbackDirection = knockbackDir; // <-- ARMAZENA A DIREÇÃO RECEBIDA
 
         if (projectileAnimator != null)
         {
@@ -61,8 +63,6 @@ public class SlashEffect : MonoBehaviour
         }
     }
 
-    // DENTRO DE SlashEffect.cs
-
     void OnTriggerEnter2D(Collider2D other)
     {
         // Se já atingimos este alvo, ignora.
@@ -78,12 +78,11 @@ public class SlashEffect : MonoBehaviour
             // Adiciona o alvo à lista para não atingi-lo novamente.
             targetsHit.Add(other);
 
-            // Calcula a direção do ataque para o knockback (do centro do corte para o inimigo).
-            Vector2 attackDirection = (other.transform.position - transform.position).normalized;
+            // CÁLCULO DE DIREÇÃO ANTIGO REMOVIDO:
+            // Vector2 attackDirection = (other.transform.position - transform.position).normalized;
 
-            // --- A LINHA QUE FALTAVA ---
-            // Chama a função TakeDamage da IA, passando o dano E o knockbackPower.
-            enemyAI.TakeDamage(damage, attackDirection, knockbackPower);
+            // Chama a função TakeDamage da IA, passando a direção PRÉ-CALCULADA.
+            enemyAI.TakeDamage(damage, precalculatedKnockbackDirection, knockbackPower);
         }
     }
 
