@@ -54,7 +54,7 @@ MonoBehaviour:
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 872cabe68352dcc4dbee48ff6544bed1, type: 3}
     damage: 10
     knockbackPower: 20
-    knockbackDirection: 0
+    knockbackDirection: 1
     lungeDistance: 0
     lungeSpeed: 1000
     comboWindow: 0.4

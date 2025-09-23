@@ -51,6 +51,8 @@ public class RoomBoundary : MonoBehaviour
     [Header("4. Configurações de Modo Automático")]
     [Tooltip("Fator de 'respiro' para o zoom. 1.1 = 10% de padding.")]
     public float automaticZoomPadding = 1.1f;
+    [Tooltip("A velocidade da transição de zoom ao entrar/sair de zonas.")]
+    public float zoomTransitionSpeed = 2f;
 
     [Header("5. Configurações de Modo Manual")]
     [Tooltip("O quão perto o jogador pode dar zoom in.")]
@@ -108,14 +110,13 @@ public class RoomBoundary : MonoBehaviour
 
     #region Input e Lógica de Update (O CORAÇÃO DO SCRIPT)
 
-    // IMPORTANTE: Esta lógica de input deve ser movida para o seu PlayerController no futuro!
-    // Deixei aqui por enquanto para que o sistema seja testável de forma independente.
+    // --- FUNÇÃO UPDATE CORRIGIDA ---
     private void Update()
     {
         // O Update só executa para a sala que está ativa no momento.
         if (currentActiveRoom != this) return;
 
-        // --- LÓGICA DE TROCA DE MODO (TECLA T) ---
+        // --- LÓgica de troca de modo (Tecla T) ---
         if (Input.GetKeyDown(KeyCode.T) && roomMode == CameraRoomMode.Unlocked && !isPeeking)
         {
             playerPreference = (playerPreference == PlayerCameraPreference.Automatic) ? PlayerCameraPreference.Manual : PlayerCameraPreference.Automatic;
@@ -123,16 +124,13 @@ public class RoomBoundary : MonoBehaviour
             Debug.Log($"Modo da Câmera alterado para: {currentOperatingMode}");
         }
 
-        // --- LÓGICA DO "MODO BURACO" / "PEEK" (TECLAS W/S) ---
-        // Detecta qual tecla de "olhar" está sendo pressionada.
+        // --- Lógica do "Modo Buraco" / "Peek" (Teclas W/S) ---
         CameraFocusZone.ActivationKey intendedPeekKey = CameraFocusZone.ActivationKey.None;
         if (Input.GetKey(KeyCode.S)) intendedPeekKey = CameraFocusZone.ActivationKey.LookDown;
         else if (Input.GetKey(KeyCode.W)) intendedPeekKey = CameraFocusZone.ActivationKey.LookUp;
 
-        // Se o jogador está segurando uma tecla de "olhar"
         if (intendedPeekKey != CameraFocusZone.ActivationKey.None)
         {
-            // Se já não estamos "olhando", inicia o timer.
             if (!isPeeking)
             {
                 peekTimer += Time.deltaTime;
@@ -142,33 +140,39 @@ public class RoomBoundary : MonoBehaviour
                 }
             }
         }
-        else // Se o jogador soltou todas as teclas de "olhar"
+        else
         {
-            peekTimer = 0f; // Reseta o timer.
+            peekTimer = 0f;
             if (isPeeking)
             {
-                StopPeek(); // Se estava "olhando", para de olhar.
+                StopPeek();
             }
         }
 
-        // Se estamos no "Modo Buraco", nenhuma outra lógica de input é processada.
         if (isPeeking) return;
 
-        // --- LÓGICA DE ZOOM MANUAL (TECLAS +/-) ---
+        // --- LÓGICA DE ZOOM MANUAL (APENAS TECLAS +/-) ---
         if (currentOperatingMode == PlayerCameraPreference.Manual)
         {
-            float zoomInput = Input.GetAxis("Mouse ScrollWheel"); // Roda do mouse é mais intuitiva que +/-
-            if (Input.GetKey(KeyCode.Plus) || Input.GetKey(KeyCode.KeypadPlus)) zoomInput = 0.1f;
-            if (Input.GetKey(KeyCode.Minus) || Input.GetKey(KeyCode.KeypadMinus)) zoomInput = -0.1f;
+            // Resetamos a variável para garantir que não haja lixo de frames anteriores.
+            float zoomInput = 0f;
 
-            if (zoomInput != 0)
+            // Verificamos o input APENAS dos botões + e -.
+            if (Input.GetKey(KeyCode.Plus) || Input.GetKey(KeyCode.KeypadPlus))
+            {
+                zoomInput = -0.1f; // Diminuir o OrthographicSize = Zoom IN
+            }
+            if (Input.GetKey(KeyCode.Minus) || Input.GetKey(KeyCode.KeypadMinus))
+            {
+                zoomInput = 0.1f; // Aumentar o OrthographicSize = Zoom OUT
+            }
+
+            // A lógica de aplicação do zoom só roda se uma das teclas foi pressionada.
+            if (zoomInput != 0 && activeVirtualCamera != null)
             {
                 float currentSize = activeVirtualCamera.Lens.OrthographicSize;
-                // O zoom máximo é sempre o ideal para a zona atual.
                 float maxZoom = CalculateOptimalLensForZone(defaultZone).OrthographicSize;
-
-                // Aplica o zoom e o prende entre o mínimo manual e o máximo automático.
-                float newSize = currentSize - zoomInput * manualZoomSpeed;
+                float newSize = currentSize + zoomInput * manualZoomSpeed;
                 activeVirtualCamera.Lens.OrthographicSize = Mathf.Clamp(newSize, manualMinZoom, maxZoom);
             }
         }
@@ -242,17 +246,25 @@ public class RoomBoundary : MonoBehaviour
         TransitionToZone(defaultZone);
     }
 
-    // O "motor" de transição principal.
+    // --- FUNÇÃO CORRIGIDA ---
     private void TransitionToZone(CameraFocusZone zone, bool isPeek = false)
     {
         if (zone == null || zone.framingCollider == null || activeVirtualCamera == null) return;
+        if (currentActiveRoom == null)
+        {
+            Debug.LogError("TransitionToZone foi chamada, mas não há uma sala ativa (currentActiveRoom is null)!");
+            return;
+        }
 
         if (activeTransitionCoroutine != null)
         {
             StopCoroutine(activeTransitionCoroutine);
         }
 
-        float speed = isPeek ? peekTransitionSpeed : this.zoomTransitionSpeed;
+        // --- A CORREÇÃO PRINCIPAL ---
+        // Acessamos as variáveis de velocidade diretamente da instância da sala ativa (currentActiveRoom).
+        // Isso remove qualquer ambiguidade sobre de onde os valores estão vindo.
+        float speed = isPeek ? currentActiveRoom.peekTransitionSpeed : currentActiveRoom.zoomTransitionSpeed;
 
         // Calcula a lente alvo. Se for um "peek", aplica o limite de visão.
         LensSettings targetLens = CalculateOptimalLensForZone(zone);
