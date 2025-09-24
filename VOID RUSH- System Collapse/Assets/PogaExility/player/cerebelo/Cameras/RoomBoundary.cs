@@ -181,14 +181,15 @@ public class RoomBoundary : MonoBehaviour
     #endregion
 
     #region Lógica da Câmera e Transições
-   
+
+    // --- FUNÇÃO EnterRoom - VERSÃO CORRETA E SIMPLIFICADA ---
     private void EnterRoom()
     {
         currentActiveRoom = this;
         InitializeCameraReferences();
         Debug.Log($"Entrando na sala '{gameObject.name}'.");
 
-        // Aplica o limite de movimento geral.
+        // Aplica o limite de movimento geral. Isso é a primeira prioridade.
         if (activeConfiner != null)
         {
             if (confinerBounds != null)
@@ -202,30 +203,13 @@ public class RoomBoundary : MonoBehaviour
             }
         }
 
-        // --- A LÓGICA CORRETA ---
-        // Determina o modo, mas NÃO transiciona a câmera aqui...
-        if (roomMode == CameraRoomMode.LockedAutomatic) currentOperatingMode = PlayerCameraPreference.Automatic;
-        else if (roomMode == CameraRoomMode.LockedManual) currentOperatingMode = PlayerCameraPreference.Manual;
-        else currentOperatingMode = playerPreference;
-        Debug.Log($"Modo operacional definido para: {currentOperatingMode}.");
-
-        // ...porque a transição para a zona padrão é a ação que deve acontecer.
-        // Isso conserta TUDO: O zoom incorreto E o fato de a câmera não seguir o player.
-        if (defaultZone != null)
-        {
-            TransitionToZone(defaultZone);
-        }
-        else
-        {
-            Debug.LogError($"A sala '{gameObject.name}' não tem uma Zona de Foco Padrão para iniciar a câmera!", this);
-        }
+        // Agora, determina o comportamento da câmera.
+        DetermineOperatingMode();
     }
 
-    // --- FUNÇÃO DetermineOperatingMode CORRIGIDA ---
+    // --- FUNÇÃO DetermineOperatingMode - LÓGICA FINAL ---
     private void DetermineOperatingMode()
     {
-        PlayerCameraPreference previousMode = currentOperatingMode;
-
         // Decide qual modo a câmera vai usar baseado na configuração da sala e na preferência do jogador.
         if (roomMode == CameraRoomMode.LockedAutomatic)
         {
@@ -240,12 +224,31 @@ public class RoomBoundary : MonoBehaviour
             currentOperatingMode = playerPreference;
         }
 
-        // CORREÇÃO: A transição para a zona padrão agora acontece sempre que o modo é determinado,
-        // garantindo que a câmera se ajuste corretamente ao entrar em modo manual também.
-        // E só faz a transição se o modo realmente mudou, para evitar saltos desnecessários.
-        if (currentOperatingMode != previousMode || activeConfiner.BoundingShape2D == null)
+        Debug.Log($"Modo operacional definido para: {currentOperatingMode}.");
+
+        // Executa a ação correta com base no modo determinado.
+        if (currentOperatingMode == PlayerCameraPreference.Automatic)
         {
-            TransitionToZone(defaultZone);
+            // MODO AUTOMÁTICO: Enquadra a Zona de Foco Padrão.
+            if (defaultZone != null)
+            {
+                TransitionToZone(defaultZone);
+            }
+            else
+            {
+                Debug.LogError($"A sala '{gameObject.name}' está em Modo Automático mas não tem uma Zona de Foco Padrão!", this);
+            }
+        }
+        else // MODO MANUAL
+        {
+            // MODO MANUAL: Começa com o zoom máximo (enquadrando o confiner)
+            // e permite que o jogador assuma o controle a partir daí.
+            // Para isso, criamos uma "zona virtual" na hora.
+            if (confinerBounds != null)
+            {
+                CameraFocusZone maxZoomZone = new CameraFocusZone { framingCollider = this.confinerBounds };
+                TransitionToZone(maxZoomZone);
+            }
         }
     }
 
@@ -311,19 +314,19 @@ public class RoomBoundary : MonoBehaviour
     // --- CORROTINA DEFINITivamente CORRIGIDA ---
     private IEnumerator SmoothTransitionCoroutine(LensSettings targetLens, float speed)
     {
-        // Pega o zoom inicial e o alvo
         float startSize = activeVirtualCamera.Lens.OrthographicSize;
         float targetSize = targetLens.OrthographicSize;
         float t = 0;
 
-        while (t < 1)
+        // Armazena a referência da sala que INICIOU esta corrotina.
+        RoomBoundary originatingRoom = this;
+
+        // O LOOP AGORA TEM UMA CONDIÇÃO DE SEGURANÇA.
+        while (t < 1 && currentActiveRoom == originatingRoom)
         {
             t += Time.deltaTime * speed;
-
-            // Calcula o novo zoom interpolado
             float newSize = Mathf.Lerp(startSize, targetSize, t);
 
-            // O jeito correto de aplicar: pega a lente, modifica, e reatribui.
             var lens = activeVirtualCamera.Lens;
             lens.OrthographicSize = newSize;
             activeVirtualCamera.Lens = lens;
@@ -331,52 +334,46 @@ public class RoomBoundary : MonoBehaviour
             yield return null;
         }
 
-        // Garante o valor final
-        var finalLens = activeVirtualCamera.Lens;
-        finalLens.OrthographicSize = targetLens.OrthographicSize;
-        activeVirtualCamera.Lens = finalLens;
+        // SÓ FINALIZA se a corrotina terminou naturalmente, na mesma sala.
+        if (t >= 1 && currentActiveRoom == originatingRoom)
+        {
+            var finalLens = activeVirtualCamera.Lens;
+            finalLens.OrthographicSize = targetLens.OrthographicSize;
+            activeVirtualCamera.Lens = finalLens;
+        }
 
+        // Limpa a referência da corrotina.
         activeTransitionCoroutine = null;
     }
 
-    // Calcula o enquadramento perfeito para uma zona específica.
-    // --- FUNÇÃO CORRIGIDA PARA RESPEITAR O LIMITE MÁXIMO ---
     private LensSettings CalculateOptimalLensForZone(CameraFocusZone zone)
     {
-        if (zone.framingCollider == null) return activeVirtualCamera.Lens;
-        // GARANTE que temos uma referência à sala ativa para pegar o confinerBounds.
-        if (currentActiveRoom == null) return activeVirtualCamera.Lens;
-
-        // --- CÁLCULO 1: O ZOOM IDEAL PARA A ZONA DE FOCO ---
-        Bounds zoneBounds = zone.framingCollider.bounds;
-        float screenRatio = (float)Screen.width / Screen.height;
-        float requiredSizeX = (zoneBounds.size.x / screenRatio) / 2f;
-        float requiredSizeY = zoneBounds.size.y / 2f;
-        float zoneOptimalSize = Mathf.Max(requiredSizeX, requiredSizeY) * automaticZoomPadding;
-
-        // --- CÁLCULO 2: O ZOOM MÁXIMO PERMITIDO PELO CONFINE ---
-        float maxAllowedZoom = float.MaxValue; // Começa com um valor infinito.
-        if (currentActiveRoom.confinerBounds != null)
+        if (zone == null || zone.framingCollider == null || currentActiveRoom == null || currentActiveRoom.confinerBounds == null)
         {
-            Bounds confinerBounds = currentActiveRoom.confinerBounds.bounds;
-            float maxRequiredSizeX = (confinerBounds.size.x / screenRatio) / 2f;
-            float maxRequiredSizeY = confinerBounds.size.y / 2f;
-            // O zoom máximo é o que enquadra o MAIOR limite, para garantir que nunca saia.
-            maxAllowedZoom = Mathf.Max(maxRequiredSizeX, maxRequiredSizeY);
+            // Se faltar alguma informação essencial, retorna a lente atual para evitar erros.
+            return activeVirtualCamera.Lens;
         }
 
-        // --- DECISÃO FINAL ---
-        // O tamanho final é o MENOR entre o que a zona quer e o que o limite permite.
-        // Isso garante que o zoom nunca "vaze" para fora.
-        float finalOptimalSize = Mathf.Min(zoneOptimalSize, maxAllowedZoom);
+        // --- CÁLCULO DO TETO ABSOLUTO (BASEADO NO CONFINE) ---
+        Bounds confinerBounds = currentActiveRoom.confinerBounds.bounds;
+        float screenRatio = (float)Screen.width / Screen.height;
+        float maxRequiredSizeX = (confinerBounds.size.x / screenRatio) / 2f;
+        float maxRequiredSizeY = confinerBounds.size.y / 2f;
+        float maxAllowedZoom = Mathf.Max(maxRequiredSizeX, maxRequiredSizeY);
 
-        // Retorna a configuração completa da lente com o zoom seguro.
-        return new LensSettings
-        {
-            OrthographicSize = finalOptimalSize,
-        };
+        // --- CÁLCULO DO ZOOM DESEJADO (BASEADO NA ZONA DE FOCO) ---
+        Bounds zoneBounds = zone.framingCollider.bounds;
+        float zoneRequiredSizeX = (zoneBounds.size.x / screenRatio) / 2f;
+        float zoneRequiredSizeY = zoneBounds.size.y / 2f;
+        float zoneOptimalSize = Mathf.Max(zoneRequiredSizeX, zoneRequiredSizeY);
+
+        // --- DECISÃO FINAL E APLICAÇÃO DA REGRA ---
+        // Garante que o zoom da zona NUNCA seja maior que o zoom máximo permitido.
+        // E aplica o padding de forma segura.
+        float finalSize = Mathf.Min(zoneOptimalSize, maxAllowedZoom) * automaticZoomPadding;
+
+        return new LensSettings { OrthographicSize = finalSize };
     }
-
     private static void InitializeCameraReferences()
     {
         if (activeVirtualCamera == null)
