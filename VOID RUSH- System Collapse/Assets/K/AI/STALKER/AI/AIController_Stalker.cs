@@ -26,6 +26,9 @@ public class AIController_Stalker : MonoBehaviour
     public float flipCooldown = 0.5f;
     public float ledgeAnalysisDuration = 2.0f;
     public float wallAnalysisDuration = 1.5f;
+    [Header("▶ Lógica de Escalada")]
+    public float entrySpeed = 3f;
+    public float entryDuration = 0.5f;
     #endregion
 
     #region UNITY LIFECYCLE & BEHAVIOR TREE SETUP
@@ -60,7 +63,21 @@ public class AIController_Stalker : MonoBehaviour
     #region BEHAVIOR TREE NODES
     private NodeState CheckIfAwareOfPlayer() => _perception.IsAwareOfPlayer ? NodeState.SUCCESS : NodeState.FAILURE;
 
-    private NodeState ProcessClimbingLogic() { /* Implementação futura */ return NodeState.FAILURE; }
+    private NodeState ProcessClimbingLogic()
+    {
+        if (!_motor.IsClimbing) return NodeState.FAILURE;
+        var query = _navigation.QueryEnvironment();
+
+        if (query.canEnterCrouchTunnel)
+        {
+            _motor.StartCrouch();
+            _motor.EnterTunnel(entrySpeed, entryDuration);
+            return NodeState.SUCCESS;
+        }
+
+        _motor.Climb(1f);
+        return NodeState.RUNNING;
+    }
 
     private NodeState ProcessCombatLogic()
     {
@@ -90,27 +107,31 @@ public class AIController_Stalker : MonoBehaviour
         return NodeState.FAILURE;
     }
 
-    // --- LÓGICA DE PATRULHA REESCRITA PARA SER UMA HIERARQUIA DE PRIORIDADES ---
     private NodeState ProcessPatrolLogic()
     {
         var query = _navigation.QueryEnvironment();
 
-        // Começamos assumindo a velocidade máxima.
-        float targetSpeed = patrolTopSpeed;
-
-        // PRIORIDADE 1 (MAIS BAIXA): Se houver antecipação, reduza a velocidade.
-        if (query.anticipationLedgeAhead || query.anticipationWallAhead)
+        // PRIORIDADE MÁXIMA: OPORTUNIDADE TÁTICA (SPELUNKER)
+        if (query.climbableWallAhead && query.canEnterCrouchTunnel && query.isGrounded)
         {
-            targetSpeed = patrolTopSpeed * 0.5f;
+            _motor.StartClimb();
+            return NodeState.RUNNING;
         }
 
-        // PRIORIDADE 2 (MAIS ALTA): Se houver perigo, SOBRESCREVA a decisão anterior e reduza ainda mais.
-        if (query.dangerLedgeAhead || query.dangerWallAhead)
+        // AMEAÇA PRIORIDADE 1: Paredes e Bordas
+        if (query.dangerWallAhead || query.dangerLedgeAhead)
         {
-            targetSpeed = patrolTopSpeed * 0.25f;
+            _motor.Move(patrolTopSpeed * 0.25f);
+            return NodeState.RUNNING;
         }
 
-        // Lógica de Agachar (executada em paralelo)
+        if (query.anticipationWallAhead || query.anticipationLedgeAhead)
+        {
+            _motor.Move(patrolTopSpeed * 0.5f);
+            return NodeState.RUNNING;
+        }
+
+        // AMEAÇA PRIORIDADE 2: Tetos
         bool shouldCrouchDueToCeilingAhead = query.ceilingAhead;
         bool isClearToStand = query.isClearToStandUp;
 
@@ -123,20 +144,22 @@ public class AIController_Stalker : MonoBehaviour
             _motor.StopCrouch();
         }
 
-        // Se estivermos agachados, nossa velocidade é limitada pela velocidade de agachar.
+        // AÇÃO PADRÃO: Movimento
         if (_motor.IsCrouching)
         {
-            targetSpeed = Mathf.Min(targetSpeed, patrolTopSpeed * 0.5f);
+            _motor.Move(patrolTopSpeed * 0.5f);
         }
-
-        // Comando final para o motor.
-        _motor.Move(targetSpeed);
+        else
+        {
+            _motor.Move(patrolTopSpeed);
+        }
 
         return NodeState.RUNNING;
     }
     #endregion
 
     #region HELPER ROUTINES & LOGIC
+    // --- CONTEÚDO DAS ROTINAS RESTAURADO ---
     private IEnumerator AnalyzeWallRoutine()
     {
         _isAnalyzing = true;

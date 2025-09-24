@@ -320,6 +320,7 @@ Transform:
   - {fileID: 1139889059671085009}
   - {fileID: 1436571948006968108}
   - {fileID: 7411999367436867676}
+  - {fileID: 5248467740255506676}
   m_Father: {fileID: 7156236136696630371}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3953610329174377715
@@ -414,6 +415,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8283127077317487656}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5988591075893311031
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5248467740255506676}
+  m_Layer: 0
+  m_Name: CrouchEnterProbeOrigin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5248467740255506676
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5988591075893311031}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.51, y: 0.155, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5215920080352703134}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6380975829879470794
 GameObject:
@@ -655,6 +687,7 @@ MonoBehaviour:
   deceleration: 4
   climbSpeed: 4
   crouchHeight: 0.6551724
+  standUpImmunityDuration: 0.2
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -683,6 +716,7 @@ MonoBehaviour:
   climbProbeOrigin: {fileID: 1358164281976282271}
   ledgeMantleProbeOrigin: {fileID: 3498956072814939786}
   standUpProbeOrigin: {fileID: 7411999367436867676}
+  crouchEnterProbeOrigin: {fileID: 5248467740255506676}
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -695,6 +729,7 @@ MonoBehaviour:
   maxJumpHeight: 2.5
   ledgeMantleDistance: 1
   showDebugGizmos: 1
+  gizmoCubeSize: 0.1
 --- !u!114 &208760096713734105
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -726,6 +761,8 @@ MonoBehaviour:
   flipCooldown: 0.5
   ledgeAnalysisDuration: 2
   wallAnalysisDuration: 1.5
+  entrySpeed: 3
+  entryDuration: 0.5
 --- !u!1 &7120330187940866159
 GameObject:
   m_ObjectHideFlags: 0
