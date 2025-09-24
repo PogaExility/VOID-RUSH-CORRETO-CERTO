@@ -62,37 +62,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8283127077317487656}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &441179609210726022
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1358164281976282271}
-  m_Layer: 0
-  m_Name: ClimbProbeOrigin
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1358164281976282271
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 441179609210726022}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.5, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 5215920080352703134}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &535584202204488437
 GameObject:
   m_ObjectHideFlags: 0
@@ -286,37 +255,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 596662267204846682}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &3725189055958217814
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1436571948006968108}
-  m_Layer: 0
-  m_Name: CeilingProbeOrigin
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1436571948006968108
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3725189055958217814}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 5215920080352703134}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3761527435063194145
 GameObject:
   m_ObjectHideFlags: 0
@@ -377,44 +315,10 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3498956072814939786}
-  - {fileID: 1358164281976282271}
   - {fileID: 1139889059671085009}
-  - {fileID: 1436571948006968108}
   - {fileID: 7411999367436867676}
   - {fileID: 5248467740255506676}
   m_Father: {fileID: 7156236136696630371}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &3953610329174377715
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3498956072814939786}
-  m_Layer: 0
-  m_Name: LedgeMantleProbeOrigin
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3498956072814939786
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3953610329174377715}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 5215920080352703134}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3989670541585863329
 GameObject:
@@ -798,12 +702,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7362f68f1429b394fb7b178be75424ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lowerWallProbe: {fileID: 0}
-  upperWallProbe: {fileID: 0}
-  ceilingProbe: {fileID: 0}
-  headSpaceProbe: {fileID: 0}
-  torsoSpaceProbe: {fileID: 0}
-  ledgeProbe: {fileID: 0}
+  lowerWallProbe: {fileID: 3284352811311209611}
+  upperWallProbe: {fileID: 3334636074236575249}
+  ceilingProbe: {fileID: 3059360733124010409}
+  headSpaceProbe: {fileID: 744427501972148071}
+  ledgeProbe: {fileID: 1412967292697318071}
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -811,6 +714,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   wallProbeDistance: 1
+  ceilingProbeDistance: 0.2
   showDebugGizmos: 1
 --- !u!114 &208760096713734105
 MonoBehaviour:

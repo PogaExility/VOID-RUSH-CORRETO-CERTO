@@ -119,6 +119,16 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!4 &284292707 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3334636074236575249, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+  m_PrefabInstance: {fileID: 4525683911788212135}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &923322397 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 744427501972148071, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+  m_PrefabInstance: {fileID: 4525683911788212135}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &995090041
 GameObject:
   m_ObjectHideFlags: 0
@@ -2135,6 +2145,21 @@ Transform:
   - {fileID: 995090042}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &1820485451 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6162827556395495294, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+  m_PrefabInstance: {fileID: 4525683911788212135}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1874224362 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3059360733124010409, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+  m_PrefabInstance: {fileID: 4525683911788212135}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1916216929 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3284352811311209611, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+  m_PrefabInstance: {fileID: 4525683911788212135}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2101246706
 GameObject:
   m_ObjectHideFlags: 0
@@ -2180,6 +2205,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerTarget: {fileID: 0}
+--- !u!4 &2131994347 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1412967292697318071, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+  m_PrefabInstance: {fileID: 4525683911788212135}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &4525683911788212135
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2196,6 +2226,30 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 0.1
       objectReference: {fileID: 0}
+    - target: {fileID: 1141719551376467767, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+      propertyPath: ledgeProbe
+      value: 
+      objectReference: {fileID: 1820485451}
+    - target: {fileID: 1141719551376467767, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+      propertyPath: ceilingProbe
+      value: 
+      objectReference: {fileID: 1874224362}
+    - target: {fileID: 1141719551376467767, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+      propertyPath: headSpaceProbe
+      value: 
+      objectReference: {fileID: 923322397}
+    - target: {fileID: 1141719551376467767, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+      propertyPath: lowerWallProbe
+      value: 
+      objectReference: {fileID: 1916216929}
+    - target: {fileID: 1141719551376467767, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+      propertyPath: upperWallProbe
+      value: 
+      objectReference: {fileID: 284292707}
+    - target: {fileID: 1141719551376467767, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
+      propertyPath: torsoSpaceProbe
+      value: 
+      objectReference: {fileID: 2131994347}
     - target: {fileID: 1141719551376467767, guid: d161bc9133d36054badbb0330fe09aa7, type: 3}
       propertyPath: wallProbeDistance
       value: 0.9
