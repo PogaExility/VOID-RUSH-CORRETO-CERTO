@@ -183,6 +183,26 @@ public class RoomBoundary : MonoBehaviour
     #region Lógica da Câmera e Transições
 
     // --- FUNÇÃO EnterRoom - VERSÃO CORRETA E SIMPLIFICADA ---
+    private static void InitializeCameraReferences()
+    {
+        // Só procura pelos objetos se a referência ainda for nula.
+        if (activeVirtualCamera == null)
+        {
+            // Encontra o GameObject da câmera virtual usando a tag que configuramos.
+            GameObject vcamObject = GameObject.FindGameObjectWithTag("VirtualCamera");
+            if (vcamObject != null)
+            {
+                // Pega os componentes necessários e os armazena nas variáveis estáticas.
+                activeVirtualCamera = vcamObject.GetComponent<CinemachineCamera>();
+                activeConfiner = vcamObject.GetComponent<CinemachineConfiner2D>();
+            }
+            else
+            {
+                // Um erro crítico se a câmera não for encontrada.
+                Debug.LogError("InitializeCameraReferences: Não foi possível encontrar um objeto com a tag 'VirtualCamera'!");
+            }
+        }
+    }
     private void EnterRoom()
     {
         currentActiveRoom = this;
@@ -346,45 +366,30 @@ public class RoomBoundary : MonoBehaviour
         activeTransitionCoroutine = null;
     }
 
+    // --- FUNÇÃO FINAL E CORRIGIDA COM A REGRA DE 40% ---
     private LensSettings CalculateOptimalLensForZone(CameraFocusZone zone)
     {
-        if (zone == null || zone.framingCollider == null || currentActiveRoom == null || currentActiveRoom.confinerBounds == null)
+        // Se a sala ativa ou os limites principais não existem, não faz nada para evitar erros.
+        if (currentActiveRoom == null || currentActiveRoom.confinerBounds == null)
         {
-            // Se faltar alguma informação essencial, retorna a lente atual para evitar erros.
             return activeVirtualCamera.Lens;
         }
 
-        // --- CÁLCULO DO TETO ABSOLUTO (BASEADO NO CONFINE) ---
+        // --- CÁLCULO BASE: O TAMANHO PARA ENQUADRAR 100% DO CONFINE ---
         Bounds confinerBounds = currentActiveRoom.confinerBounds.bounds;
         float screenRatio = (float)Screen.width / Screen.height;
-        float maxRequiredSizeX = (confinerBounds.size.x / screenRatio) / 2f;
-        float maxRequiredSizeY = confinerBounds.size.y / 2f;
-        float maxAllowedZoom = Mathf.Max(maxRequiredSizeX, maxRequiredSizeY);
+        float requiredSizeX = (confinerBounds.size.x / screenRatio) / 2f;
+        float requiredSizeY = confinerBounds.size.y / 2f;
 
-        // --- CÁLCULO DO ZOOM DESEJADO (BASEADO NA ZONA DE FOCO) ---
-        Bounds zoneBounds = zone.framingCollider.bounds;
-        float zoneRequiredSizeX = (zoneBounds.size.x / screenRatio) / 2f;
-        float zoneRequiredSizeY = zoneBounds.size.y / 2f;
-        float zoneOptimalSize = Mathf.Max(zoneRequiredSizeX, zoneRequiredSizeY);
+        // Este é o valor de zoom que enquadraria a sala perfeitamente.
+        float zoomPara100Porcento = Mathf.Max(requiredSizeX, requiredSizeY);
 
-        // --- DECISÃO FINAL E APLICAÇÃO DA REGRA ---
-        // Garante que o zoom da zona NUNCA seja maior que o zoom máximo permitido.
-        // E aplica o padding de forma segura.
-        float finalSize = Mathf.Min(zoneOptimalSize, maxAllowedZoom) * automaticZoomPadding;
+        // --- APLICAÇÃO DA REGRA DE 40% ---
+        // O tamanho final da lente é EXATAMENTE 40% do tamanho necessário para enquadrar a sala inteira.
+        float finalTargetSize = zoomPara100Porcento * 0.4f;
 
-        return new LensSettings { OrthographicSize = finalSize };
-    }
-    private static void InitializeCameraReferences()
-    {
-        if (activeVirtualCamera == null)
-        {
-            GameObject vcamObject = GameObject.FindGameObjectWithTag("VirtualCamera");
-            if (vcamObject != null)
-            {
-                activeVirtualCamera = vcamObject.GetComponent<CinemachineCamera>();
-                activeConfiner = vcamObject.GetComponent<CinemachineConfiner2D>();
-            }
-        }
+        // Retorna a lente com o valor calculado.
+        return new LensSettings { OrthographicSize = finalTargetSize };
     }
 
     #endregion
