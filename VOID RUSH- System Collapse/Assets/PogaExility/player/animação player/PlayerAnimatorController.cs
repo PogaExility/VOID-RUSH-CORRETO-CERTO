@@ -15,6 +15,9 @@ public enum PlayerAnimState
     falling,
     dash,
     derrapagem,
+    rastejando,
+    abaixando,   
+    levantando,
     block,
     pousando,
     parry,
@@ -54,6 +57,9 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int FallingHash = Animator.StringToHash("falling");
     private static readonly int DashHash = Animator.StringToHash("dash");
     private static readonly int DerrapagemHash = Animator.StringToHash("derrapagem");
+    private static readonly int RastejandoHash = Animator.StringToHash("rastejando");
+    private static readonly int AbaixandoHash = Animator.StringToHash("abaixando"); 
+    private static readonly int LevantandoHash = Animator.StringToHash("levantando");
     private static readonly int BlockHash = Animator.StringToHash("block");
     private static readonly int PousandoHash = Animator.StringToHash("pousando");
     private static readonly int ParryHash = Animator.StringToHash("parry");
@@ -189,6 +195,9 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.falling: return FallingHash;
             case PlayerAnimState.dash: return DashHash;
             case PlayerAnimState.derrapagem: return DerrapagemHash;
+            case PlayerAnimState.rastejando: return RastejandoHash;
+            case PlayerAnimState.abaixando: return AbaixandoHash;  
+            case PlayerAnimState.levantando: return LevantandoHash;
             case PlayerAnimState.block: return BlockHash;
             case PlayerAnimState.pousando: return PousandoHash;
             case PlayerAnimState.parry: return ParryHash;

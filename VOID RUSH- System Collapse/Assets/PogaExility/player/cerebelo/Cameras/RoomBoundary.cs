@@ -1,396 +1,114 @@
 using UnityEngine;
 using Unity.Cinemachine;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-
-// Enum para clareza no Inspector sobre o modo da sala.
-public enum CameraRoomMode
-{
-    Unlocked,           // Jogador pode alternar entre Auto e Manual
-    LockedAutomatic,    // Força o modo Automático
-    LockedManual        // Força o modo Manual
-}
-
-// Classe auxiliar para organizar as Zonas de Foco no Inspector.
-[System.Serializable]
-public class CameraFocusZone
-{
-    public string zoneName = "Nova Zona";
-    public Collider2D framingCollider; // O "quadro" da câmera (verde, vermelho, etc.)
-    [Tooltip("Opcional: área onde o jogador precisa estar para ativar esta zona.")]
-    public Collider2D proximityTrigger;
-
-    public enum ActivationKey { None, LookUp, LookDown }
-    [Tooltip("Qual tecla ativa esta zona? 'None' a define como a zona padrão da sala.")]
-    public ActivationKey activationKey = ActivationKey.None;
-
-    [Tooltip("Para zonas de 'olhar', limita o quão longe a câmera vai (0 a 1). 0.65 = 65% do caminho.")]
-    [Range(0f, 1f)]
-    public float peekDistanceLimit = 0.65f;
-}
 
 [RequireComponent(typeof(Collider2D))]
 public class RoomBoundary : MonoBehaviour
 {
-    // === SEÇÃO 1: MODO DE CÂMERA ===
-    [Header("1. Modo da Câmera na Sala")]
-    [Tooltip("Define como a câmera se comporta nesta sala.")]
-    public CameraRoomMode roomMode = CameraRoomMode.Unlocked;
+    // --- GERENCIADOR DE ESTADO GLOBAL ---
+    public static RoomBoundary currentActiveRoom;
 
-    // === SEÇÃO 2: CONFIGURAÇÕES GERAIS ===
-    [Header("2. Configurações Gerais")]
-    [Tooltip("O Collider2D que define os limites MÁXIMOS da câmera nesta sala para o Cinemachine Confiner.")]
-    public Collider2D confinerBounds;
+    // --- CÉREBRO COMPARTILHADO (REFERÊNCIAS ESTÁTICAS) ---
+    private static CinemachineCamera activeVirtualCamera;
+    private static CinemachineConfiner2D activeConfiner;
+    private static float currentSize;
 
-    // === SEÇÃO 3: ZONAS DE FOCO ===
-    [Header("3. Zonas de Foco da Câmera")]
-    public List<CameraFocusZone> focusZones;
-
-    // === SEÇÃO 4: CONFIGURAÇÕES DE MODOS ===
-    [Header("4. Configurações de Modo Automático")]
-    [Tooltip("Fator de 'respiro' para o zoom. 1.1 = 10% de padding.")]
-    public float automaticZoomPadding = 1.1f;
-    [Tooltip("A velocidade da transição de zoom ao entrar/sair de zonas.")]
+    [Header("Configuração de Zoom")]
+    [Tooltip("A velocidade da transição de zoom.")]
     public float zoomTransitionSpeed = 2f;
 
-    [Header("5. Configurações de Modo Manual")]
-    [Tooltip("O quão perto o jogador pode dar zoom in.")]
-    public float manualMinZoom = 4f;
-    [Tooltip("A velocidade do zoom manual com as teclas +/-.")]
-    public float manualZoomSpeed = 3f;
-    [Tooltip("O tempo em segundos para segurar a tecla antes de 'olhar' para cima/baixo.")]
-    public float timeToActivatePeek = 1f;
-    [Tooltip("A velocidade com que a câmera se move para a posição de 'olhar'.")]
-    public float peekTransitionSpeed = 2f;
+    [Tooltip("Fator de correção para o zoom. Diminua este valor (ex: 0.9) se a câmera estiver mostrando além dos limites.")]
+    [Range(0.5f, 1.5f)] // Cria um slider no Inspector
+    public float zoomCorrectionFactor = 1.0f;
 
-    // --- CÉREBRO E ESTADO GLOBAL (Estático) ---
-    private static CinemachineConfiner2D activeConfiner;
-    private static CinemachineCamera activeVirtualCamera;
-    private static RoomBoundary currentActiveRoom;
-    private static Coroutine activeTransitionCoroutine;
-    public enum PlayerCameraPreference { Automatic, Manual }
-    private static PlayerCameraPreference playerPreference = PlayerCameraPreference.Automatic;
-    // --- FIM DO CÉREBRO ---
-
-    // --- ESTADO LOCAL DA INSTÂNCIA ---
-    private PlayerCameraPreference currentOperatingMode;
-    private CameraFocusZone defaultZone;
-    private bool isPeeking = false;
-    private LensSettings prePeekLens; // Salva o estado da câmera antes de "olhar"
-    private float peekTimer = 0f;
-    private CameraFocusZone.ActivationKey currentPeekKey = CameraFocusZone.ActivationKey.None;
-    // --- FIM DO ESTADO LOCAL ---
-
-    #region Setup e Eventos de Trigger
+    // Variáveis de instância
+    private Collider2D roomCollider;
+    private float targetOrthographicSize;
 
     private void Awake()
     {
-        // Garante que o collider principal seja um trigger.
-        if (confinerBounds != null) confinerBounds.isTrigger = true;
+        roomCollider = GetComponent<Collider2D>();
+        roomCollider.isTrigger = true;
+        CalculateOptimalZoom();
+    }
 
-        // Encontra a zona padrão (marcada como 'None')
-        defaultZone = focusZones.FirstOrDefault(z => z.activationKey == CameraFocusZone.ActivationKey.None);
-        if (defaultZone == null && focusZones.Count > 0)
+    private void Update()
+    {
+        InitializeCameraReferences();
+        if (activeVirtualCamera == null) return;
+
+        if (currentActiveRoom == this)
         {
-            defaultZone = focusZones[0]; // Se nenhuma for marcada, a primeira vira padrão.
-            Debug.LogWarning($"A sala '{gameObject.name}' não tem uma Zona de Foco Padrão definida. Usando a primeira da lista: '{defaultZone.zoneName}'.");
+            currentSize = Mathf.MoveTowards(currentSize, targetOrthographicSize, zoomTransitionSpeed * Time.deltaTime);
         }
+    }
+
+    private void LateUpdate()
+    {
+        InitializeCameraReferences();
+        if (activeVirtualCamera == null) return;
+
+        activeVirtualCamera.Lens.OrthographicSize = currentSize;
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Player") && currentActiveRoom != this)
+        if (!other.CompareTag("Player")) return;
+
+        if (currentActiveRoom != this)
         {
-            EnterRoom();
+            ActivateRoom();
         }
     }
 
-    #endregion
-
-    #region Input e Lógica de Update (O CORAÇÃO DO SCRIPT)
-
-    // --- FUNÇÃO UPDATE CORRIGIDA ---
-    private void Update()
+    private void ActivateRoom()
     {
-        // O Update só executa para a sala que está ativa no momento.
-        if (currentActiveRoom != this) return;
-
-        // --- LÓgica de troca de modo (Tecla T) ---
-        if (Input.GetKeyDown(KeyCode.T) && roomMode == CameraRoomMode.Unlocked && !isPeeking)
-        {
-            playerPreference = (playerPreference == PlayerCameraPreference.Automatic) ? PlayerCameraPreference.Manual : PlayerCameraPreference.Automatic;
-            DetermineOperatingMode(); // Reavalia o modo da câmera
-            Debug.Log($"Modo da Câmera alterado para: {currentOperatingMode}");
-        }
-
-        // --- Lógica do "Modo Buraco" / "Peek" (Teclas W/S) ---
-        CameraFocusZone.ActivationKey intendedPeekKey = CameraFocusZone.ActivationKey.None;
-        if (Input.GetKey(KeyCode.S)) intendedPeekKey = CameraFocusZone.ActivationKey.LookDown;
-        else if (Input.GetKey(KeyCode.W)) intendedPeekKey = CameraFocusZone.ActivationKey.LookUp;
-
-        if (intendedPeekKey != CameraFocusZone.ActivationKey.None)
-        {
-            if (!isPeeking)
-            {
-                peekTimer += Time.deltaTime;
-                if (peekTimer >= timeToActivatePeek)
-                {
-                    StartPeek(intendedPeekKey);
-                }
-            }
-        }
-        else
-        {
-            peekTimer = 0f;
-            if (isPeeking)
-            {
-                StopPeek();
-            }
-        }
-
-        if (isPeeking) return;
-
-        // --- LÓGICA DE ZOOM MANUAL (APENAS TECLAS +/-) ---
-        if (currentOperatingMode == PlayerCameraPreference.Manual)
-        {
-            // Resetamos a variável para garantir que não haja lixo de frames anteriores.
-            float zoomInput = 0f;
-
-            // Verificamos o input APENAS dos botões + e -.
-            if (Input.GetKey(KeyCode.Plus) || Input.GetKey(KeyCode.KeypadPlus))
-            {
-                zoomInput = -0.1f; // Diminuir o OrthographicSize = Zoom IN
-            }
-            if (Input.GetKey(KeyCode.Minus) || Input.GetKey(KeyCode.KeypadMinus))
-            {
-                zoomInput = 0.1f; // Aumentar o OrthographicSize = Zoom OUT
-            }
-
-            // A lógica de aplicação do zoom só roda se uma das teclas foi pressionada.
-            if (zoomInput != 0 && activeVirtualCamera != null)
-            {
-                float currentSize = activeVirtualCamera.Lens.OrthographicSize;
-                float maxZoom = CalculateOptimalLensForZone(defaultZone).OrthographicSize;
-                float newSize = currentSize + zoomInput * manualZoomSpeed;
-                activeVirtualCamera.Lens.OrthographicSize = Mathf.Clamp(newSize, manualMinZoom, maxZoom);
-            }
-        }
-    }
-
-    #endregion
-
-    #region Lógica da Câmera e Transições
-
-    // --- FUNÇÃO EnterRoom - VERSÃO CORRETA E SIMPLIFICADA ---
-    private static void InitializeCameraReferences()
-    {
-        // Só procura pelos objetos se a referência ainda for nula.
-        if (activeVirtualCamera == null)
-        {
-            // Encontra o GameObject da câmera virtual usando a tag que configuramos.
-            GameObject vcamObject = GameObject.FindGameObjectWithTag("VirtualCamera");
-            if (vcamObject != null)
-            {
-                // Pega os componentes necessários e os armazena nas variáveis estáticas.
-                activeVirtualCamera = vcamObject.GetComponent<CinemachineCamera>();
-                activeConfiner = vcamObject.GetComponent<CinemachineConfiner2D>();
-            }
-            else
-            {
-                // Um erro crítico se a câmera não for encontrada.
-                Debug.LogError("InitializeCameraReferences: Não foi possível encontrar um objeto com a tag 'VirtualCamera'!");
-            }
-        }
-    }
-    private void EnterRoom()
-    {
-        currentActiveRoom = this;
         InitializeCameraReferences();
-        Debug.Log($"Entrando na sala '{gameObject.name}'.");
+        currentActiveRoom = this;
 
-        // Aplica o limite de movimento geral. Isso é a primeira prioridade.
         if (activeConfiner != null)
         {
-            if (confinerBounds != null)
-            {
-                activeConfiner.BoundingShape2D = confinerBounds;
-                Debug.Log($"Limite do Confiner definido para '{confinerBounds.name}'.");
-            }
-            else
-            {
-                Debug.LogError($"A sala '{gameObject.name}' nao tem um 'Confiner Bounds' definido no Inspector!", this);
-            }
-        }
-
-        // Agora, determina o comportamento da câmera.
-        DetermineOperatingMode();
-    }
-
-    // --- FUNÇÃO DetermineOperatingMode - LÓGICA FINAL ---
-    private void DetermineOperatingMode()
-    {
-        // Decide qual modo a câmera vai usar baseado na configuração da sala e na preferência do jogador.
-        if (roomMode == CameraRoomMode.LockedAutomatic)
-        {
-            currentOperatingMode = PlayerCameraPreference.Automatic;
-        }
-        else if (roomMode == CameraRoomMode.LockedManual)
-        {
-            currentOperatingMode = PlayerCameraPreference.Manual;
-        }
-        else // Unlocked
-        {
-            currentOperatingMode = playerPreference;
-        }
-
-        Debug.Log($"Modo operacional definido para: {currentOperatingMode}.");
-
-        // Executa a ação correta com base no modo determinado.
-        if (currentOperatingMode == PlayerCameraPreference.Automatic)
-        {
-            // MODO AUTOMÁTICO: Enquadra a Zona de Foco Padrão.
-            if (defaultZone != null)
-            {
-                TransitionToZone(defaultZone);
-            }
-            else
-            {
-                Debug.LogError($"A sala '{gameObject.name}' está em Modo Automático mas não tem uma Zona de Foco Padrão!", this);
-            }
-        }
-        else // MODO MANUAL
-        {
-            // MODO MANUAL: Começa com o zoom máximo (enquadrando o confiner)
-            // e permite que o jogador assuma o controle a partir daí.
-            // Para isso, criamos uma "zona virtual" na hora.
-            if (confinerBounds != null)
-            {
-                CameraFocusZone maxZoomZone = new CameraFocusZone { framingCollider = this.confinerBounds };
-                TransitionToZone(maxZoomZone);
-            }
+            activeConfiner.BoundingShape2D = roomCollider;
+            activeConfiner.InvalidateBoundingShapeCache();
         }
     }
 
-    private void StartPeek(CameraFocusZone.ActivationKey key)
+    /// <summary>
+    /// Função final e corrigida.
+    /// </summary>
+    private void CalculateOptimalZoom()
     {
-        // Encontra uma zona que corresponda à tecla e à proximidade do jogador.
-        var targetZone = focusZones.FirstOrDefault(z => z.activationKey == key && (z.proximityTrigger == null || z.proximityTrigger.bounds.Contains(GameObject.FindGameObjectWithTag("Player").transform.position)));
+        Vector2 size = (roomCollider as BoxCollider2D).size;
+        Vector3 scale = transform.lossyScale;
+        float width = size.x * scale.x;
+        float height = size.y * scale.y;
 
-        if (targetZone != null)
-        {
-            Debug.Log($"Iniciando 'Peek' para a zona '{targetZone.zoneName}'.");
-            isPeeking = true;
-            currentPeekKey = key;
-            prePeekLens = activeVirtualCamera.Lens; // Salva o estado da lente
-
-            // Inicia a transição para o enquadramento limitado do "buraco".
-            TransitionToZone(targetZone, true);
-        }
-    }
-
-    private void StopPeek()
-    {
-        Debug.Log("Parando 'Peek' e retornando ao estado anterior.");
-        isPeeking = false;
-        currentPeekKey = CameraFocusZone.ActivationKey.None;
-
-        // Retorna a câmera para o enquadramento da zona padrão.
-        TransitionToZone(defaultZone);
-    }
-
-    // --- FUNÇÃO CORRIGIDA ---
-    private void TransitionToZone(CameraFocusZone zone, bool isPeek = false)
-    {
-        if (zone == null || zone.framingCollider == null || activeVirtualCamera == null) return;
-        if (currentActiveRoom == null)
-        {
-            Debug.LogError("TransitionToZone foi chamada, mas não há uma sala ativa (currentActiveRoom is null)!");
-            return;
-        }
-
-        if (activeTransitionCoroutine != null)
-        {
-            StopCoroutine(activeTransitionCoroutine);
-        }
-
-        // --- A CORREÇÃO PRINCIPAL ---
-        // Acessamos as variáveis de velocidade diretamente da instância da sala ativa (currentActiveRoom).
-        // Isso remove qualquer ambiguidade sobre de onde os valores estão vindo.
-        float speed = isPeek ? currentActiveRoom.peekTransitionSpeed : currentActiveRoom.zoomTransitionSpeed;
-
-        // Calcula a lente alvo. Se for um "peek", aplica o limite de visão.
-        LensSettings targetLens = CalculateOptimalLensForZone(zone);
-        if (isPeek)
-        {
-            // Interpola entre o zoom atual e o zoom do buraco para respeitar o limite de 65%.
-            targetLens.OrthographicSize = Mathf.Lerp(activeVirtualCamera.Lens.OrthographicSize, targetLens.OrthographicSize, zone.peekDistanceLimit);
-        }
-
-        activeTransitionCoroutine = StartCoroutine(SmoothTransitionCoroutine(targetLens, speed));
-    }
-
-    // Corrotina que anima a lente da câmera.
-    // --- CORROTINA DEFINITivamente CORRIGIDA ---
-    private IEnumerator SmoothTransitionCoroutine(LensSettings targetLens, float speed)
-    {
-        float startSize = activeVirtualCamera.Lens.OrthographicSize;
-        float targetSize = targetLens.OrthographicSize;
-        float t = 0;
-
-        // Armazena a referência da sala que INICIOU esta corrotina.
-        RoomBoundary originatingRoom = this;
-
-        // O LOOP AGORA TEM UMA CONDIÇÃO DE SEGURANÇA.
-        while (t < 1 && currentActiveRoom == originatingRoom)
-        {
-            t += Time.deltaTime * speed;
-            float newSize = Mathf.Lerp(startSize, targetSize, t);
-
-            var lens = activeVirtualCamera.Lens;
-            lens.OrthographicSize = newSize;
-            activeVirtualCamera.Lens = lens;
-
-            yield return null;
-        }
-
-        // SÓ FINALIZA se a corrotina terminou naturalmente, na mesma sala.
-        if (t >= 1 && currentActiveRoom == originatingRoom)
-        {
-            var finalLens = activeVirtualCamera.Lens;
-            finalLens.OrthographicSize = targetLens.OrthographicSize;
-            activeVirtualCamera.Lens = finalLens;
-        }
-
-        // Limpa a referência da corrotina.
-        activeTransitionCoroutine = null;
-    }
-
-    // --- FUNÇÃO FINAL E CORRIGIDA COM A REGRA DE 40% ---
-    private LensSettings CalculateOptimalLensForZone(CameraFocusZone zone)
-    {
-        // Se a sala ativa ou os limites principais não existem, não faz nada para evitar erros.
-        if (currentActiveRoom == null || currentActiveRoom.confinerBounds == null)
-        {
-            return activeVirtualCamera.Lens;
-        }
-
-        // --- CÁLCULO BASE: O TAMANHO PARA ENQUADRAR 100% DO CONFINE ---
-        Bounds confinerBounds = currentActiveRoom.confinerBounds.bounds;
         float screenRatio = (float)Screen.width / Screen.height;
-        float requiredSizeX = (confinerBounds.size.x / screenRatio) / 2f;
-        float requiredSizeY = confinerBounds.size.y / 2f;
+        float requiredSizeX = (width / screenRatio) / 2f;
+        float requiredSizeY = height / 2f;
 
-        // Este é o valor de zoom que enquadraria a sala perfeitamente.
-        float zoomPara100Porcento = Mathf.Max(requiredSizeX, requiredSizeY);
+        float optimalSize = Mathf.Max(requiredSizeX, requiredSizeY);
 
-        // --- APLICAÇÃO DA REGRA DE 40% ---
-        // O tamanho final da lente é EXATAMENTE 40% do tamanho necessário para enquadrar a sala inteira.
-        float finalTargetSize = zoomPara100Porcento * 0.4f;
+        // --- A CORREÇÃO FINAL ESTÁ AQUI ---
+        // Aplicamos o fator de correção manual ao resultado final.
+        targetOrthographicSize = optimalSize * zoomCorrectionFactor;
 
-        // Retorna a lente com o valor calculado.
-        return new LensSettings { OrthographicSize = finalTargetSize };
+        Debug.Log($"Zoom calculado para '{gameObject.name}': {optimalSize} * {zoomCorrectionFactor} = {targetOrthographicSize}");
     }
 
-    #endregion
+    private static void InitializeCameraReferences()
+    {
+        if (activeVirtualCamera != null) return;
+
+        GameObject vcamObject = GameObject.FindGameObjectWithTag("VirtualCamera");
+        if (vcamObject != null)
+        {
+            activeVirtualCamera = vcamObject.GetComponent<CinemachineCamera>();
+            activeConfiner = vcamObject.GetComponent<CinemachineConfiner2D>();
+
+            if (activeVirtualCamera != null)
+            {
+                currentSize = activeVirtualCamera.Lens.OrthographicSize;
+            }
+        }
+    }
 }

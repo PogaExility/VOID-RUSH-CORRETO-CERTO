@@ -55,7 +55,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         moveInput = input;
     }
-
+    [Header("Rastejar")]
+    public float crawlSpeed = 4f;
+    [Tooltip("Ajuste o offset do collider quando estiver rastejando.")]
+ 
 
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
@@ -77,7 +80,14 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isWallDashing = false;
     private bool isIgnoringSteeringInput = false;
     private Coroutine steeringGraceCoroutine;
-
+    // NOVAS VARIÁVEIS PRIVADAS PARA RASTEJAR
+    private Vector2 originalColliderSize;
+    private Vector2 originalColliderOffset;
+    private bool isCrawling = false;
+    private bool wantsToStandUp = false;
+    // ADIÇÃO: Flags para controlar as animações de transição
+    private bool isTransitioningToCrawl = false;
+    private bool isTransitioningToStand = false;
 
 
     public void DisablePhysicsControl()
@@ -224,6 +234,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         currentGravityScaleOnFall = gravityScaleOnFall;
         defenseHandler = GetComponent<DefenseHandler>();
+        originalColliderSize = capsuleCollider.size;
+        originalColliderOffset = capsuleCollider.offset;
     }
 
     void Update()
@@ -254,18 +266,28 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         if (physicsControlDisabled)
         {
-            //rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
             return;
         }
+
+        // ADIÇÃO: Lógica para cancelar o rastejar se o jogador ficar no ar
+        if ((isCrawling || isTransitioningToCrawl) && !isGrounded)
+        {
+            CancelCrawl();
+        }
+
         if (isWallSliding && (!IsTouchingWall() || IsGrounded()))
         {
             StopWallSlide();
         }
-        // --- FIM DA CORREÇÃO ---
 
         CheckCollisions();
         HandleMovement();
         HandleGravity();
+
+        if (wantsToStandUp)
+        {
+            TryToStandUp();
+        }
     }
 
     public void Freeze() { rb.linearVelocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Kinematic; }
@@ -404,8 +426,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     public void DoJump(float multiplier)
     {
-
-        if (isInParabolaArc)
+        // MODIFICAÇÃO: Bloqueia o pulo também durante as transições
+        if (isInParabolaArc || isCrawling || isTransitioningToCrawl || isTransitioningToStand)
         {
             return;
         }
@@ -448,7 +470,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     public void StartWallSlide(float speed)
     {
-        if (!IsTouchingWall() || isGrounded) return;
+        // MODIFICAÇÃO: Bloqueia o wall slide se estiver rastejando
+        if (!IsTouchingWall() || isGrounded || isCrawling) return;
         isWallSliding = true;
         currentWallSlideSpeed = speed;
 
@@ -477,7 +500,15 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     // Em AdvancedPlayerMovement2D.cs
     private void HandleMovement()
     {
-        if (playerController != null && playerController.IsAttacking)
+        
+            // ADIÇÃO: Bloqueia o movimento durante as transições de rastejar
+            if (isTransitioningToCrawl || isTransitioningToStand)
+            {
+                rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Força a parada horizontal
+                return;
+            }
+
+            if (playerController != null && playerController.IsAttacking)
         {
             return;
         }
@@ -508,7 +539,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         bool isPushingAgainstWall = !isGrounded && IsTouchingWall() && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
         if (isPushingAgainstWall) return;
 
-        float targetSpeed = moveInput * moveSpeed;
+        // MODIFICAÇÃO: Usa a velocidade de rastejar se o estado estiver ativo
+        float targetSpeed = isCrawling ? moveInput * crawlSpeed : moveInput * moveSpeed;
         float speedDiff = targetSpeed - rb.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
         rb.AddForce(speedDiff * accelRate * Vector2.right);
@@ -574,5 +606,113 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
                                   $"X Speed: {currentVelocity.x:F2}\n" +
                                   $"Y Speed: {currentVelocity.y:F2}";
         }
+    }
+
+    public void StartCrawl()
+    {
+        // MODIFICAÇÃO: Só pode começar a rastejar se estiver no chão
+        if (!isGrounded || isCrawling || isTransitioningToCrawl || isTransitioningToStand) return;
+
+        isTransitioningToCrawl = true;
+        wantsToStandUp = false;
+    }
+
+    /// <summary>
+    /// Sinaliza a intenção de parar de rastejar. A lógica para se levantar será tratada no FixedUpdate.
+    /// </summary>
+    public void StopCrawl()
+    {
+        wantsToStandUp = true;
+    }
+    private void TryToStandUp()
+    {
+        // Já está se levantando, não precisa checar de novo
+ 
+        if (!isGrounded || isTransitioningToStand) return;
+
+        int originalLayer = gameObject.layer;
+        gameObject.layer = 2;
+
+        try
+        {
+            Vector2 standingCapsuleCenter = (Vector2)transform.position + originalColliderOffset;
+
+            RaycastHit2D hit = Physics2D.CapsuleCast(
+                standingCapsuleCenter,
+                originalColliderSize,
+                CapsuleDirection2D.Vertical,
+                0f,
+                Vector2.up,
+                0.01f,
+                collisionLayer
+            );
+
+            // Se há espaço, INICIA a transição para se levantar
+            if (hit.collider == null)
+            {
+                isCrawling = false; // Sai do estado de rastejar
+                wantsToStandUp = false; // Consome a intenção
+                isTransitioningToStand = true; // Entra no estado de transição
+            }
+        }
+        finally
+        {
+            gameObject.layer = originalLayer;
+        }
+    }
+
+    // --- NOVAS FUNÇÕES PARA ANIMATION EVENTS ---
+
+    /// <summary>
+    /// Esta função DEVE ser chamada por um Animation Event no ÚLTIMO FRAME da animação "abaixar".
+    /// Ela aplica a física de rastejar e corrige a posição do jogador.
+    /// </summary>
+    public void ApplyCrawlPhysics()
+    {
+        isCrawling = true;
+        isTransitioningToCrawl = false;
+
+        // Lógica de encolhimento de cima para baixo
+        float newHeight = originalColliderSize.y / 2f;
+        capsuleCollider.size = new Vector2(originalColliderSize.x, newHeight);
+
+        // Ajusta o offset para baixo para que a base do collider permaneça no lugar
+        float offsetChange = originalColliderSize.y / 4f;
+        capsuleCollider.offset = new Vector2(originalColliderOffset.x, originalColliderOffset.y - offsetChange);
+    }
+
+    /// <summary>
+    /// Esta função DEVE ser chamada por um Animation Event no ÚLTIMO FRAME da animação "levantar".
+    /// Ela restaura a física do estado "em pé" e finaliza a transição.
+    /// </summary>
+    public void ApplyStandPhysics()
+    {
+        isTransitioningToStand = false;
+
+        // Simplesmente restaura o collider para os valores originais
+        capsuleCollider.size = originalColliderSize;
+        capsuleCollider.offset = originalColliderOffset;
+    }
+
+    // --- NOVAS FUNÇÕES PÚBLICAS DE VERIFICAÇÃO ---
+    public bool IsCrawling() { return isCrawling; }
+    public bool IsTransitioningToCrawl() { return isTransitioningToCrawl; }
+    public bool IsTransitioningToStand() { return isTransitioningToStand; }
+
+    /// <summary>
+    /// Cancela o estado de rastejar imediatamente, sem animações de transição.
+    /// Usado quando o jogador cai de uma plataforma enquanto está rastejando.
+    /// </summary>
+    private void CancelCrawl()
+    {
+        // Reseta todas as flags de estado relacionadas
+        isCrawling = false;
+        isTransitioningToCrawl = false;
+        isTransitioningToStand = false;
+        wantsToStandUp = false;
+
+        // Restaura o collider imediatamente
+        capsuleCollider.size = originalColliderSize;
+        capsuleCollider.offset = originalColliderOffset;
     }
 }

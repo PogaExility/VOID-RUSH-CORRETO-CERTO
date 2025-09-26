@@ -1210,7 +1210,7 @@ Transform:
   m_GameObject: {fileID: 3345193402010468786}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.4927438, y: -2.76, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1374,6 +1374,8 @@ MonoBehaviour:
   parabolaSteeringForce: 100
   parabolaMaxAirSpeed: 20
   parabolaAirDrag: 0.98
+  crawlSpeed: 4
+  crawlingColliderOffset: {x: 0, y: -0.25}
 --- !u!95 &6689212545231447408
 Animator:
   serializedVersion: 7
