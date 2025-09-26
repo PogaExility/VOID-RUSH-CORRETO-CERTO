@@ -26,9 +26,6 @@ public class AIController_Stalker : MonoBehaviour
     public float flipCooldown = 0.5f;
     public float ledgeAnalysisDuration = 2.0f;
     public float wallAnalysisDuration = 1.5f;
-    [Header("▶ Lógica de Escalada")]
-    public float entrySpeed = 3f;
-    public float entryDuration = 0.5f;
     #endregion
 
     #region UNITY LIFECYCLE & BEHAVIOR TREE SETUP
@@ -40,8 +37,8 @@ public class AIController_Stalker : MonoBehaviour
         _player = AIManager.Instance.playerTarget;
         _rootNode = new Selector(new List<Node>
         {
-            new ActionNode(ProcessAnalysisTriggers),
-            new ActionNode(ProcessClimbingLogic),
+            // A Árvore de Comportamento agora é muito mais simples.
+            // A maior parte da lógica está no nó de Patrulha.
             new Sequence(new List<Node>
             {
                 new ActionNode(CheckIfAwareOfPlayer),
@@ -53,7 +50,9 @@ public class AIController_Stalker : MonoBehaviour
 
     void Update()
     {
-        if (!_isAnalyzing && !_motor.IsTransitioningState)
+        // A lógica de análise agora é chamada de dentro da patrulha, então não precisamos
+        // de uma verificação de _isAnalyzing aqui. O cooldown de transição é suficiente.
+        if (!_motor.IsTransitioningState)
         {
             _rootNode?.Evaluate();
         }
@@ -63,95 +62,66 @@ public class AIController_Stalker : MonoBehaviour
     #region BEHAVIOR TREE NODES
     private NodeState CheckIfAwareOfPlayer() => _perception.IsAwareOfPlayer ? NodeState.SUCCESS : NodeState.FAILURE;
 
-    private NodeState ProcessClimbingLogic()
-    {
-        if (!_motor.IsClimbing) return NodeState.FAILURE;
-        var query = _navigation.QueryEnvironment();
-
-        if (query.canEnterCrouchTunnel)
-        {
-            _motor.StartCrouch();
-            _motor.EnterTunnel(entrySpeed, entryDuration);
-            return NodeState.SUCCESS;
-        }
-
-        _motor.Climb(1f);
-        return NodeState.RUNNING;
-    }
-
+    // Lógica de combate simplificada para usar o novo sistema
     private NodeState ProcessCombatLogic()
     {
         FaceTarget(_player.position);
-        if (Vector2.Distance(transform.position, _player.position) <= attackRange) { _motor.Stop(); }
+        if (Vector2.Distance(transform.position, _player.position) <= attackRange)
+        {
+            _motor.Stop();
+        }
         else
         {
             var query = _navigation.QueryEnvironment();
-            if (query.isAtLedge || query.dangerLedgeAhead) { _motor.HardStop(); }
-            else if (query.anticipationLedgeAhead) { _motor.Brake(); }
-            else
+            switch (query.detectedObstacle)
             {
-                if (query.climbableWallAhead) _motor.StartClimb();
-                else if (query.contactWallAhead) _motor.Jump(jumpForce);
-                else _motor.Move(huntTopSpeed);
+                case AINavigationSystem.ObstacleType.FullWall:
+                case AINavigationSystem.ObstacleType.JumpablePlatform:
+                    _motor.Jump(jumpForce);
+                    break;
+                case AINavigationSystem.ObstacleType.Ledge:
+                    _motor.HardStop();
+                    break;
+                default:
+                    _motor.Move(huntTopSpeed);
+                    break;
             }
         }
         return NodeState.RUNNING;
     }
 
-    private NodeState ProcessAnalysisTriggers()
-    {
-        if (_motor.IsTransitioningState) return NodeState.FAILURE;
-        var query = _navigation.QueryEnvironment();
-        if (query.isAtLedge) { StartCoroutine(AnalyzeLedgeRoutine()); return NodeState.SUCCESS; }
-        if (query.contactWallAhead && !query.climbableWallAhead && query.isGrounded) { StartCoroutine(AnalyzeWallRoutine()); return NodeState.SUCCESS; }
-        return NodeState.FAILURE;
-    }
-
+    // O nó principal que agora contém TODA a lógica de navegação.
     private NodeState ProcessPatrolLogic()
     {
+        // Se já estivermos analisando, não faça nada.
+        if (_isAnalyzing) return NodeState.RUNNING;
+
         var query = _navigation.QueryEnvironment();
 
-        // PRIORIDADE MÁXIMA: OPORTUNIDADE TÁTICA (SPELUNKER)
-        if (query.climbableWallAhead && query.canEnterCrouchTunnel && query.isGrounded)
+        switch (query.detectedObstacle)
         {
-            _motor.StartClimb();
-            return NodeState.RUNNING;
-        }
+            case AINavigationSystem.ObstacleType.CrouchTunnel:
+                _motor.StartCrouch();
+                _motor.Move(patrolTopSpeed / 2);
+                break;
 
-        // AMEAÇA PRIORIDADE 1: Paredes e Bordas
-        if (query.dangerWallAhead || query.dangerLedgeAhead)
-        {
-            _motor.Move(patrolTopSpeed * 0.25f);
-            return NodeState.RUNNING;
-        }
+            case AINavigationSystem.ObstacleType.JumpablePlatform:
+                _motor.Jump(jumpForce);
+                break;
 
-        if (query.anticipationWallAhead || query.anticipationLedgeAhead)
-        {
-            _motor.Move(patrolTopSpeed * 0.5f);
-            return NodeState.RUNNING;
-        }
+            case AINavigationSystem.ObstacleType.FullWall:
+                StartCoroutine(AnalyzeWallRoutine());
+                break;
 
-        // AMEAÇA PRIORIDADE 2: Tetos
-        bool shouldCrouchDueToCeilingAhead = query.ceilingAhead;
-        bool isClearToStand = query.isClearToStandUp;
+            case AINavigationSystem.ObstacleType.Ledge:
+                StartCoroutine(AnalyzeLedgeRoutine());
+                break;
 
-        if (shouldCrouchDueToCeilingAhead && !_motor.IsCrouching)
-        {
-            _motor.StartCrouch();
-        }
-        else if (_motor.IsCrouching && !shouldCrouchDueToCeilingAhead && isClearToStand)
-        {
-            _motor.StopCrouch();
-        }
-
-        // AÇÃO PADRÃO: Movimento
-        if (_motor.IsCrouching)
-        {
-            _motor.Move(patrolTopSpeed * 0.5f);
-        }
-        else
-        {
-            _motor.Move(patrolTopSpeed);
+            case AINavigationSystem.ObstacleType.None:
+            default:
+                if (_motor.IsCrouching) _motor.StopCrouch();
+                _motor.Move(patrolTopSpeed);
+                break;
         }
 
         return NodeState.RUNNING;
@@ -159,12 +129,12 @@ public class AIController_Stalker : MonoBehaviour
     #endregion
 
     #region HELPER ROUTINES & LOGIC
-    // --- CONTEÚDO DAS ROTINAS RESTAURADO ---
     private IEnumerator AnalyzeWallRoutine()
     {
         _isAnalyzing = true;
         _motor.HardStop();
-        _perception.StartObstacleAnalysis(_navigation.contactWallProbeOrigin.position, isLedge: false);
+        // Nota: A rotina de análise visual precisa de um ponto de origem. Usaremos o lowerWallProbe como padrão.
+        _perception.StartObstacleAnalysis(_navigation.lowerWallProbe.position, isLedge: false);
         yield return new WaitForSeconds(wallAnalysisDuration);
         _motor.Flip();
         StartCoroutine(FlipCooldownRoutine());
@@ -176,7 +146,7 @@ public class AIController_Stalker : MonoBehaviour
     {
         _isAnalyzing = true;
         _motor.HardStop();
-        _perception.StartObstacleAnalysis(_navigation.ledgeProbeOrigin.position, isLedge: true);
+        _perception.StartObstacleAnalysis(_navigation.ledgeProbe.position, isLedge: true);
         yield return new WaitForSeconds(ledgeAnalysisDuration);
         _motor.Flip();
         StartCoroutine(FlipCooldownRoutine());
