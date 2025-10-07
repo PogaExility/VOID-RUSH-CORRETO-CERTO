@@ -125,7 +125,7 @@ MonoBehaviour:
   Damping: 0.5
   SlowingDistance: 5
   OversizeWindow:
-    Enabled: 1
+    Enabled: 0
     MaxWindowSize: 0
     Padding: 2
   m_LegacyMaxWindowSize: -2
@@ -141,3 +141,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c3a0c716120b9b41950b0ea46649a4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerTag: Player
+  cameraBoundaryTag: CameraBoundary

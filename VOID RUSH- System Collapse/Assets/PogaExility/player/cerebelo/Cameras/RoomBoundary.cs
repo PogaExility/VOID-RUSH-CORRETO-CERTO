@@ -1,114 +1,149 @@
 using UnityEngine;
 using Unity.Cinemachine;
+using System.Collections;
 
 [RequireComponent(typeof(Collider2D))]
 public class RoomBoundary : MonoBehaviour
 {
-    // --- GERENCIADOR DE ESTADO GLOBAL ---
-    public static RoomBoundary currentActiveRoom;
+    [Header("Modo da Sala")]
+    [Tooltip("Marque esta opção para a câmera mostrar a sala inteira. Desmarcada, ela seguirá o jogador.")]
+    [SerializeField] private bool showEntireRoom = false;
 
-    // --- CÉREBRO COMPARTILHADO (REFERÊNCIAS ESTÁTICAS) ---
-    private static CinemachineCamera activeVirtualCamera;
-    private static CinemachineConfiner2D activeConfiner;
-    private static float currentSize;
+    [Header("Configurações de Câmera (Modo Seguir)")]
+    [Tooltip("O tamanho (zoom) que a câmera terá ao seguir o jogador nesta sala.")]
+    [SerializeField] private float targetOrthographicSize = 9f;
 
-    [Header("Configuração de Zoom")]
-    [Tooltip("A velocidade da transição de zoom.")]
-    public float zoomTransitionSpeed = 2f;
+    [Header("Configurações de Câmera (Modo Sala Inteira)")]
+    [Tooltip("Uma margem para o zoom, para que a sala não fique colada nas bordas da tela. 1.1 = 10% de margem.")]
+    [SerializeField] private float roomPadding = 1.1f;
 
-    [Tooltip("Fator de correção para o zoom. Diminua este valor (ex: 0.9) se a câmera estiver mostrando além dos limites.")]
-    [Range(0.5f, 1.5f)] // Cria um slider no Inspector
-    public float zoomCorrectionFactor = 1.0f;
+    [Header("Configurações de Transição")]
+    [Tooltip("A duração em segundos da animação do alvo da câmera para o centro da sala (apenas no modo Sala Inteira).")]
+    [SerializeField] private float positionTransitionDuration = 0.8f;
 
-    // Variáveis de instância
     private Collider2D roomCollider;
-    private float targetOrthographicSize;
+    private static Coroutine activeTransitionCoroutine;
 
-    private void Awake()
+    // Alvo fantasma para guiar a câmera no modo "Sala Inteira"
+    private static Transform _proxyTarget;
+    private static Transform ProxyTarget
     {
-        roomCollider = GetComponent<Collider2D>();
-        roomCollider.isTrigger = true;
-        CalculateOptimalZoom();
-    }
-
-    private void Update()
-    {
-        InitializeCameraReferences();
-        if (activeVirtualCamera == null) return;
-
-        if (currentActiveRoom == this)
+        get
         {
-            currentSize = Mathf.MoveTowards(currentSize, targetOrthographicSize, zoomTransitionSpeed * Time.deltaTime);
+            if (_proxyTarget == null)
+            {
+                GameObject proxyGO = new GameObject("CameraProxyTarget");
+                _proxyTarget = proxyGO.transform;
+                // Opcional: Impedir que o alvo seja destruído ao carregar novas cenas
+                // DontDestroyOnLoad(proxyGO);
+            }
+            return _proxyTarget;
         }
     }
 
-    private void LateUpdate()
+    void Awake()
     {
-        InitializeCameraReferences();
-        if (activeVirtualCamera == null) return;
-
-        activeVirtualCamera.Lens.OrthographicSize = currentSize;
+        roomCollider = GetComponent<Collider2D>();
+        if (!roomCollider.isTrigger)
+        {
+            Debug.LogWarning($"O Collider2D no objeto '{gameObject.name}' precisa estar marcado como 'Is Trigger' para o script RoomBoundary funcionar.", gameObject);
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!other.CompareTag("Player")) return;
-
-        if (currentActiveRoom != this)
+        if (other.CompareTag("Player"))
         {
-            ActivateRoom();
-        }
-    }
-
-    private void ActivateRoom()
-    {
-        InitializeCameraReferences();
-        currentActiveRoom = this;
-
-        if (activeConfiner != null)
-        {
-            activeConfiner.BoundingShape2D = roomCollider;
-            activeConfiner.InvalidateBoundingShapeCache();
-        }
-    }
-
-    /// <summary>
-    /// Função final e corrigida.
-    /// </summary>
-    private void CalculateOptimalZoom()
-    {
-        Vector2 size = (roomCollider as BoxCollider2D).size;
-        Vector3 scale = transform.lossyScale;
-        float width = size.x * scale.x;
-        float height = size.y * scale.y;
-
-        float screenRatio = (float)Screen.width / Screen.height;
-        float requiredSizeX = (width / screenRatio) / 2f;
-        float requiredSizeY = height / 2f;
-
-        float optimalSize = Mathf.Max(requiredSizeX, requiredSizeY);
-
-        // --- A CORREÇÃO FINAL ESTÁ AQUI ---
-        // Aplicamos o fator de correção manual ao resultado final.
-        targetOrthographicSize = optimalSize * zoomCorrectionFactor;
-
-        Debug.Log($"Zoom calculado para '{gameObject.name}': {optimalSize} * {zoomCorrectionFactor} = {targetOrthographicSize}");
-    }
-
-    private static void InitializeCameraReferences()
-    {
-        if (activeVirtualCamera != null) return;
-
-        GameObject vcamObject = GameObject.FindGameObjectWithTag("VirtualCamera");
-        if (vcamObject != null)
-        {
-            activeVirtualCamera = vcamObject.GetComponent<CinemachineCamera>();
-            activeConfiner = vcamObject.GetComponent<CinemachineConfiner2D>();
-
-            if (activeVirtualCamera != null)
+            CinemachineCamera virtualCamera = FindAnyObjectByType<CinemachineCamera>();
+            if (virtualCamera == null)
             {
-                currentSize = activeVirtualCamera.Lens.OrthographicSize;
+                Debug.LogError("ERRO: RoomBoundary não encontrou uma CinemachineCamera.");
+                return;
+            }
+
+            // Para qualquer transição de posição que esteja ocorrendo.
+            if (activeTransitionCoroutine != null)
+            {
+                StopCoroutine(activeTransitionCoroutine);
+                activeTransitionCoroutine = null;
+            }
+
+            // --- LÓGICA CORRIGIDA ---
+            if (showEntireRoom)
+            {
+                // MODO SALA INTEIRA
+                // 1. Define o zoom final IMEDIATAMENTE.
+                virtualCamera.Lens.OrthographicSize = CalculateOrthographicSize();
+                // 2. Atualiza o confiner com as informações corretas.
+                UpdateConfiner();
+                // 3. Inicia a transição SUAVE apenas da POSIÇÃO do alvo.
+                activeTransitionCoroutine = StartCoroutine(TransitionProxyTarget(virtualCamera, other.transform));
+            }
+            else
+            {
+                // MODO SEGUIR JOGADOR
+                // 1. Define o zoom final IMEDIATAMENTE.
+                virtualCamera.Lens.OrthographicSize = targetOrthographicSize;
+                // 2. Atualiza o confiner com as informações corretas.
+                UpdateConfiner();
+                // 3. Garante que a câmera volte a seguir o jogador. O Damping fará a suavização.
+                virtualCamera.Follow = other.transform;
             }
         }
+    }
+
+    private void UpdateConfiner()
+    {
+        CinemachineConfiner2D confiner = FindAnyObjectByType<CinemachineConfiner2D>();
+        if (confiner != null)
+        {
+            confiner.BoundingShape2D = roomCollider;
+            confiner.InvalidateBoundingShapeCache();
+            Debug.Log($"Confiner atualizado para '{roomCollider.name}'.");
+        }
+    }
+
+    // Coroutine para mover suavemente o ALVO FANTASMA para o centro da sala.
+    private IEnumerator TransitionProxyTarget(CinemachineCamera cam, Transform playerTransform)
+    {
+        cam.Follow = ProxyTarget;
+        // Posição inicial usa a do jogador para evitar um salto inicial
+        Vector3 startPosition = playerTransform.position;
+        Vector3 targetPosition = roomCollider.bounds.center;
+
+        float elapsedTime = 0f;
+        while (elapsedTime < positionTransitionDuration)
+        {
+            float progress = elapsedTime / positionTransitionDuration;
+            ProxyTarget.position = Vector3.Lerp(startPosition, targetPosition, EaseInOut(progress));
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        ProxyTarget.position = targetPosition;
+        activeTransitionCoroutine = null;
+    }
+
+    // Calcula o tamanho ortográfico ideal para enquadrar o colisor da sala.
+    private float CalculateOrthographicSize()
+    {
+        float screenAspect = (float)Screen.width / Screen.height;
+        float roomAspect = roomCollider.bounds.size.x / roomCollider.bounds.size.y;
+        float size;
+        if (roomAspect > screenAspect)
+        {
+            size = (roomCollider.bounds.size.x / screenAspect) * 0.5f;
+        }
+        else
+        {
+            size = roomCollider.bounds.size.y * 0.5f;
+        }
+        return size * roomPadding;
+    }
+
+    // Função de suavização (Ease In/Out) para transições mais agradáveis.
+    private float EaseInOut(float t)
+    {
+        return t * t * (3f - 2f * t);
     }
 }

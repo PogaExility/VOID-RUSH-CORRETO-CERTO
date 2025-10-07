@@ -9,6 +9,7 @@ TagManager:
   - Fundo
   - Enemy
   - VirtualCamera
+  - CameraBoundary
   layers:
   - Default
   - TransparentFX

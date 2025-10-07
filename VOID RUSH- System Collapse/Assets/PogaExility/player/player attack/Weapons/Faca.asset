@@ -55,7 +55,7 @@ MonoBehaviour:
     damage: 10
     knockbackPower: 20
     knockbackDirection: 0
-    lungeDistance: 0
+    lungeDistance: 0.01
     lungeSpeed: 1000
     comboWindow: 0.4
     comboSpeed: 2
@@ -66,8 +66,8 @@ MonoBehaviour:
     damage: 12
     knockbackPower: 30
     knockbackDirection: 0
-    lungeDistance: 0
-    lungeSpeed: 15
+    lungeDistance: 0.01
+    lungeSpeed: 1000
     comboWindow: 0.4
     comboSpeed: 2
   - playerAnimationState: 21
