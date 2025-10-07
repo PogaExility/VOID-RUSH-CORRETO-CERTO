@@ -2,123 +2,93 @@
 
 public class AINavigationSystem : MonoBehaviour
 {
-    public enum ObstacleType { None, CrouchTunnel, JumpablePlatform, FullWall, Ledge }
+    public enum ObstacleType { None, FullWall, JumpableWall, CrouchTunnel, Ledge }
 
-    #region REFERENCES & STATE
-    private AIPlatformerMotor _motor;
-    #endregion
-
-    #region CONFIGURATION
-    [Header("▶ Pontos de Origem das Sondas (Transforms)")]
-    [Tooltip("Sensor baixo (altura dos pés) para detectar a base da parede.")]
-    public Transform lowerWallProbe;
-    [Tooltip("Sensor alto (altura da cabeça) para detectar a parte de cima da parede.")]
-    public Transform upperWallProbe;
-    [Tooltip("Sensor frontal (altura da cabeça) para detectar tetos baixos.")]
-    public Transform ceilingProbe;
-    [Tooltip("Sensor para verificar espaço livre na altura da cabeça.")]
-    public Transform headSpaceProbe;
-    [Tooltip("Sensor de contato com borda (apenas para quedas).")]
-    public Transform ledgeProbe;
-    [Header("▶ Configuração das Sondas")]
-    public LayerMask groundLayer;
-    public LayerMask climbableLayer;
-    public float wallProbeDistance = 0.2f;
-    public float ceilingProbeDistance = 0.2f; // Nova variável para controle da sonda de teto
-    [Header("▶ Depuração Visual")]
-    public bool showDebugGizmos = true;
-    #endregion
-
-    #region UNITY LIFECYCLE
-    void Awake()
-    {
-        _motor = GetComponent<AIPlatformerMotor>();
-        if (_motor == null) { Debug.LogError("AINavigationSystem: AIPlatformerMotor não encontrado!", this); this.enabled = false; }
-    }
-    #endregion
-
-    #region PUBLIC API
     public struct NavQueryResult
     {
         public ObstacleType detectedObstacle;
+        public float distanceToObstacle;
         public bool isGrounded;
     }
+
+    #region HIERARQUIA DE SONDAS (6 ESPECIALISTAS)
+    [Header("▶ ARQUITETURA FINAL (GRID GRANULAR)")]
+    [Tooltip("Sonda de detecção na altura do Tile 1 (Base).")]
+    public Transform Probe_Height_1_Base;
+    [Tooltip("Sonda de detecção na altura do Tile 2 (Meio).")]
+    public Transform Probe_Height_2_Mid;
+    [Tooltip("Sonda de detecção na altura do Tile 3 (Topo).")]
+    public Transform Probe_Height_3_Top;
+    [Tooltip("Sonda especialista em detectar precipícios. Olha para BAIXO.")]
+    public Transform Probe_Ledge_Check;
+    [Tooltip("Sonda especialista em detectar tetos baixos. Olha para CIMA.")]
+    public Transform Probe_Ceiling_Check;
+    [Tooltip("Sonda de segurança para se levantar / permanecer agachado. Olha para CIMA.")]
+    public Transform Probe_Crouch_Safety;
+    #endregion
+
+    #region CONFIGURAÇÃO
+    [Header("▶ Configuração das Sondas")]
+    public LayerMask obstacleLayer;
+    public float detectionDistance = 5f;
+    public float ceilingProbeHeight = 0.5f;
+    #endregion
+
+    private AIPlatformerMotor _motor;
+    void Awake() { _motor = GetComponent<AIPlatformerMotor>(); }
 
     public NavQueryResult QueryEnvironment()
     {
         var result = new NavQueryResult
         {
             isGrounded = _motor.IsGrounded(),
-            detectedObstacle = ObstacleType.None
+            detectedObstacle = ObstacleType.None,
+            distanceToObstacle = float.MaxValue
         };
 
-        bool seesLowerWall = ProbeForWall(lowerWallProbe);
-
-        if (seesLowerWall)
+        // PRIORIDADE 1: Detecção de Paredes usando o grid
+        RaycastHit2D hitBase = Probe(Probe_Height_1_Base, transform.right, detectionDistance);
+        if (hitBase.collider != null)
         {
-            bool seesUpperWall = ProbeForWall(upperWallProbe);
+            result.distanceToObstacle = hitBase.distance;
 
-            if (!seesUpperWall)
+            // Classifica a parede com base na altura do grid
+            bool hitMid = Probe(Probe_Height_2_Mid, transform.right, hitBase.distance).collider != null;
+            bool hitTop = Probe(Probe_Height_3_Top, transform.right, hitBase.distance).collider != null;
+
+            if (hitTop) // Se a sonda mais alta acerta, é uma parede intransponível.
             {
-                result.detectedObstacle = ObstacleType.JumpablePlatform;
+                result.detectedObstacle = ObstacleType.FullWall;
             }
-            else
+            else // Se a mais alta não acerta, é pulável (seja de 1 ou 2 tiles).
             {
-                // CORREÇÃO CRÍTICA: Utiliza a nova sonda vertical para o teto.
-                bool seesCeiling = ProbeForCeiling(ceilingProbe);
-                bool headSpaceIsClear = !ProbeForWall(headSpaceProbe);
-
-                if (seesCeiling && headSpaceIsClear)
-                {
-                    result.detectedObstacle = ObstacleType.CrouchTunnel;
-                }
-                else
-                {
-                    result.detectedObstacle = ObstacleType.FullWall;
-                }
+                result.detectedObstacle = ObstacleType.JumpableWall;
             }
         }
-
-        if (result.detectedObstacle == ObstacleType.None && ProbeForLedge(ledgeProbe))
+        // PRIORIDADE 2: Detecção de Túneis (só se não houver parede na base)
+        else if (Probe(Probe_Ceiling_Check, Vector2.up, ceilingProbeHeight).collider != null)
+        {
+            result.detectedObstacle = ObstacleType.CrouchTunnel;
+            result.distanceToObstacle = 0;
+        }
+        // PRIORIDADE 3: Detecção de Bordas (último recurso)
+        else if (!Probe(Probe_Ledge_Check, Vector2.down, detectionDistance).collider)
         {
             result.detectedObstacle = ObstacleType.Ledge;
+            result.distanceToObstacle = Vector3.Distance(transform.position, Probe_Ledge_Check.position);
         }
 
         return result;
     }
-    #endregion
 
-    #region SONDAS INTERNAS
-    private bool ProbeForWall(Transform origin) => origin != null && Physics2D.Raycast(origin.position, transform.right, wallProbeDistance, groundLayer);
-
-    // NOVO MÉTODO: Sonda dedicada para o teto, que lança o raio para CIMA.
-    private bool ProbeForCeiling(Transform origin) => origin != null && Physics2D.Raycast(origin.position, Vector2.up, ceilingProbeDistance, groundLayer);
-
-    private bool ProbeForLedge(Transform origin) => origin != null && !Physics2D.Raycast(origin.position, Vector2.down, 1.0f, groundLayer);
-    #endregion
-
-    #region VISUALIZAÇÃO
-    void OnDrawGizmosSelected()
+    public bool CanStandUp()
     {
-        if (!showDebugGizmos || !Application.isPlaying || _motor == null) return;
-        DrawProbeGizmo(lowerWallProbe, ProbeForWall(lowerWallProbe), Color.red, transform.right, wallProbeDistance);
-        DrawProbeGizmo(upperWallProbe, ProbeForWall(upperWallProbe), Color.red, transform.right, wallProbeDistance);
-        DrawProbeGizmo(headSpaceProbe, !ProbeForWall(headSpaceProbe), Color.cyan, transform.right, wallProbeDistance);
-
-        // CORREÇÃO CRÍTICA: Atualiza a visualização da sonda de teto para apontar para CIMA.
-        DrawProbeGizmo(ceilingProbe, ProbeForCeiling(ceilingProbe), Color.yellow, Vector3.up, ceilingProbeDistance);
-
-        DrawProbeGizmo(ledgeProbe, ProbeForLedge(ledgeProbe), Color.magenta, Vector3.down, 1.0f);
+        return !Probe(Probe_Crouch_Safety, Vector2.up, 0.1f).collider;
     }
 
-    // Método de desenho do Gizmo atualizado para aceitar direção e distância.
-    private void DrawProbeGizmo(Transform origin, bool isActive, Color activeColor, Vector3 direction, float distance)
+    private RaycastHit2D Probe(Transform origin, Vector2 direction, float distance)
     {
-        if (origin == null) return;
-        Color inactiveColor = new Color(activeColor.r * 0.3f, activeColor.g * 0.3f, activeColor.b * 0.3f, 0.5f);
-        Gizmos.color = isActive ? activeColor : inactiveColor;
-        Gizmos.DrawLine(origin.position, origin.position + direction * distance);
-        if (isActive) Gizmos.DrawCube(origin.position + direction * distance, Vector3.one * 0.1f);
+        if (origin == null) { Debug.LogError($"Sonda não atribuída no Inspector!", this); return new RaycastHit2D(); }
+        return Physics2D.Raycast(origin.position, direction, distance, obstacleLayer);
     }
-    #endregion
 }
