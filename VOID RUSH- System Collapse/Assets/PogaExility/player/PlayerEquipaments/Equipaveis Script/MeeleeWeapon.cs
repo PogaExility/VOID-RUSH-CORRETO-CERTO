@@ -17,7 +17,7 @@ public class MeeleeWeapon : WeaponBase
     public void InitializeMeelee(PlayerController pc, PlayerAnimatorController animCtrl)
     {
         this.playerController = pc;
-        this.animatorController = animCtrl; 
+        this.animatorController = animCtrl;
     }
 
     private void Update()

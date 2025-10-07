@@ -37,7 +37,7 @@ public class PlayerController : MonoBehaviour
     [Header("Skills de Combate")]
     public SkillSO blockSkill;
 
-  
+
     private bool attackBuffered = false;
     private bool isInventoryOpen = false;
     private SkillSO activeJumpSkill;
@@ -107,26 +107,6 @@ public class PlayerController : MonoBehaviour
         animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
     }
 
-    private void HandleCrawlInput()
-    {
-        // ADIÇÃO: Bloqueia a entrada se estiver atacando ou já em transição
-        if (IsAttacking || movementScript.IsTransitioningToCrawl() || movementScript.IsTransitioningToStand())
-        {
-            return;
-        }
-
-        // MODIFICAÇÃO: Garante que só possa começar a rastejar se estiver no chão
-        if (Input.GetKeyDown(KeyCode.LeftControl) && movementScript.IsGrounded())
-        {
-            movementScript.StartCrawl();
-        }
-
-        if (Input.GetKeyUp(KeyCode.LeftControl))
-        {
-            movementScript.StopCrawl();
-        }
-    }
-
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
@@ -148,9 +128,6 @@ public class PlayerController : MonoBehaviour
         {
             isLanding = true;
         }
-
-        // ADIÇÃO: Chamada para a nova função de input
-        HandleCrawlInput();
 
         HandlePowerModeToggle();
         HandleSkillInput();
@@ -270,9 +247,6 @@ public class PlayerController : MonoBehaviour
 
     private void HandleSkillInput()
     {
-        // ADIÇÃO: Bloqueia skills se estiver rastejando
-        if (movementScript.IsCrawling()) return;
-
         // A função agora apenas chama a lógica de skills, sem se preocupar com bloqueio de combate.
         TryActivateMovementSkills();
     }
@@ -296,9 +270,6 @@ public class PlayerController : MonoBehaviour
 
     private void HandleCombatInput()
     {
-        // ADIÇÃO: Bloqueia combate se estiver rastejando
-        if (movementScript.IsCrawling() || movementScript.IsTransitioningToCrawl() || movementScript.IsTransitioningToStand()) return;
-
         if (weaponHandler.IsReloading) return;
 
         // Pega a arma ativa para saber o tipo dela
@@ -366,22 +337,11 @@ public class PlayerController : MonoBehaviour
         // --- ETAPA 1: DETERMINAR O ESTADO DESEJADO DA BASE LAYER ---
         PlayerAnimState desiredState;
 
-        // MODIFICAÇÃO: Lógica de animação completamente reformulada para incluir transições
         if (playerStats.IsDead()) { desiredState = PlayerAnimState.morrendo; }
-        else if (movementScript.IsTransitioningToCrawl()) { desiredState = PlayerAnimState.abaixando; }
-        else if (movementScript.IsTransitioningToStand()) { desiredState = PlayerAnimState.levantando; }
         else if (isLanding) { desiredState = PlayerAnimState.pousando; }
         else if (animatorController.GetCurrentAnimatorStateInfo(AnimatorTarget.PlayerBody, 0).IsName("dano")) { desiredState = PlayerAnimState.dano; }
-        else if (movementScript.IsCrawling())
-        {
-            desiredState = PlayerAnimState.rastejando;
-            // Se estiver rastejando, controla a velocidade da animação
-            // Se o jogador estiver se movendo, velocidade = 1. Se estiver parado, velocidade = 0 (pausado).
-            animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, movementScript.IsMoving() ? 1f : 0f);
-        }
         else if (!movementScript.IsGrounded())
         {
-            animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f); // Garante que a velocidade volte ao normal
             if (movementScript.IsWallSliding()) desiredState = PlayerAnimState.derrapagem;
             else if (movementScript.IsDashing() || movementScript.IsWallDashing()) desiredState = PlayerAnimState.dashAereo;
             else if (movementScript.GetVerticalVelocity() > 0.1f) desiredState = PlayerAnimState.pulando;
@@ -389,7 +349,6 @@ public class PlayerController : MonoBehaviour
         }
         else // No chão
         {
-            animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f); // Garante que a velocidade volte ao normal
             if (movementScript.IsDashing()) desiredState = PlayerAnimState.dash;
             else if (movementScript.IsMoving()) desiredState = PlayerAnimState.andando;
             else
@@ -502,6 +461,4 @@ public class PlayerController : MonoBehaviour
         isLanding = false;
         movementScript.OnLandingComplete();
     }
-
-
 }
