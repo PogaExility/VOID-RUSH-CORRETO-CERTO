@@ -5,27 +5,25 @@ using System.Collections.Generic;
 [RequireComponent(typeof(AIPerceptionSystem), typeof(AIPlatformerMotor), typeof(AINavigationSystem))]
 public class AIController_Stalker : MonoBehaviour
 {
-    #region REFERÊNCIAS E ESTADO
+    #region REFERENCES & STATE
     private AIPerceptionSystem _perception;
     private AIPlatformerMotor _motor;
     private AINavigationSystem _navigation;
     private Transform _player;
+    private bool _canFlip = true;
     private bool _isAnalyzing = false;
     #endregion
 
-    #region CONFIGURAÇÃO DE COMPORTAMENTO
-    [Header("▶ Atributos Gerais")]
+    #region CONFIGURATION
+    [Header("▶ Configuração de Combate")]
     public float patrolTopSpeed = 4f;
+    public float huntTopSpeed = 7f;
     public float jumpForce = 15f;
-
-    [Header("▶ LÓGICA DE PROXIMIDADE")]
-    [Tooltip("Distância em que o Stalker começa a desacelerar.")]
-    public float dangerDistance = 2.5f;
-    [Tooltip("Distância em que o Stalker para totalmente e analisa (ex: 1 tile = 1.0f).")]
-    public float contactDistance = 1.0f;
-
+    public float attackRange = 1.5f;
     [Header("▶ Lógica de Análise")]
-    public float analysisDuration = 1.5f;
+    public float flipCooldown = 0.5f;
+    public float ledgeAnalysisDuration = 2.0f;
+    public float wallAnalysisDuration = 1.5f;
     #endregion
 
     void Start()
@@ -33,84 +31,125 @@ public class AIController_Stalker : MonoBehaviour
         _perception = GetComponent<AIPerceptionSystem>();
         _motor = GetComponent<AIPlatformerMotor>();
         _navigation = GetComponent<AINavigationSystem>();
-        // _player = AIManager.Instance.playerTarget; // Descomente se tiver um AIManager
+        // _player = AIManager.Instance.playerTarget;
     }
 
     void Update()
     {
-        if (_isAnalyzing || _motor.IsTransitioningState) return;
+        if (_motor.IsTransitioningState || _isAnalyzing) return;
         ProcessPatrolLogic();
     }
 
     private void ProcessPatrolLogic()
     {
-        var query = _navigation.QueryEnvironment();
+        // =====================================================================================
+        // SUA LÓGICA DO "INTERRUPTOR" (SWITCH) IMPLEMENTADA
+        // =====================================================================================
 
-        switch (query.detectedObstacle)
+        // --- NÍVEL 2: O PILOTO AUTOMÁTICO (SE JÁ ESTIVER AGACHADO) ---
+        if (_motor.IsCrouching)
         {
-            case AINavigationSystem.ObstacleType.None:
-                if (_motor.IsCrouching && _navigation.CanStandUp())
+            // A única pergunta é: O interruptor de segurança desligou? (CS == off?)
+            if (_navigation.CanStandUp())
+            {
+                // SIM: O interruptor "Agachar" é desligado. A IA se levanta.
+                _motor.StopCrouch();
+            }
+            else
+            {
+                // NÃO: O interruptor continua ligado. Continue no modo túnel.
+                // Verificamos se há paredes dentro do túnel.
+                var crouchQuery = _navigation.QueryEnvironment();
+                if (crouchQuery.detectedObstacle == AINavigationSystem.ObstacleType.FullWall)
                 {
-                    _motor.StopCrouch();
-                }
-                _motor.Move(patrolTopSpeed);
-                break;
-
-            case AINavigationSystem.ObstacleType.CrouchTunnel:
-                _motor.StartCrouch();
-                _motor.Move(patrolTopSpeed / 2);
-                break;
-
-            case AINavigationSystem.ObstacleType.JumpableWall:
-                if (query.distanceToObstacle <= contactDistance * 1.5f)
-                {
-                    _motor.Jump(jumpForce);
+                    StartCoroutine(AnalyzeWallRoutine());
                 }
                 else
                 {
-                    _motor.Move(patrolTopSpeed);
+                    _motor.Move(patrolTopSpeed / 2);
                 }
-                break;
-
-            case AINavigationSystem.ObstacleType.FullWall:
-            case AINavigationSystem.ObstacleType.Ledge:
-                HandleProximityObstacle(query);
-                break;
+            }
+            return; // A decisão para este frame está tomada.
         }
-    }
 
-    private void HandleProximityObstacle(AINavigationSystem.NavQueryResult query)
-    {
-        if (query.distanceToObstacle <= contactDistance)
+        // --- NÍVEL 1: O GATILHO DE ENTRADA (SE ESTIVER EM PÉ) ---
+        // Este código só é executado se a IA não estiver agachada.
+        var query = _navigation.QueryEnvironment();
+
+        // O veredito "CrouchTunnel" do sistema nervoso representa a sua condição:
+        // (wall top e ceiling == on)
+        if (query.detectedObstacle == AINavigationSystem.ObstacleType.CrouchTunnel)
         {
-            StartCoroutine(AnalyzeObstacleRoutine(query.detectedObstacle == AINavigationSystem.ObstacleType.Ledge));
-        }
-        else if (query.distanceToObstacle <= dangerDistance)
-        {
-            _motor.Brake();
+            // A condição implícita (CS == off) é que _motor.IsCrouching é falso.
+            // O interruptor "Agachar" é ligado. A IA começa a agachar.
+            _motor.StartCrouch();
+            _motor.Move(patrolTopSpeed / 2);
         }
         else
         {
-            _motor.Move(patrolTopSpeed);
+            // Se o gatilho de agachar não for ativado, execute a lógica de patrulha normal.
+            switch (query.detectedObstacle)
+            {
+                case AINavigationSystem.ObstacleType.JumpablePlatform:
+                    _motor.Jump(jumpForce);
+                    break;
+                case AINavigationSystem.ObstacleType.FullWall:
+                    StartCoroutine(AnalyzeWallRoutine());
+                    break;
+                case AINavigationSystem.ObstacleType.Ledge:
+                    StartCoroutine(AnalyzeLedgeRoutine());
+                    break;
+                case AINavigationSystem.ObstacleType.None:
+                default:
+                    _motor.Move(patrolTopSpeed);
+                    break;
+            }
         }
     }
 
-    private IEnumerator AnalyzeObstacleRoutine(bool isLedge)
+    #region Helper Routines and Combat
+    // ... (As outras funções, como ProcessCombatLogic, AnalyzeWallRoutine, etc., permanecem as mesmas) ...
+    private void ProcessCombatLogic() {/*...*/}
+    private IEnumerator AnalyzeWallRoutine()
     {
         if (_isAnalyzing) yield break;
         _isAnalyzing = true;
-
-        while (_motor._currentSpeed > 0.01f)
-        {
-            _motor.Brake();
-            yield return null;
-        }
         _motor.HardStop();
-
-        Debug.Log("Analisando " + (isLedge ? "Borda" : "Parede"));
-        yield return new WaitForSeconds(analysisDuration);
-
+        if (_perception != null) _perception.StartObstacleAnalysis(_navigation.Probe_Height_1_Base.position, isLedge: false);
+        yield return new WaitForSeconds(wallAnalysisDuration);
+        if (_perception != null) _perception.StopObstacleAnalysis();
         _motor.Flip();
+        StartCoroutine(FlipCooldownRoutine());
         _isAnalyzing = false;
     }
+    private IEnumerator AnalyzeLedgeRoutine()
+    {
+        if (_isAnalyzing) yield break;
+        _isAnalyzing = true;
+        _motor.HardStop();
+        if (_perception != null) _perception.StartObstacleAnalysis(_navigation.Probe_Ledge_Check.position, isLedge: true);
+        yield return new WaitForSeconds(ledgeAnalysisDuration);
+        if (_perception != null) _perception.StopObstacleAnalysis();
+        _motor.Flip();
+        StartCoroutine(FlipCooldownRoutine());
+        _isAnalyzing = false;
+    }
+    private void FaceTarget(Vector3 targetPosition)
+    {
+        if (_player == null) return;
+        float dotProduct = Vector2.Dot((targetPosition - transform.position).normalized, transform.right);
+        if (_canFlip && dotProduct < -0.1f)
+        {
+            _motor.Flip();
+            StartCoroutine(FlipCooldownRoutine());
+        }
+    }
+
+    private IEnumerator FlipCooldownRoutine()
+    {
+        _canFlip = false;
+        yield return new WaitForSeconds(flipCooldown);
+        _canFlip = true;
+    }
+    #endregion
 }

@@ -118,7 +118,7 @@ Transform:
   m_GameObject: {fileID: 2777775840453110099}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.6, y: -0.3, z: 0}
+  m_LocalPosition: {x: 0.5, y: -0.3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -180,7 +180,7 @@ Transform:
   m_GameObject: {fileID: 3531739786457896639}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.51, y: 0.155, z: 0}
+  m_LocalPosition: {x: -0.6, y: 0.155, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -219,11 +219,12 @@ Transform:
   m_GameObject: {fileID: 6661398253481518625}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.47, y: 0.5016, z: 1.2408022}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 2.9, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6485459896483529973}
+  - {fileID: 7156236136696630371}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &7589668237929059689
@@ -419,11 +420,13 @@ MonoBehaviour:
   Probe_Ledge_Check: {fileID: 5511967849121691990}
   Probe_Ceiling_Check: {fileID: 7151929598489357073}
   Probe_Crouch_Safety: {fileID: 7981987888853148419}
-  obstacleLayer:
+  groundLayer:
     serializedVersion: 2
     m_Bits: 64
-  detectionDistance: 5
+  wallProbeDistance: 0.2
+  ledgeProbeDistance: 1
   ceilingProbeHeight: 0.5
+  showDebugGizmos: 1
 --- !u!114 &208760096713734105
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -449,10 +452,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   patrolTopSpeed: 4
-  jumpForce: 15
-  dangerDistance: 2.5
-  contactDistance: 1
-  analysisDuration: 1.5
+  huntTopSpeed: 7
+  jumpForce: 1
+  attackRange: 1.5
+  flipCooldown: 0.5
+  ledgeAnalysisDuration: 2
+  wallAnalysisDuration: 1.5
 --- !u!1 &7120330187940866159
 GameObject:
   m_ObjectHideFlags: 0
@@ -489,7 +494,7 @@ Transform:
   - {fileID: 7151929598489357073}
   - {fileID: 7981987888853148419}
   - {fileID: 580457152994844138}
-  m_Father: {fileID: 6485459896483529973}
+  m_Father: {fileID: 3675850213332784283}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7533560976596753000
 GameObject:
@@ -521,7 +526,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 210489685686077488}
-  - {fileID: 7156236136696630371}
   m_Father: {fileID: 3675850213332784283}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8158927985904265868

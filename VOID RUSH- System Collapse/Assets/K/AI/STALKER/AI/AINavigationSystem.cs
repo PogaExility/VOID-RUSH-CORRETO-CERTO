@@ -2,93 +2,113 @@
 
 public class AINavigationSystem : MonoBehaviour
 {
-    public enum ObstacleType { None, FullWall, JumpableWall, CrouchTunnel, Ledge }
+    public enum ObstacleType { None, CrouchTunnel, JumpablePlatform, FullWall, Ledge }
+
+    #region REFERÊNCIAS
+    private AIPlatformerMotor _motor;
+    #endregion
+
+    #region CONFIGURAÇÃO DAS SONDAS
+    [Header("▶ HIERARQUIA DE SONDAS (6 SONDAS)")]
+    public Transform Probe_Height_1_Base;
+    public Transform Probe_Height_2_Mid;
+    public Transform Probe_Height_3_Top;
+    public Transform Probe_Ledge_Check;
+    public Transform Probe_Ceiling_Check;
+    public Transform Probe_Crouch_Safety;
+
+    [Header("▶ Configuração das Sondas")]
+    public LayerMask groundLayer;
+    public float wallProbeDistance = 0.2f;
+    public float ledgeProbeDistance = 1.0f;
+    public float ceilingProbeHeight = 0.5f;
+
+    [Header("▶ Depuração Visual")]
+    public bool showDebugGizmos = true;
+    #endregion
+
+    void Awake()
+    {
+        // Usa GetComponentInParent porque o motor está no objeto raiz, um nível acima.
+        _motor = GetComponentInParent<AIPlatformerMotor>();
+        if (_motor == null) { Debug.LogError("AINavigationSystem: AIPlatformerMotor não foi encontrado no objeto pai!", this); }
+    }
 
     public struct NavQueryResult
     {
         public ObstacleType detectedObstacle;
-        public float distanceToObstacle;
         public bool isGrounded;
     }
-
-    #region HIERARQUIA DE SONDAS (6 ESPECIALISTAS)
-    [Header("▶ ARQUITETURA FINAL (GRID GRANULAR)")]
-    [Tooltip("Sonda de detecção na altura do Tile 1 (Base).")]
-    public Transform Probe_Height_1_Base;
-    [Tooltip("Sonda de detecção na altura do Tile 2 (Meio).")]
-    public Transform Probe_Height_2_Mid;
-    [Tooltip("Sonda de detecção na altura do Tile 3 (Topo).")]
-    public Transform Probe_Height_3_Top;
-    [Tooltip("Sonda especialista em detectar precipícios. Olha para BAIXO.")]
-    public Transform Probe_Ledge_Check;
-    [Tooltip("Sonda especialista em detectar tetos baixos. Olha para CIMA.")]
-    public Transform Probe_Ceiling_Check;
-    [Tooltip("Sonda de segurança para se levantar / permanecer agachado. Olha para CIMA.")]
-    public Transform Probe_Crouch_Safety;
-    #endregion
-
-    #region CONFIGURAÇÃO
-    [Header("▶ Configuração das Sondas")]
-    public LayerMask obstacleLayer;
-    public float detectionDistance = 5f;
-    public float ceilingProbeHeight = 0.5f;
-    #endregion
-
-    private AIPlatformerMotor _motor;
-    void Awake() { _motor = GetComponent<AIPlatformerMotor>(); }
 
     public NavQueryResult QueryEnvironment()
     {
         var result = new NavQueryResult
         {
             isGrounded = _motor.IsGrounded(),
-            detectedObstacle = ObstacleType.None,
-            distanceToObstacle = float.MaxValue
+            detectedObstacle = ObstacleType.None
         };
 
-        // PRIORIDADE 1: Detecção de Paredes usando o grid
-        RaycastHit2D hitBase = Probe(Probe_Height_1_Base, transform.right, detectionDistance);
-        if (hitBase.collider != null)
+        // =====================================================================================
+        // LÓGICA DE PERCEPÇÃO BASEADA EM ESTADO
+        // =====================================================================================
+        if (_motor.IsCrouching)
         {
-            result.distanceToObstacle = hitBase.distance;
-
-            // Classifica a parede com base na altura do grid
-            bool hitMid = Probe(Probe_Height_2_Mid, transform.right, hitBase.distance).collider != null;
-            bool hitTop = Probe(Probe_Height_3_Top, transform.right, hitBase.distance).collider != null;
-
-            if (hitTop) // Se a sonda mais alta acerta, é uma parede intransponível.
+            // --- LÓGICA QUANDO ESTÁ AGACHADO ---
+            // A IA só se preocupa com paredes baixas e bordas dentro do túnel.
+            if (ProbeForWall(Probe_Height_1_Base))
             {
                 result.detectedObstacle = ObstacleType.FullWall;
             }
-            else // Se a mais alta não acerta, é pulável (seja de 1 ou 2 tiles).
+            else if (ProbeForLedge(Probe_Ledge_Check))
             {
-                result.detectedObstacle = ObstacleType.JumpableWall;
+                result.detectedObstacle = ObstacleType.Ledge;
             }
         }
-        // PRIORIDADE 2: Detecção de Túneis (só se não houver parede na base)
-        else if (Probe(Probe_Ceiling_Check, Vector2.up, ceilingProbeHeight).collider != null)
+        else
         {
-            result.detectedObstacle = ObstacleType.CrouchTunnel;
-            result.distanceToObstacle = 0;
-        }
-        // PRIORIDADE 3: Detecção de Bordas (último recurso)
-        else if (!Probe(Probe_Ledge_Check, Vector2.down, detectionDistance).collider)
-        {
-            result.detectedObstacle = ObstacleType.Ledge;
-            result.distanceToObstacle = Vector3.Distance(transform.position, Probe_Ledge_Check.position);
+            // --- LÓGICA QUANDO ESTÁ EM PÉ (SUA ARQUITETURA COMPLETA) ---
+            bool seesBaseWall = ProbeForWall(Probe_Height_1_Base);
+            bool seesMidWall = ProbeForWall(Probe_Height_2_Mid);
+            bool seesTopWall = ProbeForWall(Probe_Height_3_Top);
+            bool seesCeiling = ProbeForCeiling(Probe_Ceiling_Check);
+
+            if (seesCeiling && seesTopWall) { result.detectedObstacle = ObstacleType.CrouchTunnel; }
+            else if (seesBaseWall && !seesMidWall && !seesTopWall) { result.detectedObstacle = ObstacleType.JumpablePlatform; }
+            else if (seesBaseWall) { result.detectedObstacle = ObstacleType.FullWall; }
+            else if (ProbeForLedge(Probe_Ledge_Check)) { result.detectedObstacle = ObstacleType.Ledge; }
         }
 
         return result;
     }
 
+    // O "Switch" de Segurança
     public bool CanStandUp()
     {
-        return !Probe(Probe_Crouch_Safety, Vector2.up, 0.1f).collider;
+        return !ProbeForCeiling(Probe_Crouch_Safety);
     }
 
-    private RaycastHit2D Probe(Transform origin, Vector2 direction, float distance)
+    #region Sondas e Gizmos
+    private bool ProbeForWall(Transform origin) => origin != null && Physics2D.Raycast(origin.position, transform.right, wallProbeDistance, groundLayer);
+    private bool ProbeForLedge(Transform origin) => origin != null && !Physics2D.Raycast(origin.position, Vector2.down, ledgeProbeDistance, groundLayer);
+    private bool ProbeForCeiling(Transform origin) => origin != null && Physics2D.Raycast(origin.position, Vector2.up, ceilingProbeHeight, groundLayer);
+
+    void OnDrawGizmosSelected()
     {
-        if (origin == null) { Debug.LogError($"Sonda não atribuída no Inspector!", this); return new RaycastHit2D(); }
-        return Physics2D.Raycast(origin.position, direction, distance, obstacleLayer);
+        if (!showDebugGizmos || !Application.isPlaying) return;
+        DrawProbeGizmo(Probe_Height_1_Base, ProbeForWall(Probe_Height_1_Base), Color.red, transform.right, wallProbeDistance);
+        DrawProbeGizmo(Probe_Height_2_Mid, ProbeForWall(Probe_Height_2_Mid), Color.red, transform.right, wallProbeDistance);
+        DrawProbeGizmo(Probe_Height_3_Top, ProbeForWall(Probe_Height_3_Top), Color.red, transform.right, wallProbeDistance);
+        DrawProbeGizmo(Probe_Ledge_Check, ProbeForLedge(Probe_Ledge_Check), Color.magenta, Vector2.down, ledgeProbeDistance);
+        DrawProbeGizmo(Probe_Ceiling_Check, ProbeForCeiling(Probe_Ceiling_Check), Color.yellow, Vector2.up, ceilingProbeHeight);
+        DrawProbeGizmo(Probe_Crouch_Safety, !CanStandUp(), Color.cyan, Vector2.up, ceilingProbeHeight);
     }
+
+    private void DrawProbeGizmo(Transform origin, bool isActive, Color activeColor, Vector3 direction, float distance)
+    {
+        if (origin == null) return;
+        Color inactiveColor = new Color(activeColor.r * 0.3f, activeColor.g * 0.3f, activeColor.b * 0.3f, 0.5f);
+        Gizmos.color = isActive ? activeColor : inactiveColor;
+        Gizmos.DrawLine(origin.position, origin.position + direction * distance);
+    }
+    #endregion
 }
