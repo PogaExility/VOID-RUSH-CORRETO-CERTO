@@ -63,25 +63,41 @@ public class SlashEffect : MonoBehaviour
         }
     }
 
+
     void OnTriggerEnter2D(Collider2D other)
     {
-        // Se já atingimos este alvo, ignora.
+        // A verificação inicial para evitar múltiplos acertos permanece a mesma.
         if (targetsHit.Contains(other))
         {
             return;
         }
 
-        // Tenta encontrar o componente da IA do inimigo.
+        // --- INÍCIO DA MUDANÇA ---
+
+        // 1. Tenta encontrar o componente do objeto interativo PRIMEIRO.
+        var objetoInterativo = other.GetComponent<ObjetoInterativo>();
+        if (objetoInterativo != null)
+        {
+            // Se encontrou, chama a função de dano do objeto.
+            objetoInterativo.ReceberDano(TipoDeAtaqueAceito.ApenasMelee);
+
+            // Adiciona à lista para não interagir de novo com o mesmo golpe.
+            targetsHit.Add(other);
+
+            // Retorna para não continuar e procurar por um inimigo no mesmo objeto.
+            return;
+        }
+
+        // --- FIM DA MUDANÇA ---
+
+        // 2. Se não era um objeto interativo, continua a lógica original para inimigos.
         var enemyAI = other.GetComponent<AIController_Basic>();
         if (enemyAI != null)
         {
             // Adiciona o alvo à lista para não atingi-lo novamente.
             targetsHit.Add(other);
 
-            // CÁLCULO DE DIREÇÃO ANTIGO REMOVIDO:
-            // Vector2 attackDirection = (other.transform.position - transform.position).normalized;
-
-            // Chama a função TakeDamage da IA, passando a direção PRÉ-CALCULADA.
+            // Chama a função TakeDamage da IA, passando a direção pré-calculada.
             enemyAI.TakeDamage(damage, precalculatedKnockbackDirection, knockbackPower);
         }
     }

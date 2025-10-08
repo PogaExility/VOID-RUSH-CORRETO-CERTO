@@ -41,42 +41,64 @@ public class Projectile : MonoBehaviour
         Destroy(gameObject, lifetime);
     }
 
+    // DENTRO DO SCRIPT: Projectile.cs
+
     void OnTriggerEnter2D(Collider2D other)
     {
+        // A checagem de colisão com o chão permanece a mesma, é a prioridade máxima.
         if (other.gameObject.layer == groundLayer)
         {
             Destroy(gameObject);
             return;
         }
 
-        if (other.TryGetComponent<AIController_Basic>(out var enemyAI))
+        // --- INÍCIO DA MUDANÇA ---
+
+        // Esta flag nos ajudará a saber se devemos aplicar a lógica de perfuração no final.
+        bool hitValidTarget = false;
+
+        // 1. Tenta encontrar o componente do objeto interativo.
+        var objetoInterativo = other.GetComponent<ObjetoInterativo>();
+        if (objetoInterativo != null)
+        {
+            // Se encontrou, chama a função de dano do objeto.
+            objetoInterativo.ReceberDano(TipoDeAtaqueAceito.ApenasRanged);
+            hitValidTarget = true;
+        }
+        // 2. Se não era um objeto interativo, continua a lógica para inimigos.
+        // Usamos 'else if' para garantir que não tentaremos atingir um inimigo se já atingimos um objeto.
+        else if (other.TryGetComponent<AIController_Basic>(out var enemyAI))
         {
             Vector2 attackDirection;
-
-            // Decide qual vetor de direção usar com base na instrução recebida.
             switch (knockbackDirection)
             {
                 case RangedKnockbackDirection.Frente:
                     attackDirection = rb.linearVelocity.normalized;
                     break;
-                // Futuramente, outros 'cases' podem ser adicionados aqui.
                 default:
                     attackDirection = rb.linearVelocity.normalized;
                     break;
             }
 
             enemyAI.TakeDamage(this.damage, attackDirection, this.knockbackPower);
+            hitValidTarget = true;
+        }
 
+        // 3. Se atingimos um alvo válido (inimigo OU objeto), aplicamos a lógica de perfuração.
+        if (hitValidTarget)
+        {
             if (pierceCount > 0)
             {
                 pierceCount--;
-                damage *= (1 - damageFalloff);
+                damage *= (1 - damageFalloff); // Reduz o dano para o próximo alvo.
             }
             else
             {
-                Destroy(gameObject);
+                Destroy(gameObject); // Destrói o projétil se não pode mais perfurar.
             }
         }
+
+        // --- FIM DA MUDANÇA ---
     }
 
 #if UNITY_EDITOR

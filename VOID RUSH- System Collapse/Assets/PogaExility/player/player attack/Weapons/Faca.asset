@@ -53,7 +53,7 @@ MonoBehaviour:
     playerAnimationClip: {fileID: 7400000, guid: 9c5cce670f717304e8a5c7bc54cdbd92, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 872cabe68352dcc4dbee48ff6544bed1, type: 3}
     damage: 10
-    knockbackPower: 20
+    knockbackPower: 5
     knockbackDirection: 0
     lungeDistance: 0
     lungeSpeed: 0
@@ -64,7 +64,7 @@ MonoBehaviour:
     playerAnimationClip: {fileID: 7400000, guid: 412c1ca60930e824d86bd7e05ff40327, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 0ad855eb5e4c7c3469a385d1550fe5fb, type: 3}
     damage: 12
-    knockbackPower: 30
+    knockbackPower: 7
     knockbackDirection: 0
     lungeDistance: 0
     lungeSpeed: 0
