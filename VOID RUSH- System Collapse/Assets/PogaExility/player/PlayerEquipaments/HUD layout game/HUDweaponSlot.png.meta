@@ -173,7 +173,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      HUDweaponSlot_0: 4385742813409658267
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
