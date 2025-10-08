@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Faca
   m_EditorClassIdentifier: 
   itemName: Faca
-  itemIcon: {fileID: 21300000, guid: c44229ff3bda8304aa6516d4fafe6fd9, type: 3}
+  itemIcon: {fileID: 21300000, guid: 5b91babf6318637418548745e34cf96f, type: 3}
   itemType: 2
   itemPrefab: {fileID: 6872308494124798136, guid: bd231f54711833a428ec02207b10904a, type: 3}
   worldPickupPrefab: {fileID: 6872308494124798136, guid: efe0781df1de134468e94ce0dc01e23d, type: 3}
@@ -53,7 +53,7 @@ MonoBehaviour:
     playerAnimationClip: {fileID: 7400000, guid: 9c5cce670f717304e8a5c7bc54cdbd92, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 872cabe68352dcc4dbee48ff6544bed1, type: 3}
     damage: 10
-    knockbackPower: 20
+    knockbackPower: 5
     knockbackDirection: 0
     lungeDistance: 0
     lungeSpeed: 0
@@ -64,7 +64,7 @@ MonoBehaviour:
     playerAnimationClip: {fileID: 7400000, guid: 412c1ca60930e824d86bd7e05ff40327, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 0ad855eb5e4c7c3469a385d1550fe5fb, type: 3}
     damage: 12
-    knockbackPower: 30
+    knockbackPower: 7
     knockbackDirection: 0
     lungeDistance: 0
     lungeSpeed: 0

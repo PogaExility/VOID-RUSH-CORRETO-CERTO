@@ -41,7 +41,6 @@ public class AIControllerVD : MonoBehaviour
         if (player != null) playerTransform = player.transform;
         else Debug.LogError("IA não encontrou o jogador! Verifique se o jogador tem a tag 'Player'.");
 
-        // Inscreve-se nos dois eventos do EnemyStatsVD
         enemyStats.OnEnemyDied += HandleDeath;
         enemyStats.OnDamageTaken += HandleDamageTaken;
 
@@ -50,7 +49,6 @@ public class AIControllerVD : MonoBehaviour
 
     void OnDestroy()
     {
-        // É crucial se desinscrever de todos os eventos
         enemyStats.OnEnemyDied -= HandleDeath;
         enemyStats.OnDamageTaken -= HandleDamageTaken;
     }
@@ -71,6 +69,10 @@ public class AIControllerVD : MonoBehaviour
     private void ChangeState(AIState newState)
     {
         if (currentState == newState) return;
+
+        // --- DEBUG ADICIONADO ---
+        Debug.Log(gameObject.name + " mudando de estado: " + currentState + " -> " + newState);
+
         currentState = newState;
     }
 
@@ -114,16 +116,13 @@ public class AIControllerVD : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         var enemyData = enemyStats.EnemyData;
 
-        // Se o jogador fugiu, volta a perseguir.
         if (Vector2.Distance(transform.position, playerTransform.position) > enemyData.meleeAttackRange)
         {
             ChangeState(AIState.Chasing);
             return;
         }
 
-        // Vira para o jogador antes de atacar.
         FacePlayer();
-
         if (Time.time >= lastMeleeAttackTime + enemyData.meleeAttackCooldown)
         {
             PerformMeleeAttack();
@@ -145,9 +144,7 @@ public class AIControllerVD : MonoBehaviour
             return;
         }
 
-        // Vira para o jogador antes de atirar.
         FacePlayer();
-
         if (Time.time >= lastRangedAttackTime + enemyData.rangedAttackCooldown)
         {
             PerformRangedAttack();
@@ -157,8 +154,26 @@ public class AIControllerVD : MonoBehaviour
 
     // --- FUNÇÕES DE ATAQUE ---
 
-    private void PerformMeleeAttack() { /* ...nenhuma mudança aqui... */ }
-    private void PerformRangedAttack() { /* ...nenhuma mudança aqui... */ }
+    private void PerformMeleeAttack()
+    {
+        var enemyData = enemyStats.EnemyData;
+        if (enemyData.meleeAttackPrefab == null || attackPoint == null) return;
+        GameObject attackGO = Instantiate(enemyData.meleeAttackPrefab, attackPoint.position, attackPoint.rotation);
+        if (attackGO.TryGetComponent<EnemyAttackPrefabVD>(out var attackScript))
+            attackScript.Initialize(enemyData.meleeAttackDamage, enemyData.meleeAttackKnockbackPower, 0, Vector2.zero);
+    }
+
+    private void PerformRangedAttack()
+    {
+        var enemyData = enemyStats.EnemyData;
+        if (enemyData.rangedAttackPrefab == null || attackPoint == null) return;
+        GameObject attackGO = Instantiate(enemyData.rangedAttackPrefab, attackPoint.position, attackPoint.rotation);
+        if (attackGO.TryGetComponent<EnemyAttackPrefabVD>(out var attackScript))
+        {
+            Vector2 direction = (playerTransform.position - attackPoint.position).normalized;
+            attackScript.Initialize(enemyData.rangedAttackDamage, enemyData.rangedAttackKnockbackPower, enemyData.projectileSpeed, direction);
+        }
+    }
 
     // --- FUNÇÕES DE DETECÇÃO E REAÇÃO ---
 
@@ -169,7 +184,6 @@ public class AIControllerVD : MonoBehaviour
     {
         if (playerTransform == null) return false;
 
-        // Lógica do cone de visão restaurada.
         float halfAngle = visionConeAngle / 2;
         float angleStep = visionConeAngle / (visionConeRayCount - 1);
 
@@ -180,7 +194,6 @@ public class AIControllerVD : MonoBehaviour
             RaycastHit2D hit = Physics2D.Raycast(visionOriginPoint.position, direction, visionRange, playerLayer | groundLayer);
             if (hit.collider != null && hit.collider.CompareTag("Player"))
             {
-                // Checagem extra: garante que não há uma parede entre o inimigo e o jogador.
                 RaycastHit2D wallCheck = Physics2D.Raycast(visionOriginPoint.position, direction, Vector2.Distance(transform.position, playerTransform.position), groundLayer);
                 if (wallCheck.collider == null)
                 {
@@ -195,6 +208,7 @@ public class AIControllerVD : MonoBehaviour
 
     private void FacePlayer()
     {
+        if (playerTransform == null) return; // Checagem de segurança
         if (playerTransform.position.x > transform.position.x && facingDirection == -1) Flip();
         else if (playerTransform.position.x < transform.position.x && facingDirection == 1) Flip();
     }
@@ -213,25 +227,70 @@ public class AIControllerVD : MonoBehaviour
 
     private void HandleDamageTaken(Vector2 attackDirection)
     {
-        // Se o ataque veio da direita (x > 0) e eu estou virado para a esquerda (facingDirection == -1), vira.
-        if (attackDirection.x > 0 && facingDirection == -1)
-        {
-            Flip();
-        }
-        // Se o ataque veio da esquerda (x < 0) e eu estou virado para a direita (facingDirection == 1), vira.
-        else if (attackDirection.x < 0 && facingDirection == 1)
-        {
-            Flip();
-        }
+        if (attackDirection.x > 0 && facingDirection == -1) Flip();
+        else if (attackDirection.x < 0 && facingDirection == 1) Flip();
 
-        // Entra em modo de perseguição para retaliar imediatamente.
-        if (currentState == AIState.Patrolling)
-        {
-            ChangeState(AIState.Chasing);
-        }
+        if (currentState == AIState.Patrolling) ChangeState(AIState.Chasing);
     }
 
 #if UNITY_EDITOR
-    private void OnDrawGizmosSelected() { /* ...nenhuma mudança aqui... */ }
+    private void OnDrawGizmosSelected()
+    {
+        // --- FUNÇÃO DE GIZMOS REESCRITA E MAIS SEGURA ---
+        if (enemyStats == null) enemyStats = GetComponent<EnemyStatsVD>();
+        bool hasData = enemyStats != null && enemyStats.EnemyData != null;
+
+        Vector3 forward = transform.right * facingDirection;
+
+        // Gizmos de Detecção de Ambiente
+        Gizmos.color = Color.blue;
+        if (wallCheckPoint != null) Gizmos.DrawRay(wallCheckPoint.position, forward * environmentCheckDistance);
+        if (ledgeCheckPoint != null) Gizmos.DrawRay(ledgeCheckPoint.position, Vector2.down * environmentCheckDistance);
+
+        // Gizmos de Visão (Raios Amarelos)
+        if (visionOriginPoint != null)
+        {
+            Gizmos.color = Color.yellow;
+            if (visionConeRayCount > 1)
+            {
+                float halfAngle = visionConeAngle / 2;
+                float angleStep = visionConeAngle / (visionConeRayCount - 1);
+                for (int i = 0; i < visionConeRayCount; i++)
+                {
+                    float angle = -halfAngle + (angleStep * i);
+                    Vector2 direction = Quaternion.Euler(0, 0, angle) * forward;
+                    Gizmos.DrawRay(visionOriginPoint.position, direction * visionRange);
+                }
+            }
+            else
+            {
+                Gizmos.DrawRay(visionOriginPoint.position, forward * visionRange);
+            }
+        }
+
+        // Gizmos de Alcance
+        if (hasData)
+        {
+            var enemyData = enemyStats.EnemyData;
+
+            // Gizmo do Chase Range (Círculo Verde)
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(transform.position, enemyData.chaseRange);
+
+            // Gizmos de Ataque (Raios Direcionais)
+            Vector3 attackOrigin = attackPoint != null ? attackPoint.position : transform.position;
+
+            if (enemyData.meleeAttackPrefab != null)
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawRay(attackOrigin, forward * enemyData.meleeAttackRange);
+            }
+            if (enemyData.rangedAttackPrefab != null)
+            {
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawRay(attackOrigin, forward * enemyData.rangedAttackRange);
+            }
+        }
+    }
 #endif
 }

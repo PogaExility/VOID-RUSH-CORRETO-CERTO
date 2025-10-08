@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81410a9fd6b183e4aa486cf1e269603b, type: 3}
+  m_Name: Arabe
+  m_EditorClassIdentifier: 
+  patrolSpeed: 1.5
+  alertRadius: 5
+  explosionRadius: 3
+  fuseTime: 1.5
+  explosionDamage: 50
+  explosionKnockback: 15
+  explosionPrefab: {fileID: 4208246580208665913, guid: a858d7c42a33d7a46a2b0eb6abdeedf9, type: 3}
