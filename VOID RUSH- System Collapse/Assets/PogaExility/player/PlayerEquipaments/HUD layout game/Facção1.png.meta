@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: abcd9750c61e02b4a92a6b2ae207b641
+guid: 7e95e569049e72344b08f1a124c4fe07
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 4719582235430759037
-    second: fill_0
+      213: 4121498144835651251
+    second: "Fac\xE7\xE3o1_0"
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,12 +46,12 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
+  spritePixelsToUnits: 16
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: fill_0
+      name: "Fac\xE7\xE3o1_0"
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 32
-        height: 32
+        width: 118
+        height: 131
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d7a2817a9035f7140800000000000000
-      internalID: 4719582235430759037
+      spriteID: 3b64c51e9b0823930800000000000000
+      internalID: 4121498144835651251
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      fill_0: 4719582235430759037
+      "Fac\xE7\xE3o1_0": 4121498144835651251
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

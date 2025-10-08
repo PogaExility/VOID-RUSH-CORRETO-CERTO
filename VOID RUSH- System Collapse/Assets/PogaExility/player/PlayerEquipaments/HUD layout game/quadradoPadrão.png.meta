@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: c44229ff3bda8304aa6516d4fafe6fd9
+guid: 3de065353c1629d4e8603c4c371f1fe9
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -2796637303117201333
-    second: Faca_0
+      213: -6499946686035142905
+    second: "quadradoPadr\xE3o_0"
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +51,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 1000
+  spritePixelsToUnits: 16
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Faca_0
+      name: "quadradoPadr\xE3o_0"
       rect:
         serializedVersion: 2
-        x: 30
-        y: 17
-        width: 423
-        height: 1263
+        x: 0
+        y: 0
+        width: 64
+        height: 64
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b40c716a0395039d0800000000000000
-      internalID: -2796637303117201333
+      spriteID: 707d5ef5dec8bc5a0800000000000000
+      internalID: -6499946686035142905
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Faca_0: -2796637303117201333
+      "quadradoPadr\xE3o_0": -6499946686035142905
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
