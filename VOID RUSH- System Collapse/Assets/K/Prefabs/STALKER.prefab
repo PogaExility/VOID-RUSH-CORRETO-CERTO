@@ -31,6 +31,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7156236136696630371}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &209981840654103907
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5736354394595566627}
+  m_Layer: 0
+  m_Name: ProbeCrouchSafetyBack
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5736354394595566627
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 209981840654103907}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.5, y: 0.155, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7156236136696630371}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &535584202204488437
 GameObject:
   m_ObjectHideFlags: 0
@@ -165,7 +196,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7981987888853148419}
   m_Layer: 0
-  m_Name: ProbeCrouchSafety
+  m_Name: ProbeCrouchSafetyFront
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -180,7 +211,7 @@ Transform:
   m_GameObject: {fileID: 3531739786457896639}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.6, y: 0.155, z: 0}
+  m_LocalPosition: {x: 0.5, y: 0.155, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -419,7 +450,9 @@ MonoBehaviour:
   Probe_Height_3_Top: {fileID: 1721302582425673791}
   Probe_Ledge_Check: {fileID: 5511967849121691990}
   Probe_Ceiling_Check: {fileID: 7151929598489357073}
-  Probe_Crouch_Safety: {fileID: 7981987888853148419}
+  Probe_Crouch_Safety_Front: {fileID: 7981987888853148419}
+  Probe_Crouch_Safety_Mid: {fileID: 5626941571963428760}
+  Probe_Crouch_Safety_Back: {fileID: 5736354394595566627}
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -493,6 +526,8 @@ Transform:
   - {fileID: 5511967849121691990}
   - {fileID: 7151929598489357073}
   - {fileID: 7981987888853148419}
+  - {fileID: 5626941571963428760}
+  - {fileID: 5736354394595566627}
   - {fileID: 580457152994844138}
   m_Father: {fileID: 3675850213332784283}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -585,6 +620,37 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.6, y: -0.49999997, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7156236136696630371}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &8869765995712569851
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5626941571963428760}
+  m_Layer: 0
+  m_Name: ProbeCrouchSafetyMid
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5626941571963428760
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8869765995712569851}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.155, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

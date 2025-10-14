@@ -9,13 +9,17 @@ public class AINavigationSystem : MonoBehaviour
     #endregion
 
     #region CONFIGURAÇÃO DAS SONDAS
-    [Header("▶ HIERARQUIA DE SONDAS (6 SONDAS)")]
+    [Header("▶ Grid de Detecção Frontal")]
     public Transform Probe_Height_1_Base;
     public Transform Probe_Height_2_Mid;
     public Transform Probe_Height_3_Top;
+    [Header("▶ Sondas Especialistas")]
     public Transform Probe_Ledge_Check;
     public Transform Probe_Ceiling_Check;
-    public Transform Probe_Crouch_Safety;
+    [Header("▶ Cortina de Segurança (3 Sondas)")]
+    public Transform Probe_Crouch_Safety_Front;
+    public Transform Probe_Crouch_Safety_Mid;
+    public Transform Probe_Crouch_Safety_Back;
 
     [Header("▶ Configuração das Sondas")]
     public LayerMask groundLayer;
@@ -29,16 +33,10 @@ public class AINavigationSystem : MonoBehaviour
 
     void Awake()
     {
-        // Usa GetComponentInParent porque o motor está no objeto raiz, um nível acima.
         _motor = GetComponentInParent<AIPlatformerMotor>();
-        if (_motor == null) { Debug.LogError("AINavigationSystem: AIPlatformerMotor não foi encontrado no objeto pai!", this); }
     }
 
-    public struct NavQueryResult
-    {
-        public ObstacleType detectedObstacle;
-        public bool isGrounded;
-    }
+    public struct NavQueryResult { public ObstacleType detectedObstacle; public bool isGrounded; }
 
     public NavQueryResult QueryEnvironment()
     {
@@ -48,25 +46,33 @@ public class AINavigationSystem : MonoBehaviour
             detectedObstacle = ObstacleType.None
         };
 
-        // =====================================================================================
-        // LÓGICA DE PERCEPÇÃO BASEADA EM ESTADO
-        // =====================================================================================
         if (_motor.IsCrouching)
         {
-            // --- LÓGICA QUANDO ESTÁ AGACHADO ---
-            // A IA só se preocupa com paredes baixas e bordas dentro do túnel.
-            if (ProbeForWall(Probe_Height_1_Base))
+            // =====================================================================================
+            // SUA LÓGICA "FODA-SE" IMPLEMENTADA AQUI
+            // =====================================================================================
+            // Quando agachada, a IA só se importa com paredes que bloqueiam seu torso ou com quedas.
+
+            bool seesMidWall = ProbeForWall(Probe_Height_2_Mid);
+
+            if (seesMidWall)
             {
+                // Se a sonda do meio está bloqueada, É uma parede de verdade. Pare.
                 result.detectedObstacle = ObstacleType.FullWall;
             }
             else if (ProbeForLedge(Probe_Ledge_Check))
             {
+                // Se não há uma parede, verifique se há uma queda.
                 result.detectedObstacle = ObstacleType.Ledge;
             }
+
+            // Se NENHUMA das condições acima for atendida (ou seja, se APENAS a sonda
+            // da base estiver ativa), o veredito permanecerá 'None'. A IA irá ignorar
+            // a rampa e continuar andando, deixando a física fazer o trabalho de subir.
         }
         else
         {
-            // --- LÓGICA QUANDO ESTÁ EM PÉ (SUA ARQUITETURA COMPLETA) ---
+            // --- LÓGICA QUANDO ESTÁ EM PÉ (Inalterada e Correta) ---
             bool seesBaseWall = ProbeForWall(Probe_Height_1_Base);
             bool seesMidWall = ProbeForWall(Probe_Height_2_Mid);
             bool seesTopWall = ProbeForWall(Probe_Height_3_Top);
@@ -81,10 +87,13 @@ public class AINavigationSystem : MonoBehaviour
         return result;
     }
 
-    // O "Switch" de Segurança
     public bool CanStandUp()
     {
-        return !ProbeForCeiling(Probe_Crouch_Safety);
+        bool frontIsClear = !ProbeForCeiling(Probe_Crouch_Safety_Front);
+        bool midIsClear = !ProbeForCeiling(Probe_Crouch_Safety_Mid);
+        bool backIsClear = !ProbeForCeiling(Probe_Crouch_Safety_Back);
+
+        return frontIsClear && midIsClear && backIsClear;
     }
 
     #region Sondas e Gizmos
@@ -100,7 +109,9 @@ public class AINavigationSystem : MonoBehaviour
         DrawProbeGizmo(Probe_Height_3_Top, ProbeForWall(Probe_Height_3_Top), Color.red, transform.right, wallProbeDistance);
         DrawProbeGizmo(Probe_Ledge_Check, ProbeForLedge(Probe_Ledge_Check), Color.magenta, Vector2.down, ledgeProbeDistance);
         DrawProbeGizmo(Probe_Ceiling_Check, ProbeForCeiling(Probe_Ceiling_Check), Color.yellow, Vector2.up, ceilingProbeHeight);
-        DrawProbeGizmo(Probe_Crouch_Safety, !CanStandUp(), Color.cyan, Vector2.up, ceilingProbeHeight);
+        DrawProbeGizmo(Probe_Crouch_Safety_Front, !ProbeForCeiling(Probe_Crouch_Safety_Front), Color.cyan, Vector2.up, ceilingProbeHeight);
+        DrawProbeGizmo(Probe_Crouch_Safety_Mid, !ProbeForCeiling(Probe_Crouch_Safety_Mid), Color.cyan, Vector2.up, ceilingProbeHeight);
+        DrawProbeGizmo(Probe_Crouch_Safety_Back, !ProbeForCeiling(Probe_Crouch_Safety_Back), Color.cyan, Vector2.up, ceilingProbeHeight);
     }
 
     private void DrawProbeGizmo(Transform origin, bool isActive, Color activeColor, Vector3 direction, float distance)
