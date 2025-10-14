@@ -51,7 +51,9 @@ public class PlayerController : MonoBehaviour
     private PlayerAnimState previousBodyState;
     private bool isActionInterruptingAim = false;
     private bool _isAttacking;
+    private Interagivel interagivelProximo;
     public bool IsAttacking
+
     {
         get { return _isAttacking; }
         set
@@ -106,16 +108,46 @@ public class PlayerController : MonoBehaviour
         movementScript.allowMovementFlip = !isNowAiming;
         animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
     }
+    public void RegistrarInteragivel(Interagivel interagivel)
+    {
+        interagivelProximo = interagivel;
+    }
+
+    /// <summary>
+    /// Remove a referência a um objeto interagível que não está mais ao alcance.
+    /// Esta função deve ser chamada pelo OnTriggerExit2D do próprio objeto Interagivel.
+    /// </summary>
+    public void RemoverInteragivel(Interagivel interagivel)
+    {
+        // Apenas remove se for o mesmo interagível que está registrado (evita bugs).
+        if (interagivelProximo == interagivel)
+        {
+            interagivelProximo = null;
+        }
+    }
+
+    /// <summary>
+    /// Verifica o input para interação e aciona o objeto interagível próximo.
+    /// </summary>
+    private void HandleInteractionInput()
+    {
+        // Se a tecla E for pressionada E existe um interagível próximo...
+        if (Input.GetKeyDown(KeyCode.E) && interagivelProximo != null)
+        {
+            // ...chama a função de interação do objeto.
+            interagivelProximo.Interagir();
+        }
+    }
+
+    // DENTRO DE PlayerController.cs
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
         if (isInventoryOpen) { movementScript.SetMoveInput(0); return; }
 
-        // --- TRAVA DE INPUT CORRIGIDA ---
         if (IsAttacking)
         {
-            // Zera o input para parar o deslize e ignora o resto dos inputs de movimento/skills.
             movementScript.SetMoveInput(0);
             return;
         }
@@ -128,6 +160,11 @@ public class PlayerController : MonoBehaviour
         {
             isLanding = true;
         }
+
+        // --- INÍCIO DA MUDANÇA ---
+        // Adicionamos a chamada para o nosso novo handler de input.
+        HandleInteractionInput();
+        // --- FIM DA MUDANÇA ---
 
         HandlePowerModeToggle();
         HandleSkillInput();
