@@ -1,32 +1,15 @@
-// NOME DO ARQUIVO: ObjetoInterativo.cs (VERSÃO UNIFICADA)
+// NOME DO ARQUIVO: ObjetoInterativo.cs (VERSÃO FINAL COM ANIMATOR)
 
 using UnityEngine;
 using UnityEngine.Events;
 using System.Collections;
+using System.Collections.Generic; // Necessário para a lista no Override Controller
 
 #region ENUMS DE CONFIGURAÇÃO
-// Define COMO o objeto é ativado.
-public enum ModoDeAtivacao
-{
-    PorDano,        // Tem vida e quebra com ataques (ex: parede falsa)
-    PorHit,         // Não tem vida, apenas reage a um hit (ex: alavanca)
-    PorBotao        // Não reage a hits, apenas ao botão 'E' (ex: painel)
-}
-
-// Define SE o objeto pode ser usado mais de uma vez.
-public enum ModoDeUso
-{
-    Unico,          // Só pode ser ativado uma vez.
-    Reativavel      // Pode ser ativado e desativado múltiplas vezes.
-}
-
-// Define o TIPO de feedback visual para ativação/desativação.
-public enum ModoFeedbackVisual
-{
-    Nenhum,
-    TrocarSprite,
-    TocarAnimacao
-}
+public enum TipoDeAtaqueAceito { ApenasMelee, ApenasRanged, Ambos }
+public enum ModoDeAtivacao { PorDano, PorHit, PorBotao }
+public enum ModoDeUso { Unico, Reativavel }
+public enum ModoFeedbackVisual { Nenhum, TrocarSprite, TocarAnimacao }
 #endregion
 
 [RequireComponent(typeof(Collider2D))]
@@ -34,93 +17,91 @@ public class ObjetoInterativo : MonoBehaviour
 {
     #region CAMPOS DO INSPECTOR
     [Header("1. MODO DE ATIVAÇÃO PRINCIPAL")]
-    [Tooltip("Como este objeto é ativado? Isso mudará as opções abaixo.")]
     [SerializeField] private ModoDeAtivacao modoDeAtivacao = ModoDeAtivacao.PorDano;
 
     [Header("2. COMPORTAMENTO GERAL")]
-    [Tooltip("Pode ser usado uma vez ou pode ser ligado/desligado?")]
     [SerializeField] private ModoDeUso modoDeUso = ModoDeUso.Unico;
 
     // --- Opções para 'Por Dano' ---
     [Header("3. OPÇÕES PARA 'POR DANO'")]
-    [Tooltip("Quantos ataques o objeto aguenta antes de ativar.")]
     [SerializeField] private int vidaMaxima = 3;
-    [Tooltip("Qual tipo de ataque pode danificar este objeto.")]
     [SerializeField] private TipoDeAtaqueAceito tipoDeAtaqueAceito_Dano = TipoDeAtaqueAceito.Ambos;
-    [Tooltip("A cor que o objeto irá piscar ao receber dano.")]
     [SerializeField] private Color corDeDano = Color.red;
-    [Tooltip("A intensidade do efeito de tremor ao levar dano.")]
     [SerializeField] private float intensidadeTremor = 0.1f;
-    [Tooltip("A duração do efeito de flash/tremor de dano.")]
     [SerializeField] private float duracaoFeedbackDano = 0.15f;
     [SerializeField] private GameObject efeitoDeQuebraPrefab;
 
     // --- Opções para 'Por Hit' ---
     [Header("4. OPÇÕES PARA 'POR HIT'")]
-    [Tooltip("Qual tipo de ataque pode ativar este objeto.")]
     [SerializeField] private TipoDeAtaqueAceito tipoDeAtaqueAceito_Hit = TipoDeAtaqueAceito.Ambos;
 
     // --- Opções para 'Por Botão' ---
     [Header("5. OPÇÕES PARA 'POR BOTÃO'")]
-    [Tooltip("O objeto (ex: um sprite com a tecla 'E') que aparece para mostrar que é possível interagir.")]
     [SerializeField] private GameObject promptVisual;
 
-    // --- Opções de Feedback de Ativação (para Hit e Botão) ---
-    [Header("6. FEEDBACK DE ATIVAÇÃO (PARA HIT E BOTÃO)")]
+    // --- Opções de Feedback de Ativação ---
+    [Header("6. FEEDBACK DE ATIVAÇÃO")]
     [SerializeField] private ModoFeedbackVisual modoVisual = ModoFeedbackVisual.TrocarSprite;
-    [Tooltip("Sprite para o estado ATIVADO.")]
+    // Campo para o Animator Controller Base
+    [Tooltip("Arraste aqui o Animator Controller base, como o 'AC_InteragivelBase'.")]
+    [SerializeField] private RuntimeAnimatorController controllerBase;
     [SerializeField] private Sprite spriteAtivo;
-    [Tooltip("Sprite para o estado INATIVO.")]
     [SerializeField] private Sprite spriteInativo;
-    [Tooltip("Animação ao ATIVAR.")]
     [SerializeField] private AnimationClip clipeAtivando;
-    [Tooltip("Animação ao DESATIVAR.")]
     [SerializeField] private AnimationClip clipeDesativando;
     [SerializeField] private AudioClip somAtivar;
     [SerializeField] private AudioClip somDesativar;
 
     [Header("7. AÇÕES (EVENTOS)")]
-    [Tooltip("Ação executada quando o objeto é ativado (vida chega a zero, é atingido ou botão 'E' é pressionado).")]
     public UnityEvent aoAtivar;
-    [Tooltip("Ação executada quando o objeto é desativado (no modo Reativável).")]
     public UnityEvent aoDesativar;
     #endregion
 
     #region VARIÁVEIS INTERNAS
     private int vidaAtual;
     private bool estaAtivo = false;
-    private bool bloqueado = false; // Bloqueia após uso único
+    private bool bloqueado = false;
     private bool jogadorNaArea = false;
-
-    // Componentes
+    // Componentes ATUALIZADOS
     private SpriteRenderer spriteRenderer;
-    private Animation animationComponent;
+    private Animator animator; // Agora usamos Animator
     private AudioSource audioSource;
     private Vector3 posicaoInicial;
     private Coroutine feedbackDanoCoroutine;
+    private AnimatorOverrideController overrideController; // Nosso controller customizado
     #endregion
 
-    #region MÉTODOS UNITY (AWAKE, START, TRIGGERS)
+    #region MÉTODOS UNITY
     private void Awake()
     {
-        // Pega componentes essenciais
         audioSource = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
         spriteRenderer = GetComponent<SpriteRenderer>();
-        animationComponent = GetComponent<Animation>();
+        animator = GetComponent<Animator>(); // Pega o Animator, não adiciona um se não houver
 
-        // Configura o colisor
         GetComponent<Collider2D>().isTrigger = (modoDeAtivacao == ModoDeAtivacao.PorBotao);
 
-        // Prepara o componente de Animação se necessário
-        if (modoVisual == ModoFeedbackVisual.TocarAnimacao && animationComponent == null)
+        // LÓGICA DE ANIMAÇÃO COM ANIMATOR
+        if (modoVisual == ModoFeedbackVisual.TocarAnimacao)
         {
-            animationComponent = gameObject.AddComponent<Animation>();
+            if (animator == null)
+            {
+                Debug.LogError($"Objeto '{gameObject.name}' está em modo TocarAnimacao mas não tem um componente 'Animator'!", this);
+                return;
+            }
+            if (controllerBase == null)
+            {
+                Debug.LogError($"Objeto '{gameObject.name}' está em modo TocarAnimacao mas não tem um Controller Base configurado!", this);
+                return;
+            }
+
+            // Cria um Animator Override Controller em tempo de execução
+            overrideController = new AnimatorOverrideController(controllerBase);
+            animator.runtimeAnimatorController = overrideController;
         }
-        if (animationComponent != null)
+        else if (animator != null)
         {
-            animationComponent.playAutomatically = false;
-            if (clipeAtivando != null) animationComponent.AddClip(clipeAtivando, clipeAtivando.name);
-            if (clipeDesativando != null) animationComponent.AddClip(clipeDesativando, clipeDesativando.name);
+            // Se não usamos animação, desativa o Animator para não interferir
+            animator.enabled = false;
         }
 
         if (promptVisual != null) promptVisual.SetActive(false);
@@ -130,6 +111,19 @@ public class ObjetoInterativo : MonoBehaviour
     {
         posicaoInicial = transform.position;
         vidaAtual = vidaMaxima;
+
+        // Aplica os clipes de animação (override) no Start, após o Animator ser inicializado
+        if (modoVisual == ModoFeedbackVisual.TocarAnimacao && overrideController != null)
+        {
+            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+            // Assume que o controller base tem clipes chamados "placeholder_ativando" e "placeholder_desativando"
+            if (clipeAtivando != null)
+                overrides.Add(new KeyValuePair<AnimationClip, AnimationClip>(overrideController.animationClips[0], clipeAtivando));
+            if (clipeDesativando != null && overrideController.animationClips.Length > 1)
+                overrides.Add(new KeyValuePair<AnimationClip, AnimationClip>(overrideController.animationClips[1], clipeDesativando));
+
+            overrideController.ApplyOverrides(overrides);
+        }
 
         // Garante estado visual inicial correto
         if (estaAtivo) TocarFeedbackDeAtivacao(true, true);
@@ -143,11 +137,7 @@ public class ObjetoInterativo : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             var player = other.GetComponent<PlayerController>();
-            if (player != null)
-            {
-                // ATENÇÃO: PlayerController precisará ser modificado para aceitar ObjetoInterativo
-                // player.RegistrarInteragivel(this); 
-            }
+            if (player != null) player.RegistrarInteragivel(this);
             jogadorNaArea = true;
             if (promptVisual != null) promptVisual.SetActive(true);
         }
@@ -160,21 +150,14 @@ public class ObjetoInterativo : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             var player = other.GetComponent<PlayerController>();
-            if (player != null)
-            {
-                // ATENÇÃO: PlayerController precisará ser modificado
-                // player.RemoverInteragivel(this);
-            }
+            if (player != null) player.RemoverInteragivel(this);
             jogadorNaArea = false;
             if (promptVisual != null) promptVisual.SetActive(false);
         }
     }
     #endregion
 
-    #region MÉTODOS DE ATIVAÇÃO (PÚBLICOS)
-    /// <summary>
-    /// Ponto de entrada para ataques de armas (chamado pelo SlashEffect e Projectile).
-    /// </summary>
+    #region MÉTODOS DE ATIVAÇÃO PÚBLICOS
     public void ReceberHit(TipoDeAtaqueAceito tipoDoAtaque)
     {
         if (bloqueado) return;
@@ -182,23 +165,14 @@ public class ObjetoInterativo : MonoBehaviour
         switch (modoDeAtivacao)
         {
             case ModoDeAtivacao.PorDano:
-                if (tipoDeAtaqueAceito_Dano == TipoDeAtaqueAceito.Ambos || tipoDoAtaque == tipoDeAtaqueAceito_Dano)
-                {
-                    ProcessarDano();
-                }
+                if (tipoDeAtaqueAceito_Dano == TipoDeAtaqueAceito.Ambos || tipoDoAtaque == tipoDeAtaqueAceito_Dano) ProcessarDano();
                 break;
             case ModoDeAtivacao.PorHit:
-                if (tipoDeAtaqueAceito_Hit == TipoDeAtaqueAceito.Ambos || tipoDoAtaque == tipoDeAtaqueAceito_Hit)
-                {
-                    AlternarEstado();
-                }
+                if (tipoDeAtaqueAceito_Hit == TipoDeAtaqueAceito.Ambos || tipoDoAtaque == tipoDeAtaqueAceito_Hit) AlternarEstado();
                 break;
         }
     }
 
-    /// <summary>
-    /// Ponto de entrada para interação com o botão 'E' (chamado pelo PlayerController).
-    /// </summary>
     public void Interagir()
     {
         if (modoDeAtivacao != ModoDeAtivacao.PorBotao || bloqueado || !jogadorNaArea) return;
@@ -210,38 +184,24 @@ public class ObjetoInterativo : MonoBehaviour
     private void ProcessarDano()
     {
         if (vidaAtual <= 0) return;
-
         vidaAtual--;
         TocarFeedbackDeDano();
-
-        if (vidaAtual <= 0)
-        {
-            Ativar();
-        }
+        if (vidaAtual <= 0) Ativar();
     }
 
     private void AlternarEstado()
     {
-        if (estaAtivo)
-        {
-            Desativar();
-        }
-        else
-        {
-            Ativar();
-        }
+        if (estaAtivo) Desativar();
+        else Ativar();
     }
 
     private void Ativar()
     {
         if (estaAtivo && modoDeUso == ModoDeUso.Reativavel) return;
-
         estaAtivo = true;
 
-        if (modoDeAtivacao != ModoDeAtivacao.PorDano)
-            TocarFeedbackDeAtivacao(true);
-        else if (efeitoDeQuebraPrefab != null)
-            Instantiate(efeitoDeQuebraPrefab, transform.position, Quaternion.identity);
+        if (modoDeAtivacao != ModoDeAtivacao.PorDano) TocarFeedbackDeAtivacao(true);
+        else if (efeitoDeQuebraPrefab != null) Instantiate(efeitoDeQuebraPrefab, transform.position, Quaternion.identity);
 
         aoAtivar.Invoke();
 
@@ -249,23 +209,15 @@ public class ObjetoInterativo : MonoBehaviour
         {
             bloqueado = true;
             if (promptVisual != null) promptVisual.SetActive(false);
-            if (modoDeAtivacao == ModoDeAtivacao.PorDano)
-            {
-                // Objeto se destrói
-                Destroy(gameObject, 0.1f);
-            }
+            if (modoDeAtivacao == ModoDeAtivacao.PorDano) Destroy(gameObject, 0.1f);
         }
     }
 
     private void Desativar()
     {
         if (!estaAtivo || modoDeUso != ModoDeUso.Reativavel) return;
-
         estaAtivo = false;
-
-        if (modoDeAtivacao != ModoDeAtivacao.PorDano)
-            TocarFeedbackDeAtivacao(false);
-
+        if (modoDeAtivacao != ModoDeAtivacao.PorDano) TocarFeedbackDeAtivacao(false);
         aoDesativar.Invoke();
     }
     #endregion
@@ -280,7 +232,6 @@ public class ObjetoInterativo : MonoBehaviour
     private IEnumerator FeedbackDanoCoroutine()
     {
         if (spriteRenderer != null) spriteRenderer.color = corDeDano;
-
         float tempoDecorrido = 0f;
         while (tempoDecorrido < duracaoFeedbackDano)
         {
@@ -290,9 +241,8 @@ public class ObjetoInterativo : MonoBehaviour
             tempoDecorrido += Time.deltaTime;
             yield return null;
         }
-
         transform.position = posicaoInicial;
-        if (spriteRenderer != null) spriteRenderer.color = Color.white; // Assumindo cor original branca
+        if (spriteRenderer != null) spriteRenderer.color = Color.white;
         feedbackDanoCoroutine = null;
     }
 
@@ -305,10 +255,10 @@ public class ObjetoInterativo : MonoBehaviour
                 if (spriteRenderer != null) spriteRenderer.sprite = ativar ? spriteAtivo : spriteInativo;
                 break;
             case ModoFeedbackVisual.TocarAnimacao:
-                if (animationComponent != null)
+                if (animator != null && animator.enabled)
                 {
-                    AnimationClip clipe = ativar ? clipeAtivando : clipeDesativando;
-                    if (clipe != null) animationComponent.Play(clipe.name);
+                    string trigger = ativar ? "Ativar" : "Desativar";
+                    animator.SetTrigger(trigger);
                 }
                 break;
         }
@@ -316,7 +266,7 @@ public class ObjetoInterativo : MonoBehaviour
         if (!silencioso)
         {
             AudioClip som = ativar ? somAtivar : somDesativar;
-            if (som != null) audioSource.PlayOneShot(som);
+            if (som != null && audioSource != null) audioSource.PlayOneShot(som);
         }
     }
     #endregion

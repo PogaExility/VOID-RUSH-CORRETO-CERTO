@@ -17930,65 +17930,16 @@ GameObject:
   - component: {fileID: 559536143}
   - component: {fileID: 559536142}
   - component: {fileID: 559536141}
-  - component: {fileID: 559536140}
-  m_Layer: 0
+  - component: {fileID: 559536144}
+  - component: {fileID: 559536145}
+  - component: {fileID: 559536146}
+  m_Layer: 6
   m_Name: Alavanca
-  m_TagString: Untagged
+  m_TagString: Chao
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &559536140
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 559536138}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5c38dd5936d90047839936c75a3c4c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  modo: 1
-  promptVisual: {fileID: 0}
-  modoVisual: 1
-  spriteAtivo: {fileID: 21300000, guid: b2dc416b596137944b945a5b6d7e2303, type: 3}
-  spriteInativo: {fileID: 21300000, guid: f5f7e09e35c21b44383faeab675b9995, type: 3}
-  clipeAtivando: {fileID: 7400000, guid: 0b64fbbc902b459429b60e732ad98dfd, type: 2}
-  clipeDesativando: {fileID: 7400000, guid: b540ecb6b21813f4ca07a3d7c2f5c6b6, type: 2}
-  somAtivar: {fileID: 8300000, guid: e6dbffdce9b6bfc4ebadaaf1bacaba13, type: 3}
-  somDesativar: {fileID: 8300000, guid: e6dbffdce9b6bfc4ebadaaf1bacaba13, type: 3}
-  aoAtivar:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1296858797}
-        m_TargetAssemblyTypeName: PortaController, Assembly-CSharp
-        m_MethodName: AbrirPorta
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  aoDesativar:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1296858797}
-        m_TargetAssemblyTypeName: PortaController, Assembly-CSharp
-        m_MethodName: FecharPorta
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
 --- !u!61 &559536141
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -18019,11 +17970,11 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.017973423, y: -0.08523989}
+  m_Offset: {x: 0.025641441, y: -0.5185251}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -18033,7 +17984,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1.9706049, y: 1.5931463}
+  m_Size: {x: 1.1653862, y: 0.72657585}
   m_EdgeRadius: 0
 --- !u!212 &559536142
 SpriteRenderer:
@@ -18105,6 +18056,185 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &559536144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 559536138}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8a02ff57cc291c4686d6ae26009ac4f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  modoDeAtivacao: 1
+  modoDeUso: 1
+  vidaMaxima: 1
+  tipoDeAtaqueAceito_Dano: 2
+  corDeDano: {r: 1, g: 0, b: 0, a: 1}
+  intensidadeTremor: 0.1
+  duracaoFeedbackDano: 0.15
+  efeitoDeQuebraPrefab: {fileID: 0}
+  tipoDeAtaqueAceito_Hit: 2
+  promptVisual: {fileID: 0}
+  modoVisual: 1
+  controllerBase: {fileID: 0}
+  spriteAtivo: {fileID: 21300000, guid: b2dc416b596137944b945a5b6d7e2303, type: 3}
+  spriteInativo: {fileID: 21300000, guid: f5f7e09e35c21b44383faeab675b9995, type: 3}
+  clipeAtivando: {fileID: 7400000, guid: d986b334f5dc1bd428b582ed9d0f4b59, type: 2}
+  clipeDesativando: {fileID: 7400000, guid: 398890513c1bf8244a8bfd98d40789f0, type: 2}
+  somAtivar: {fileID: 8300000, guid: e6dbffdce9b6bfc4ebadaaf1bacaba13, type: 3}
+  somDesativar: {fileID: 8300000, guid: e6dbffdce9b6bfc4ebadaaf1bacaba13, type: 3}
+  aoAtivar:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1296858797}
+        m_TargetAssemblyTypeName: PortaController, Assembly-CSharp
+        m_MethodName: AbrirPorta
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  aoDesativar:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1296858797}
+        m_TargetAssemblyTypeName: PortaController, Assembly-CSharp
+        m_MethodName: FecharPorta
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+--- !u!82 &559536145
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 559536138}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!95 &559536146
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 559536138}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: f31624a5a9cf6ff499dedb8fdd83f72a, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &592359591
 GameObject:
   m_ObjectHideFlags: 0
@@ -18173,7 +18303,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -17.228798, y: 0.69048977}
+  m_Offset: {x: -17.144543, y: 0.69048977}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -18183,7 +18313,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 12.787704, y: 7.2424107}
+  m_Size: {x: 10.27017, y: 7.2424107}
   m_EdgeRadius: 0
 --- !u!4 &592359594
 Transform:
@@ -18255,6 +18385,10 @@ PrefabInstance:
     - target: {fileID: 912617670442170904, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1056504015796229457, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -2.000122
       objectReference: {fileID: 0}
     - target: {fileID: 1056504015796229457, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -37639,16 +37773,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8a02ff57cc291c4686d6ae26009ac4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  modoDeAtivacao: 0
+  modoDeUso: 0
   vidaMaxima: 10
-  tipoDeAtaqueAceito: 2
+  tipoDeAtaqueAceito_Dano: 2
   corDeDano: {r: 1, g: 0, b: 0, a: 1}
-  duracaoFeedback: 0.15
   intensidadeTremor: 0.1
+  duracaoFeedbackDano: 0.15
   efeitoDeQuebraPrefab: {fileID: 0}
-  somDeDano: {fileID: 0}
-  somDeQuebra: {fileID: 0}
-  destruirAoQuebrar: 1
-  aoQuebrar:
+  tipoDeAtaqueAceito_Hit: 2
+  promptVisual: {fileID: 0}
+  modoVisual: 1
+  controllerBase: {fileID: 0}
+  spriteAtivo: {fileID: 0}
+  spriteInativo: {fileID: 0}
+  clipeAtivando: {fileID: 0}
+  clipeDesativando: {fileID: 0}
+  somAtivar: {fileID: 0}
+  somDesativar: {fileID: 0}
+  aoAtivar:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 517687928}
@@ -37663,6 +37806,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  aoDesativar:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!61 &1622800781
 BoxCollider2D:
   m_ObjectHideFlags: 0

@@ -51,7 +51,7 @@ public class PlayerController : MonoBehaviour
     private PlayerAnimState previousBodyState;
     private bool isActionInterruptingAim = false;
     private bool _isAttacking;
-    private Interagivel interagivelProximo;
+    private ObjetoInterativo interagivelProximo;
     public bool IsAttacking
 
     {
@@ -108,16 +108,15 @@ public class PlayerController : MonoBehaviour
         movementScript.allowMovementFlip = !isNowAiming;
         animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
     }
-    public void RegistrarInteragivel(Interagivel interagivel)
+    // DENTRO DE PlayerController.cs
+
+    // O parâmetro da função agora é do tipo ObjetoInterativo.
+    public void RegistrarInteragivel(ObjetoInterativo interagivel)
     {
         interagivelProximo = interagivel;
     }
 
-    /// <summary>
-    /// Remove a referência a um objeto interagível que não está mais ao alcance.
-    /// Esta função deve ser chamada pelo OnTriggerExit2D do próprio objeto Interagivel.
-    /// </summary>
-    public void RemoverInteragivel(Interagivel interagivel)
+    public void RemoverInteragivel(ObjetoInterativo interagivel)
     {
         // Apenas remove se for o mesmo interagível que está registrado (evita bugs).
         if (interagivelProximo == interagivel)
@@ -126,9 +125,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Verifica o input para interação e aciona o objeto interagível próximo.
-    /// </summary>
+ 
     private void HandleInteractionInput()
     {
         // Se a tecla E for pressionada E existe um interagível próximo...
