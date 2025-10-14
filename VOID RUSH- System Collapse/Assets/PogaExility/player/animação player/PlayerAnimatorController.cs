@@ -30,7 +30,12 @@ public enum PlayerAnimState
     recarregando,
     Combo1,
     Combo2,
-    Combo3
+    Combo3,
+    // --- ADICIONADO ---
+    abaixando,
+    rastejando,
+    levantando
+    // --- FIM DA ADIÇÃO ---
 }
 
 public class PlayerAnimatorController : MonoBehaviour
@@ -70,6 +75,12 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int Combo1Hash = Animator.StringToHash("Combo1");
     private static readonly int Combo2Hash = Animator.StringToHash("Combo2");
     private static readonly int Combo3Hash = Animator.StringToHash("Combo3");
+
+    // --- ADICIONADO ---
+    private static readonly int AbaixandoHash = Animator.StringToHash("abaixando");
+    private static readonly int RastejandoHash = Animator.StringToHash("rastejando");
+    private static readonly int LevantandoHash = Animator.StringToHash("levantando");
+    // --- FIM DA ADIÇÃO ---
     #endregion
 
 
@@ -78,10 +89,8 @@ public class PlayerAnimatorController : MonoBehaviour
         if (bodyAnimator == null) bodyAnimator = GetComponent<Animator>();
         currentStateByTarget = new Dictionary<AnimatorTarget, PlayerAnimState>();
 
-        // AQUI ESTÁ A MÁGICA: No início do jogo, ele pergunta para o Animator qual é o número da "CotocoLayer".
         cotocoLayerIndex = bodyAnimator.GetLayerIndex("CotocoLayer");
 
-        // Uma verificação de segurança para te ajudar a debugar.
         if (cotocoLayerIndex == -1)
         {
             Debug.LogWarning("AVISO: A layer 'CotocoLayer' não foi encontrada no Animator do corpo. A mira não vai funcionar. Verifique se o nome está escrito exatamente igual.", this.gameObject);
@@ -92,10 +101,10 @@ public class PlayerAnimatorController : MonoBehaviour
         Animator targetAnimator = GetTargetAnimator(target);
         if (targetAnimator != null)
         {
+            // CORREÇÃO: "parametername" foi trocado para "parameterName"
             targetAnimator.SetFloat(parameterName, value);
         }
     }
-    // Em PlayerAnimatorController.cs
 
     public void PlayState(AnimatorTarget target, PlayerAnimState state, int layer = 0)
     {
@@ -110,21 +119,17 @@ public class PlayerAnimatorController : MonoBehaviour
             return;
         }
 
-        // ---- INÍCIO DO DIAGNÓSTICO ----
-        // Se o alvo for a mão, vamos imprimir informações vitais antes de tocar.
         if (target == AnimatorTarget.PlayerHand)
         {
             Debug.Log($"Maestro recebeu ordem para a MÃO. O Animator da mão está no objeto: '{targetAnimator.gameObject.name}'");
             Debug.Log($"O Animator Controller que ele está usando é: '{targetAnimator.runtimeAnimatorController.name}'");
         }
-        // ---- FIM DO DIAGNÓSTICO ----
 
         currentStateByTarget[target] = state;
         int stateHash = GetStateHash(state);
         targetAnimator.Play(stateHash, layer, 0f);
     }
 
-    // Função auxiliar para pegar o animator correto.
     private Animator GetTargetAnimator(AnimatorTarget target)
     {
         switch (target)
@@ -142,18 +147,14 @@ public class PlayerAnimatorController : MonoBehaviour
     }
     public void SetAimLayerWeight(float weight)
     {
-        // Garante que o peso esteja sempre entre 0 e 1.
         weight = Mathf.Clamp01(weight);
 
-        if (cotocoLayerIndex != -1) // Só tenta mudar o peso se a layer existir.
+        if (cotocoLayerIndex != -1)
         {
             bodyAnimator.SetLayerWeight(cotocoLayerIndex, weight);
         }
     }
-    /// <summary>
-    /// Toca um estado de animação usando o nome exato do clipe.
-    /// Essencial para animações dinâmicas como ataques de combo que vêm do ItemSO.
-    /// </summary>
+
     public void PlayStateByName(AnimatorTarget target, string stateName, int layer = 0)
     {
         Animator targetAnimator = GetTargetAnimator(target);
@@ -167,10 +168,6 @@ public class PlayerAnimatorController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Define o multiplicador de velocidade para um animator específico.
-    /// 1.0f = velocidade normal.
-    /// </summary>
     public void SetAnimatorSpeed(AnimatorTarget target, float speed)
     {
         Animator targetAnimator = GetTargetAnimator(target);
@@ -205,6 +202,13 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.Combo1: return Combo1Hash;
             case PlayerAnimState.Combo2: return Combo2Hash;
             case PlayerAnimState.Combo3: return Combo3Hash;
+
+            // --- ADICIONADO ---
+            case PlayerAnimState.abaixando: return AbaixandoHash;
+            case PlayerAnimState.rastejando: return RastejandoHash;
+            case PlayerAnimState.levantando: return LevantandoHash;
+            // --- FIM DA ADIÇÃO ---
+
             default: return ParadoHash;
         }
     }

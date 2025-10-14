@@ -51,7 +51,9 @@ public class PlayerController : MonoBehaviour
     private PlayerAnimState previousBodyState;
     private bool isActionInterruptingAim = false;
     private bool _isAttacking;
+    private ObjetoInterativo interagivelProximo;
     public bool IsAttacking
+
     {
         get { return _isAttacking; }
         set
@@ -106,16 +108,43 @@ public class PlayerController : MonoBehaviour
         movementScript.allowMovementFlip = !isNowAiming;
         animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
     }
+    // DENTRO DE PlayerController.cs
+
+    // O parâmetro da função agora é do tipo ObjetoInterativo.
+    public void RegistrarInteragivel(ObjetoInterativo interagivel)
+    {
+        interagivelProximo = interagivel;
+    }
+
+    public void RemoverInteragivel(ObjetoInterativo interagivel)
+    {
+        // Apenas remove se for o mesmo interagível que está registrado (evita bugs).
+        if (interagivelProximo == interagivel)
+        {
+            interagivelProximo = null;
+        }
+    }
+
+ 
+    private void HandleInteractionInput()
+    {
+        // Se a tecla E for pressionada E existe um interagível próximo...
+        if (Input.GetKeyDown(KeyCode.E) && interagivelProximo != null)
+        {
+            // ...chama a função de interação do objeto.
+            interagivelProximo.Interagir();
+        }
+    }
+
+    // DENTRO DE PlayerController.cs
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
         if (isInventoryOpen) { movementScript.SetMoveInput(0); return; }
 
-        // --- TRAVA DE INPUT CORRIGIDA ---
         if (IsAttacking)
         {
-            // Zera o input para parar o deslize e ignora o resto dos inputs de movimento/skills.
             movementScript.SetMoveInput(0);
             return;
         }
@@ -128,6 +157,11 @@ public class PlayerController : MonoBehaviour
         {
             isLanding = true;
         }
+
+        // --- INÍCIO DA MUDANÇA ---
+        // Adicionamos a chamada para o nosso novo handler de input.
+        HandleInteractionInput();
+        // --- FIM DA MUDANÇA ---
 
         HandlePowerModeToggle();
         HandleSkillInput();

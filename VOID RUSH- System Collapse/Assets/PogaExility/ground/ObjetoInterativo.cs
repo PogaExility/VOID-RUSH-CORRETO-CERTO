@@ -1,176 +1,273 @@
-// NOME DO ARQUIVO: ObjetoInterativo.cs
+// NOME DO ARQUIVO: ObjetoInterativo.cs (VERSÃO FINAL COM ANIMATOR)
 
 using UnityEngine;
 using UnityEngine.Events;
-using System.Collections; // -- NOVO -- Necessário para usar Corrotinas (IEnumerator)
+using System.Collections;
+using System.Collections.Generic; // Necessário para a lista no Override Controller
 
-public enum TipoDeAtaqueAceito
-{
-    ApenasMelee,
-    ApenasRanged,
-    Ambos
-}
+#region ENUMS DE CONFIGURAÇÃO
+public enum TipoDeAtaqueAceito { ApenasMelee, ApenasRanged, Ambos }
+public enum ModoDeAtivacao { PorDano, PorHit, PorBotao }
+public enum ModoDeUso { Unico, Reativavel }
+public enum ModoFeedbackVisual { Nenhum, TrocarSprite, TocarAnimacao }
+#endregion
 
+[RequireComponent(typeof(Collider2D))]
 public class ObjetoInterativo : MonoBehaviour
 {
-    [Header("Configuração de Vida")]
-    [Tooltip("Quantos ataques o objeto aguenta antes de quebrar/ativar.")]
-    [SerializeField] private int vidaMaxima = 1;
+    #region CAMPOS DO INSPECTOR
+    [Header("1. MODO DE ATIVAÇÃO PRINCIPAL")]
+    [SerializeField] private ModoDeAtivacao modoDeAtivacao = ModoDeAtivacao.PorDano;
 
-    [Tooltip("Qual tipo de ataque pode danificar este objeto.")]
-    [SerializeField] private TipoDeAtaqueAceito tipoDeAtaqueAceito = TipoDeAtaqueAceito.Ambos;
+    [Header("2. COMPORTAMENTO GERAL")]
+    [SerializeField] private ModoDeUso modoDeUso = ModoDeUso.Unico;
 
-    [Header("Feedback Visual e Sonoro")]
-    [Tooltip("A cor que o objeto irá piscar ao receber dano.")]
-    [SerializeField] private Color corDeDano = Color.red; // -- NOVO --
-
-    [Tooltip("A duração em segundos do efeito de tremor e flash.")]
-    [SerializeField] private float duracaoFeedback = 0.15f; // -- NOVO --
-
-    [Tooltip("A intensidade do efeito de tremor.")]
-    [SerializeField] private float intensidadeTremor = 0.1f; // -- NOVO --
-
+    // --- Opções para 'Por Dano' ---
+    [Header("3. OPÇÕES PARA 'POR DANO'")]
+    [SerializeField] private int vidaMaxima = 3;
+    [SerializeField] private TipoDeAtaqueAceito tipoDeAtaqueAceito_Dano = TipoDeAtaqueAceito.Ambos;
+    [SerializeField] private Color corDeDano = Color.red;
+    [SerializeField] private float intensidadeTremor = 0.1f;
+    [SerializeField] private float duracaoFeedbackDano = 0.15f;
     [SerializeField] private GameObject efeitoDeQuebraPrefab;
-    [SerializeField] private AudioClip somDeDano;
-    [SerializeField] private AudioClip somDeQuebra;
-    private AudioSource audioSource;
 
-    [Header("Ações")]
-    [Tooltip("Se marcado, o objeto será destruído quando a vida chegar a zero.")]
-    [SerializeField] private bool destruirAoQuebrar = true;
+    // --- Opções para 'Por Hit' ---
+    [Header("4. OPÇÕES PARA 'POR HIT'")]
+    [SerializeField] private TipoDeAtaqueAceito tipoDeAtaqueAceito_Hit = TipoDeAtaqueAceito.Ambos;
 
-    [Tooltip("Ações a serem executadas quando o objeto é quebrado/ativado.")]
-    public UnityEvent aoQuebrar;
+    // --- Opções para 'Por Botão' ---
+    [Header("5. OPÇÕES PARA 'POR BOTÃO'")]
+    [SerializeField] private GameObject promptVisual;
 
+    // --- Opções de Feedback de Ativação ---
+    [Header("6. FEEDBACK DE ATIVAÇÃO")]
+    [SerializeField] private ModoFeedbackVisual modoVisual = ModoFeedbackVisual.TrocarSprite;
+    // Campo para o Animator Controller Base
+    [Tooltip("Arraste aqui o Animator Controller base, como o 'AC_InteragivelBase'.")]
+    [SerializeField] private RuntimeAnimatorController controllerBase;
+    [SerializeField] private Sprite spriteAtivo;
+    [SerializeField] private Sprite spriteInativo;
+    [SerializeField] private AnimationClip clipeAtivando;
+    [SerializeField] private AnimationClip clipeDesativando;
+    [SerializeField] private AudioClip somAtivar;
+    [SerializeField] private AudioClip somDesativar;
+
+    [Header("7. AÇÕES (EVENTOS)")]
+    public UnityEvent aoAtivar;
+    public UnityEvent aoDesativar;
+    #endregion
+
+    #region VARIÁVEIS INTERNAS
     private int vidaAtual;
-
-    // -- INÍCIO DAS NOVAS VARIÁVEIS INTERNAS --
+    private bool estaAtivo = false;
+    private bool bloqueado = false;
+    private bool jogadorNaArea = false;
+    // Componentes ATUALIZADOS
     private SpriteRenderer spriteRenderer;
-    private Color corOriginal;
+    private Animator animator; // Agora usamos Animator
+    private AudioSource audioSource;
     private Vector3 posicaoInicial;
-    private Coroutine feedbackCoroutine;
-    // -- FIM DAS NOVAS VARIÁVEIS INTERNAS --
+    private Coroutine feedbackDanoCoroutine;
+    private AnimatorOverrideController overrideController; // Nosso controller customizado
+    #endregion
 
+    #region MÉTODOS UNITY
     private void Awake()
     {
-        audioSource = GetComponent<AudioSource>();
-        if (audioSource == null)
+        audioSource = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        animator = GetComponent<Animator>(); // Pega o Animator, não adiciona um se não houver
+
+        GetComponent<Collider2D>().isTrigger = (modoDeAtivacao == ModoDeAtivacao.PorBotao);
+
+        // LÓGICA DE ANIMAÇÃO COM ANIMATOR
+        if (modoVisual == ModoFeedbackVisual.TocarAnimacao)
         {
-            audioSource = gameObject.AddComponent<AudioSource>();
+            if (animator == null)
+            {
+                Debug.LogError($"Objeto '{gameObject.name}' está em modo TocarAnimacao mas não tem um componente 'Animator'!", this);
+                return;
+            }
+            if (controllerBase == null)
+            {
+                Debug.LogError($"Objeto '{gameObject.name}' está em modo TocarAnimacao mas não tem um Controller Base configurado!", this);
+                return;
+            }
+
+            // Cria um Animator Override Controller em tempo de execução
+            overrideController = new AnimatorOverrideController(controllerBase);
+            animator.runtimeAnimatorController = overrideController;
+        }
+        else if (animator != null)
+        {
+            // Se não usamos animação, desativa o Animator para não interferir
+            animator.enabled = false;
         }
 
-        // -- NOVO -- Pega a referência do SpriteRenderer para podermos mudar a cor.
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null)
-        {
-            Debug.LogWarning("ObjetoInterativo não encontrou um SpriteRenderer neste GameObject. O efeito de cor não funcionará.", this);
-        }
+        if (promptVisual != null) promptVisual.SetActive(false);
     }
 
     private void Start()
     {
+        posicaoInicial = transform.position;
         vidaAtual = vidaMaxima;
 
-        // -- NOVO -- Guarda a posição e cor originais do objeto no início.
-        posicaoInicial = transform.position;
-        if (spriteRenderer != null)
+        // Aplica os clipes de animação (override) no Start, após o Animator ser inicializado
+        if (modoVisual == ModoFeedbackVisual.TocarAnimacao && overrideController != null)
         {
-            corOriginal = spriteRenderer.color;
+            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+            // Assume que o controller base tem clipes chamados "placeholder_ativando" e "placeholder_desativando"
+            if (clipeAtivando != null)
+                overrides.Add(new KeyValuePair<AnimationClip, AnimationClip>(overrideController.animationClips[0], clipeAtivando));
+            if (clipeDesativando != null && overrideController.animationClips.Length > 1)
+                overrides.Add(new KeyValuePair<AnimationClip, AnimationClip>(overrideController.animationClips[1], clipeDesativando));
+
+            overrideController.ApplyOverrides(overrides);
         }
+
+        // Garante estado visual inicial correto
+        if (estaAtivo) TocarFeedbackDeAtivacao(true, true);
+        else TocarFeedbackDeAtivacao(false, true);
     }
 
-    public void ReceberDano(TipoDeAtaqueAceito tipoDeAtaque)
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        bool podeReceberDano = tipoDeAtaqueAceito == TipoDeAtaqueAceito.Ambos || tipoDeAtaqueAceito == tipoDeAtaque;
+        if (modoDeAtivacao != ModoDeAtivacao.PorBotao || bloqueado) return;
 
-        if (!podeReceberDano) return;
-
-        vidaAtual--;
-
-        if (somDeDano != null)
+        if (other.CompareTag("Player"))
         {
-            audioSource.PlayOneShot(somDeDano);
-        }
-
-        // -- INÍCIO DA LÓGICA DE FEEDBACK --
-        // Se já existe um feedback rodando, pare ele primeiro para evitar sobreposição.
-        if (feedbackCoroutine != null)
-        {
-            StopCoroutine(feedbackCoroutine);
-            ResetarFeedbackVisual(); // Reseta a aparência para o estado original
-        }
-        // Inicia a nova corrotina de feedback.
-        feedbackCoroutine = StartCoroutine(FeedbackDeDanoCoroutine());
-        // -- FIM DA LÓGICA DE FEEDBACK --
-
-        if (vidaAtual <= 0)
-        {
-            QuebrarObjeto();
+            var player = other.GetComponent<PlayerController>();
+            if (player != null) player.RegistrarInteragivel(this);
+            jogadorNaArea = true;
+            if (promptVisual != null) promptVisual.SetActive(true);
         }
     }
 
-    // -- INÍCIO DA NOVA CORROTINA --
-    /// <summary>
-    /// Executa o efeito visual de flash de cor e tremor por um curto período.
-    /// </summary>
-    private IEnumerator FeedbackDeDanoCoroutine()
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        if (modoDeAtivacao != ModoDeAtivacao.PorBotao) return;
+
+        if (other.CompareTag("Player"))
+        {
+            var player = other.GetComponent<PlayerController>();
+            if (player != null) player.RemoverInteragivel(this);
+            jogadorNaArea = false;
+            if (promptVisual != null) promptVisual.SetActive(false);
+        }
+    }
+    #endregion
+
+    #region MÉTODOS DE ATIVAÇÃO PÚBLICOS
+    public void ReceberHit(TipoDeAtaqueAceito tipoDoAtaque)
+    {
+        if (bloqueado) return;
+
+        switch (modoDeAtivacao)
+        {
+            case ModoDeAtivacao.PorDano:
+                if (tipoDeAtaqueAceito_Dano == TipoDeAtaqueAceito.Ambos || tipoDoAtaque == tipoDeAtaqueAceito_Dano) ProcessarDano();
+                break;
+            case ModoDeAtivacao.PorHit:
+                if (tipoDeAtaqueAceito_Hit == TipoDeAtaqueAceito.Ambos || tipoDoAtaque == tipoDeAtaqueAceito_Hit) AlternarEstado();
+                break;
+        }
+    }
+
+    public void Interagir()
+    {
+        if (modoDeAtivacao != ModoDeAtivacao.PorBotao || bloqueado || !jogadorNaArea) return;
+        AlternarEstado();
+    }
+    #endregion
+
+    #region LÓGICA INTERNA
+    private void ProcessarDano()
+    {
+        if (vidaAtual <= 0) return;
+        vidaAtual--;
+        TocarFeedbackDeDano();
+        if (vidaAtual <= 0) Ativar();
+    }
+
+    private void AlternarEstado()
+    {
+        if (estaAtivo) Desativar();
+        else Ativar();
+    }
+
+    private void Ativar()
+    {
+        if (estaAtivo && modoDeUso == ModoDeUso.Reativavel) return;
+        estaAtivo = true;
+
+        if (modoDeAtivacao != ModoDeAtivacao.PorDano) TocarFeedbackDeAtivacao(true);
+        else if (efeitoDeQuebraPrefab != null) Instantiate(efeitoDeQuebraPrefab, transform.position, Quaternion.identity);
+
+        aoAtivar.Invoke();
+
+        if (modoDeUso == ModoDeUso.Unico)
+        {
+            bloqueado = true;
+            if (promptVisual != null) promptVisual.SetActive(false);
+            if (modoDeAtivacao == ModoDeAtivacao.PorDano) Destroy(gameObject, 0.1f);
+        }
+    }
+
+    private void Desativar()
+    {
+        if (!estaAtivo || modoDeUso != ModoDeUso.Reativavel) return;
+        estaAtivo = false;
+        if (modoDeAtivacao != ModoDeAtivacao.PorDano) TocarFeedbackDeAtivacao(false);
+        aoDesativar.Invoke();
+    }
+    #endregion
+
+    #region FEEDBACK
+    private void TocarFeedbackDeDano()
+    {
+        if (feedbackDanoCoroutine != null) StopCoroutine(feedbackDanoCoroutine);
+        feedbackDanoCoroutine = StartCoroutine(FeedbackDanoCoroutine());
+    }
+
+    private IEnumerator FeedbackDanoCoroutine()
     {
         if (spriteRenderer != null) spriteRenderer.color = corDeDano;
-
         float tempoDecorrido = 0f;
-        while (tempoDecorrido < duracaoFeedback)
+        while (tempoDecorrido < duracaoFeedbackDano)
         {
             float offsetX = Random.Range(-1f, 1f) * intensidadeTremor;
             float offsetY = Random.Range(-1f, 1f) * intensidadeTremor;
             transform.position = posicaoInicial + new Vector3(offsetX, offsetY, 0);
-
             tempoDecorrido += Time.deltaTime;
-            yield return null; // Espera até o próximo frame.
+            yield return null;
         }
-
-        // Garante que o objeto volte ao estado original ao final do efeito.
-        ResetarFeedbackVisual();
-        feedbackCoroutine = null; // Libera a referência da corrotina.
-    }
-    // -- FIM DA NOVA CORROTINA --
-
-    // -- INÍCIO DA NOVA FUNÇÃO AUXILIAR --
-    /// <summary>
-    /// Reseta a posição e a cor do objeto para seus valores originais.
-    /// </summary>
-    private void ResetarFeedbackVisual()
-    {
         transform.position = posicaoInicial;
-        if (spriteRenderer != null)
-        {
-            spriteRenderer.color = corOriginal;
-        }
+        if (spriteRenderer != null) spriteRenderer.color = Color.white;
+        feedbackDanoCoroutine = null;
     }
-    // -- FIM DA NOVA FUNÇÃO AUXILIAR --
 
-    private void QuebrarObjeto()
+    private void TocarFeedbackDeAtivacao(bool ativar, bool silencioso = false)
     {
-        // -- NOVO -- Garante que qualquer efeito de feedback seja interrompido antes de destruir o objeto.
-        if (feedbackCoroutine != null)
+        // Visual
+        switch (modoVisual)
         {
-            StopCoroutine(feedbackCoroutine);
+            case ModoFeedbackVisual.TrocarSprite:
+                if (spriteRenderer != null) spriteRenderer.sprite = ativar ? spriteAtivo : spriteInativo;
+                break;
+            case ModoFeedbackVisual.TocarAnimacao:
+                if (animator != null && animator.enabled)
+                {
+                    string trigger = ativar ? "Ativar" : "Desativar";
+                    animator.SetTrigger(trigger);
+                }
+                break;
         }
-
-        if (somDeQuebra != null)
+        // Sonoro
+        if (!silencioso)
         {
-            AudioSource.PlayClipAtPoint(somDeQuebra, transform.position);
-        }
-
-        if (efeitoDeQuebraPrefab != null)
-        {
-            Instantiate(efeitoDeQuebraPrefab, transform.position, Quaternion.identity);
-        }
-
-        aoQuebrar.Invoke();
-
-        if (destruirAoQuebrar)
-        {
-            Destroy(gameObject);
+            AudioClip som = ativar ? somAtivar : somDesativar;
+            if (som != null && audioSource != null) audioSource.PlayOneShot(som);
         }
     }
+    #endregion
 }

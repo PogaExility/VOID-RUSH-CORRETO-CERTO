@@ -3,36 +3,29 @@
 using UnityEngine;
 using System.Collections;
 
-// Enum para escolher o comportamento da porta no Inspector da Unity.
 public enum ModoDeAbertura
 {
-    Mover,      // A porta irá deslizar para uma nova posição.
-    Animar,     // A porta irá tocar uma animação.
-    Desativar   // A porta irá simplesmente desaparecer.
+    Mover,
+    Animar,
+    Desativar // Lembre-se: Desativar = A porta some.
 }
 
-[RequireComponent(typeof(AudioSource))] // Garante que sempre haverá um AudioSource.
+[RequireComponent(typeof(AudioSource))]
 public class PortaController : MonoBehaviour
 {
     [Header("Configuração Geral")]
-    [Tooltip("Define como a porta deve se comportar ao ser aberta.")]
     [SerializeField] private ModoDeAbertura modoDeAbertura = ModoDeAbertura.Mover;
-
-    [Tooltip("Som que tocará quando a porta abrir.")]
     [SerializeField] private AudioClip somDeAbertura;
+    [SerializeField] private AudioClip somDeFechamento; // --- NOVO ---
 
-    // --- Variáveis para o Modo 'Mover' ---
     [Header("Opções para o Modo 'Mover'")]
-    [Tooltip("O quanto a porta vai se mover a partir de sua posição inicial. Ex: (0, 5, 0) para subir 5 unidades.")]
     [SerializeField] private Vector3 deslocamentoAoAbrir = new Vector3(0, 5f, 0);
-
-    [Tooltip("Quanto tempo, em segundos, a porta levará para completar o movimento.")]
     [SerializeField] private float duracaoDoMovimento = 2f;
 
-    // --- Variáveis para o Modo 'Animar' ---
     [Header("Opções para o Modo 'Animar'")]
-    [Tooltip("O nome do 'Trigger' no Animator Controller da porta a ser ativado.")]
-    [SerializeField] private string nomeDoTriggerAnimacao = "Abrir";
+    // --- ALTERADO --- Nome da variável para maior clareza.
+    [SerializeField] private string nomeDoTriggerAnimacaoAbrir = "Abrir";
+    [SerializeField] private string nomeDoTriggerAnimacaoFechar = "Fechar"; // --- NOVO ---
 
     // --- Componentes e Controle de Estado ---
     private AudioSource audioSource;
@@ -40,81 +33,103 @@ public class PortaController : MonoBehaviour
     private bool estaAberta = false;
     private Vector3 posicaoInicial;
     private Vector3 posicaoFinal;
+    private Coroutine moveCoroutine; // --- NOVO --- Para controlar o movimento em andamento.
 
     private void Awake()
     {
         audioSource = GetComponent<AudioSource>();
+        animator = GetComponent<Animator>();
 
-        // Se estiver no modo de Animação, tenta pegar o componente Animator.
-        if (modoDeAbertura == ModoDeAbertura.Animar)
+        if (modoDeAbertura == ModoDeAbertura.Animar && animator == null)
         {
-            animator = GetComponent<Animator>();
-            if (animator == null)
-            {
-                Debug.LogError("Modo 'Animar' selecionado, mas não há um componente Animator na porta!", this);
-            }
+            Debug.LogError("Modo 'Animar' selecionado, mas não há um componente Animator na porta!", this);
         }
     }
 
     private void Start()
     {
-        // Guarda as posições para o modo de movimento.
         posicaoInicial = transform.position;
         posicaoFinal = posicaoInicial + deslocamentoAoAbrir;
     }
 
-    /// <summary>
-    /// Esta é a função pública que será chamada pelo UnityEvent do ObjetoInterativo.
-    /// </summary>
     public void AbrirPorta()
     {
-        // Se a porta já estiver aberta, não faz mais nada.
-        if (estaAberta)
-        {
-            return;
-        }
+        if (estaAberta) return;
         estaAberta = true;
 
-        // Toca o som de abertura, se houver um.
-        if (somDeAbertura != null)
-        {
-            audioSource.PlayOneShot(somDeAbertura);
-        }
+        if (somDeAbertura != null) audioSource.PlayOneShot(somDeAbertura);
 
-        // Executa a ação correspondente ao modo selecionado.
+        // Interrompe qualquer movimento anterior
+        if (moveCoroutine != null) StopCoroutine(moveCoroutine);
+
         switch (modoDeAbertura)
         {
             case ModoDeAbertura.Mover:
-                StartCoroutine(MoverPortaCoroutine());
+                // --- ALTERADO --- Usa a nova corrotina genérica.
+                moveCoroutine = StartCoroutine(MoverCoroutine(transform.position, posicaoFinal));
                 break;
             case ModoDeAbertura.Animar:
-                if (animator != null)
-                {
-                    animator.SetTrigger(nomeDoTriggerAnimacao);
-                }
+                if (animator != null) animator.SetTrigger(nomeDoTriggerAnimacaoAbrir);
                 break;
             case ModoDeAbertura.Desativar:
+                // Abrir, neste modo, significa desaparecer.
                 gameObject.SetActive(false);
                 break;
         }
     }
 
+    // --- INÍCIO DA NOVA FUNÇÃO ---
     /// <summary>
-    /// Corrotina que move a porta suavemente da posição inicial para a final.
+    /// Fecha a porta, revertendo a ação de abertura.
     /// </summary>
-    private IEnumerator MoverPortaCoroutine()
+    public void FecharPorta()
+    {
+        if (!estaAberta && gameObject.activeSelf) return; // Se já está fechada e visível, não faz nada.
+        estaAberta = false;
+
+        if (somDeFechamento != null) audioSource.PlayOneShot(somDeFechamento);
+
+        if (moveCoroutine != null) StopCoroutine(moveCoroutine);
+
+        switch (modoDeAbertura)
+        {
+            case ModoDeAbertura.Mover:
+                moveCoroutine = StartCoroutine(MoverCoroutine(transform.position, posicaoInicial));
+                break;
+            case ModoDeAbertura.Animar:
+                if (animator != null) animator.SetTrigger(nomeDoTriggerAnimacaoFechar);
+                break;
+            case ModoDeAbertura.Desativar:
+                // Fechar, neste modo, significa reaparecer.
+                gameObject.SetActive(true);
+                break;
+        }
+    }
+    // --- FIM DA NOVA FUNÇÃO ---
+
+    // --- CORROTINA REATORADA ---
+    /// <summary>
+    /// Corrotina genérica que move o objeto de uma posição inicial para uma final.
+    /// </summary>
+    private IEnumerator MoverCoroutine(Vector3 startPos, Vector3 endPos)
     {
         float tempoDecorrido = 0;
 
-        while (tempoDecorrido < duracaoDoMovimento)
+        // Se a porta já está no destino, não faz nada.
+        if (Vector3.Distance(startPos, endPos) < 0.01f)
         {
-            // Interpola a posição da porta ao longo do tempo.
-            transform.position = Vector3.Lerp(posicaoInicial, posicaoFinal, tempoDecorrido / duracaoDoMovimento);
-            tempoDecorrido += Time.deltaTime;
-            yield return null; // Espera o próximo frame.
+            moveCoroutine = null;
+            yield break;
         }
 
-        // Garante que a porta termine exatamente na posição final.
-        transform.position = posicaoFinal;
+        while (tempoDecorrido < duracaoDoMovimento)
+        {
+            transform.position = Vector3.Lerp(startPos, endPos, tempoDecorrido / duracaoDoMovimento);
+            tempoDecorrido += Time.deltaTime;
+            yield return null;
+
+        }
+        transform.position = endPos;
+        moveCoroutine = null; // Libera a referência ao terminar.
     }
 }

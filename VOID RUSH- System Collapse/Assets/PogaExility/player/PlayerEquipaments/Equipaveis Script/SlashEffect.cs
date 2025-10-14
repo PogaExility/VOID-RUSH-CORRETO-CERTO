@@ -64,40 +64,37 @@ public class SlashEffect : MonoBehaviour
     }
 
 
+    // DENTRO DO SCRIPT: SlashEffect.cs
+
     void OnTriggerEnter2D(Collider2D other)
     {
-        // A verificação inicial para evitar múltiplos acertos permanece a mesma.
+        // A verificação para não atingir o mesmo alvo múltiplas vezes permanece a mesma.
         if (targetsHit.Contains(other))
         {
             return;
         }
 
-        // --- INÍCIO DA MUDANÇA ---
-
-        // 1. Tenta encontrar o componente do objeto interativo PRIMEIRO.
+        // Tenta encontrar o nosso novo componente unificado.
         var objetoInterativo = other.GetComponent<ObjetoInterativo>();
         if (objetoInterativo != null)
         {
-            // Se encontrou, chama a função de dano do objeto.
-            objetoInterativo.ReceberDano(TipoDeAtaqueAceito.ApenasMelee);
+            // --- INÍCIO DA MUDANÇA ---
+            // Agora chamamos a nova função 'ReceberHit', que é o ponto de entrada para todos os ataques.
+            objetoInterativo.ReceberHit(TipoDeAtaqueAceito.ApenasMelee);
+            // --- FIM DA MUDANÇA ---
 
-            // Adiciona à lista para não interagir de novo com o mesmo golpe.
+            // Adiciona à lista de alvos atingidos para não interagir novamente com o mesmo golpe.
             targetsHit.Add(other);
 
-            // Retorna para não continuar e procurar por um inimigo no mesmo objeto.
+            // Retorna para não tentar, no mesmo objeto, procurar por um inimigo.
             return;
         }
 
-        // --- FIM DA MUDANÇA ---
-
-        // 2. Se não era um objeto interativo, continua a lógica original para inimigos.
+        // Se não era um objeto interativo, a lógica para inimigos continua exatamente como antes.
         var enemyAI = other.GetComponent<AIController_Basic>();
         if (enemyAI != null)
         {
-            // Adiciona o alvo à lista para não atingi-lo novamente.
             targetsHit.Add(other);
-
-            // Chama a função TakeDamage da IA, passando a direção pré-calculada.
             enemyAI.TakeDamage(damage, precalculatedKnockbackDirection, knockbackPower);
         }
     }

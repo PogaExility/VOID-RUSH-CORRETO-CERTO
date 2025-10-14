@@ -43,30 +43,30 @@ public class Projectile : MonoBehaviour
 
     // DENTRO DO SCRIPT: Projectile.cs
 
+    // DENTRO DO SCRIPT: Projectile.cs
+
     void OnTriggerEnter2D(Collider2D other)
     {
-        // A checagem de colisão com o chão permanece a mesma, é a prioridade máxima.
+        // A checagem de colisão com o chão permanece a mesma.
         if (other.gameObject.layer == groundLayer)
         {
             Destroy(gameObject);
             return;
         }
 
-        // --- INÍCIO DA MUDANÇA ---
-
-        // Esta flag nos ajudará a saber se devemos aplicar a lógica de perfuração no final.
         bool hitValidTarget = false;
 
         // 1. Tenta encontrar o componente do objeto interativo.
         var objetoInterativo = other.GetComponent<ObjetoInterativo>();
         if (objetoInterativo != null)
         {
-            // Se encontrou, chama a função de dano do objeto.
-            objetoInterativo.ReceberDano(TipoDeAtaqueAceito.ApenasRanged);
+            // --- INÍCIO DA MUDANÇA ---
+            // Chamamos a nova função 'ReceberHit' e passamos o tipo de ataque do projétil.
+            objetoInterativo.ReceberHit(TipoDeAtaqueAceito.ApenasRanged);
+            // --- FIM DA MUDANÇA ---
             hitValidTarget = true;
         }
-        // 2. Se não era um objeto interativo, continua a lógica para inimigos.
-        // Usamos 'else if' para garantir que não tentaremos atingir um inimigo se já atingimos um objeto.
+        // 2. Se não era um objeto interativo, a lógica para inimigos continua.
         else if (other.TryGetComponent<AIController_Basic>(out var enemyAI))
         {
             Vector2 attackDirection;
@@ -84,21 +84,19 @@ public class Projectile : MonoBehaviour
             hitValidTarget = true;
         }
 
-        // 3. Se atingimos um alvo válido (inimigo OU objeto), aplicamos a lógica de perfuração.
+        // 3. A lógica de perfuração funciona para qualquer alvo válido (inimigo OU objeto).
         if (hitValidTarget)
         {
             if (pierceCount > 0)
             {
                 pierceCount--;
-                damage *= (1 - damageFalloff); // Reduz o dano para o próximo alvo.
+                damage *= (1 - damageFalloff);
             }
             else
             {
-                Destroy(gameObject); // Destrói o projétil se não pode mais perfurar.
+                Destroy(gameObject);
             }
         }
-
-        // --- FIM DA MUDANÇA ---
     }
 
 #if UNITY_EDITOR
