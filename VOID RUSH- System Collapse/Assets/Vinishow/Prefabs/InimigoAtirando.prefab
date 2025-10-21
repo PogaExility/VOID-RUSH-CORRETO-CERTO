@@ -208,8 +208,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 10000
-  m_Sprite: {fileID: -9095717837082945937, guid: 207ee8102dd4143d288186ef0be518ee, type: 3}
-  m_Color: {r: 0, g: 0.073209524, b: 1, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 0a4b712c549c3da41b5b38e2bc9017ab, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -296,6 +296,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemyData: {fileID: 11400000, guid: faf0fd8c3ab72454bbd04d78245dcc29, type: 2}
+  enemySpriteRenderer: {fileID: 1275836949103627094}
+  flashColor: {r: 1, g: 0, b: 0, a: 1}
+  flashDuration: 0.1
 --- !u!114 &863119666816260595
 MonoBehaviour:
   m_ObjectHideFlags: 0

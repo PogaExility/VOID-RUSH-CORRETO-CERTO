@@ -296,6 +296,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemyData: {fileID: 11400000, guid: 1f483af31885e7647b9e3ac866621aa4, type: 2}
+  enemySpriteRenderer: {fileID: 1275836949103627094}
+  flashColor: {r: 1, g: 0, b: 0, a: 1}
+  flashDuration: 0.1
 --- !u!114 &863119666816260595
 MonoBehaviour:
   m_ObjectHideFlags: 0
