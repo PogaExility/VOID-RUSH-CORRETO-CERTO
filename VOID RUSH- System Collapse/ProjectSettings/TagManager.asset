@@ -26,7 +26,7 @@ TagManager:
   - VirtualCamera
   - MainCamera
   - Escada
-  - 
+  - Plataforma
   - 
   - 
   - 
@@ -47,14 +47,26 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Background
+    uniqueID: 3976698181
+    locked: 0
   - name: EnemyFar
     uniqueID: 2548790603
     locked: 0
   - name: EnemyMiddle
     uniqueID: 3536677643
     locked: 0
+  - name: Interactables
+    uniqueID: 1061211075
+    locked: 0
+  - name: Player
+    uniqueID: 3917182247
+    locked: 0
   - name: EnemyNear
     uniqueID: 77996003
+    locked: 0
+  - name: Foreground
+    uniqueID: 1911432371
     locked: 0
   m_RenderingLayers:
   - Default

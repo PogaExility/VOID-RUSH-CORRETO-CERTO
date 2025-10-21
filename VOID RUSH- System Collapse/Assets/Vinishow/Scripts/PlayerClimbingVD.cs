@@ -1,20 +1,17 @@
 using UnityEngine;
 
-// Garante que este script só possa ser adicionado a um objeto que já tem os componentes essenciais.
 [RequireComponent(typeof(Rigidbody2D), typeof(AdvancedPlayerMovement2D))]
 public class PlayerClimbingVD : MonoBehaviour
 {
     [Header("Configuração da Escada")]
-    [Tooltip("A velocidade com que o jogador sobe e desce as escadas.")]
     [SerializeField] private float climbingSpeed = 5f;
-    [Tooltip("A camada (Layer) em que os objetos de escada se encontram.")]
     [SerializeField] private LayerMask ladderLayer;
 
-    // Referências a outros componentes no jogador
+    // Referências
     private Rigidbody2D rb;
     private AdvancedPlayerMovement2D playerMovement;
 
-    // Controle de estado interno
+    // Controle de estado
     private bool isOnLadder = false;
     private bool isClimbing = false;
     private float verticalInput;
@@ -22,26 +19,32 @@ public class PlayerClimbingVD : MonoBehaviour
 
     void Awake()
     {
-        // Pega as referências dos componentes no mesmo GameObject
         rb = GetComponent<Rigidbody2D>();
         playerMovement = GetComponent<AdvancedPlayerMovement2D>();
-
-        // Guarda a escala de gravidade original para podermos restaurá-la depois
-        originalGravityScale = rb.gravityScale;
+        // É mais seguro pegar a gravidade do script de movimento, caso ele a modifique.
+        originalGravityScale = playerMovement.baseGravity;
     }
 
     void Update()
     {
-        // Lê o input vertical do jogador (W/S ou direcional para cima/baixo)
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        // Se o jogador está em contato com uma escada e aperta para cima ou para baixo, começa a escalar
+        // --- LÓGICA DE PULO ADICIONADA ---
+        // Se o jogador está escalando e aperta o botão de pulo...
+        if (isClimbing && Input.GetButtonDown("Jump"))
+        {
+            isClimbing = false; // Para de escalar
+            // Não precisa chamar playerMovement.DoJump() aqui, 
+            // pois o script principal vai ler o input no mesmo frame.
+            return; // Sai da função Update deste script para o playerMovement assumir.
+        }
+        // --- FIM DA LÓGICA DE PULO ---
+
         if (isOnLadder && Mathf.Abs(verticalInput) > 0.1f)
         {
             isClimbing = true;
         }
 
-        // Se o jogador não está em contato com uma escada, ele não pode estar escalando
         if (!isOnLadder)
         {
             isClimbing = false;
@@ -50,39 +53,33 @@ public class PlayerClimbingVD : MonoBehaviour
         // Se o jogador está escalando...
         if (isClimbing)
         {
-            // Desativa a gravidade
+            // O movimento horizontal é zerado para que o jogador não deslize para os lados
+            rb.velocity = new Vector2(0, verticalInput * climbingSpeed);
             playerMovement.SetGravityScale(0f);
-            // Controla o movimento vertical
-            rb.velocity = new Vector2(rb.velocity.x, verticalInput * climbingSpeed);
-            // Trava o movimento horizontal do script principal
-            playerMovement.enabled = false;
+            playerMovement.enabled = false; // Desativa o script principal
         }
         else
         {
-            // Se não está escalando, devolve o controle ao script de movimento principal
-            playerMovement.SetGravityScale(originalGravityScale); // Restaura a gravidade
-            playerMovement.enabled = true; // Reativa o script de movimento
+            // Se não está escalando, devolve o controle.
+            playerMovement.enabled = true; // Reativa o script principal
+            // O próprio script principal agora é responsável por restaurar a gravidade.
         }
     }
 
-    // Chamado quando o jogador entra em um trigger
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        // Verifica se o objeto com que colidiu está na camada "Escada"
         if ((ladderLayer.value & (1 << collision.gameObject.layer)) > 0)
         {
             isOnLadder = true;
         }
     }
 
-    // Chamado quando o jogador sai de um trigger
     private void OnTriggerExit2D(Collider2D collision)
     {
-        // Verifica se o objeto que está deixando é uma escada
         if ((ladderLayer.value & (1 << collision.gameObject.layer)) > 0)
         {
             isOnLadder = false;
-            isClimbing = false; // Força a parada da escalada ao sair
+            isClimbing = false;
         }
     }
 }
