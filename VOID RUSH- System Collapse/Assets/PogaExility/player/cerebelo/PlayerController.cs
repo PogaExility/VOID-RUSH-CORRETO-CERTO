@@ -439,8 +439,6 @@ public class PlayerController : MonoBehaviour
         // --- LÓGICA DE ANIMAÇÃO DE RASTEJAR (TEM PRIORIDADE) ---
         if (movementScript.IsOnCrawlTransition())
         {
-            // Se está na transição de abaixar ou levantar, não fazemos nada.
-            // A animação correta já foi disparada pelo HandleCrawlInput.
             return;
         }
 
@@ -448,7 +446,6 @@ public class PlayerController : MonoBehaviour
         {
             animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.rastejando);
 
-            // Pausa ou retoma a animação de rastejar baseado no movimento
             if (movementScript.IsMoving())
             {
                 animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
@@ -457,7 +454,7 @@ public class PlayerController : MonoBehaviour
             {
                 animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 0f);
             }
-            return; // Impede que a lógica de animação normal seja executada
+            return;
         }
         // --- FIM DA LÓGICA DE RASTEJAR ---
 
@@ -466,7 +463,9 @@ public class PlayerController : MonoBehaviour
         PlayerAnimState desiredState;
 
         if (playerStats.IsDead()) { desiredState = PlayerAnimState.morrendo; }
-        else if (isLanding) { desiredState = PlayerAnimState.pousando; }
+        // --- MUDANÇA CRÍTICA AQUI ---
+        else if (isLanding && !isInAimMode) { desiredState = PlayerAnimState.pousando; }
+        // --- FIM DA MUDANÇA ---
         else if (animatorController.GetCurrentAnimatorStateInfo(AnimatorTarget.PlayerBody, 0).IsName("dano")) { desiredState = PlayerAnimState.dano; }
         else if (!movementScript.IsGrounded())
         {
