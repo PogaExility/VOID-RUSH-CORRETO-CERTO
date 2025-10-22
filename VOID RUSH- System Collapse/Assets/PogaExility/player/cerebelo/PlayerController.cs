@@ -52,6 +52,8 @@ public class PlayerController : MonoBehaviour
     private bool isActionInterruptingAim = false;
     private bool _isAttacking;
     private ObjetoInterativo interagivelProximo;
+
+
     public bool IsAttacking
 
     {
@@ -136,8 +138,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // DENTRO DE PlayerController.cs
-
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
@@ -149,7 +149,13 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // O resto da lógica de Update só roda se não estiver atacando.
+        // --- ADIÇÃO ---
+        // A lógica de rastejar é tratada primeiro para ter prioridade.
+        HandleCrawlInput();
+        // --- FIM DA ADIÇÃO ---
+
+        // O resto da lógica de Update só roda se não estiver atacando ou rastejando.
+        // A trava de movimento já está dentro de cada função Handle.
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
 
         bool isGroundedNow = movementScript.IsGrounded();
@@ -158,11 +164,7 @@ public class PlayerController : MonoBehaviour
             isLanding = true;
         }
 
-        // --- INÍCIO DA MUDANÇA ---
-        // Adicionamos a chamada para o nosso novo handler de input.
         HandleInteractionInput();
-        // --- FIM DA MUDANÇA ---
-
         HandlePowerModeToggle();
         HandleSkillInput();
         HandleCombatInput();
@@ -174,6 +176,60 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
     }
+
+    // --- NOVAS FUNÇÕES PARA A LÓGICA DE RASTEJAR ---
+
+    private void HandleCrawlInput()
+    {
+        // Pressionou para começar a rastejar
+        if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            // Condições para poder rastejar: no chão e não estar fazendo outra ação
+            if (movementScript.IsGrounded() && !movementScript.IsCrawling() && !movementScript.IsOnCrawlTransition())
+            {
+                // --- ADICIONADO: Força a saída do modo de mira ---
+                if (isInAimMode)
+                {
+                    SetAimingState(false);
+                }
+                // --- FIM DA ADIÇÃO ---
+
+                movementScript.BeginCrouchTransition();
+                animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.abaixando);
+            }
+        }
+        // Soltou a tecla para levantar
+        else if (Input.GetKeyUp(KeyCode.LeftControl))
+        {
+            if (movementScript.IsCrawling())
+            {
+                // Garante que a velocidade do animator volte ao normal para a animação de "levantar"
+                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+                movementScript.BeginStandUpTransition();
+                animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.levantando);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Esta função DEVE ser chamada por um Animation Event no último frame da sua animação "abaixando".
+    /// </summary>
+    public void OnCrouchDownAnimationComplete()
+    {
+        movementScript.CompleteCrouch();
+    }
+
+    /// <summary>
+    /// Esta função DEVE ser chamada por um Animation Event no último frame da sua animação "levantando".
+    /// </summary>
+    public void OnStandUpAnimationComplete()
+    {
+        movementScript.CompleteStandUp();
+    }
+
+    // --- FIM DAS NOVAS FUNÇÕES ---
+  
+
 
 
     private Coroutine lungeCoroutine;
@@ -281,7 +337,14 @@ public class PlayerController : MonoBehaviour
 
     private void HandleSkillInput()
     {
-        // A função agora apenas chama a lógica de skills, sem se preocupar com bloqueio de combate.
+        // --- CORREÇÃO DEFINITIVA: Bloqueia a TENTATIVA de ativar skills ---
+        if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition())
+        {
+            return;
+        }
+        // --- FIM DA CORREÇÃO ---
+
+        // A função agora só tenta ativar skills se o bloqueio acima for passado.
         TryActivateMovementSkills();
     }
 
@@ -304,32 +367,30 @@ public class PlayerController : MonoBehaviour
 
     private void HandleCombatInput()
     {
+        // --- ADICIONADO: Bloqueia combate ao rastejar ---
+        if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition()) return;
+        // --- FIM DA ADIÇÃO ---
+
         if (weaponHandler.IsReloading) return;
 
-        // Pega a arma ativa para saber o tipo dela
         var activeWeapon = weaponHandler.GetActiveWeaponSlot()?.item;
         if (activeWeapon == null) return;
 
-
-        // LÓGICA HÍBRIDA DE INPUT
         if (activeWeapon.weaponType == WeaponType.Meelee)
         {
-            // Para MEELEE, usamos GetButtonDown para registrar um único clique.
             if (Input.GetButtonDown("Fire1"))
             {
                 attackBuffered = true;
             }
         }
-        else // Para Ranger, Buster, etc.
+        else
         {
-            // Para RANGER, usamos GetButton para permitir segurar o botão.
             if (Input.GetButton("Fire1"))
             {
                 attackBuffered = true;
             }
         }
 
-        // A lógica de recarga e defesa continua a mesma.
         if (Input.GetKeyDown(KeyCode.R))
         {
             weaponHandler.HandleReloadInput();
@@ -346,12 +407,19 @@ public class PlayerController : MonoBehaviour
 
     private void ProcessAttackBuffer()
     {
+        // --- ADICIONADO: Bloqueia ataque ao rastejar ---
+        if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition())
+        {
+            attackBuffered = false; // Limpa o buffer se o jogador tentar rastejar
+            return;
+        }
+        // --- FIM DA ADIÇÃO ---
+
         if (!attackBuffered)
         {
             return;
         }
 
-        // Condições para poder atacar (são as mesmas para ambos os tipos)
         bool canAttackNow = !IsAttacking &&
                             !movementScript.IsDashing() &&
                             weaponHandler.IsWeaponObjectActive();
@@ -359,16 +427,42 @@ public class PlayerController : MonoBehaviour
         if (canAttackNow)
         {
             weaponHandler.HandleAttackInput();
-            attackBuffered = false; // Consome o buffer
+            attackBuffered = false;
         }
     }
 
     private void UpdateAnimations()
     {
-        // Trava de ataque meelee (continua igual)
+        // Trava de ataque meelee
         if (IsAttacking) return;
 
-        // --- ETAPA 1: DETERMINAR O ESTADO DESEJADO DA BASE LAYER ---
+        // --- LÓGICA DE ANIMAÇÃO DE RASTEJAR (TEM PRIORIDADE) ---
+        if (movementScript.IsOnCrawlTransition())
+        {
+            // Se está na transição de abaixar ou levantar, não fazemos nada.
+            // A animação correta já foi disparada pelo HandleCrawlInput.
+            return;
+        }
+
+        if (movementScript.IsCrawling())
+        {
+            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.rastejando);
+
+            // Pausa ou retoma a animação de rastejar baseado no movimento
+            if (movementScript.IsMoving())
+            {
+                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+            }
+            else
+            {
+                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 0f);
+            }
+            return; // Impede que a lógica de animação normal seja executada
+        }
+        // --- FIM DA LÓGICA DE RASTEJAR ---
+
+
+        // --- LÓGICA DE ANIMAÇÃO NORMAL ---
         PlayerAnimState desiredState;
 
         if (playerStats.IsDead()) { desiredState = PlayerAnimState.morrendo; }
@@ -392,7 +486,6 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-
         bool isDesiredStateAnAction = IsActionState(desiredState);
 
         if (isDesiredStateAnAction)
@@ -412,7 +505,6 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // --- ETAPA 3: TOCAR A ANIMAÇÃO CORRETA ---
         if (isInAimMode)
         {
             if (!movementScript.IsGrounded())
@@ -436,7 +528,6 @@ public class PlayerController : MonoBehaviour
             animatorController.PlayState(AnimatorTarget.PlayerBody, desiredState, 0);
         }
     }
-
     private bool IsActionState(PlayerAnimState state)
     {
         switch (state)

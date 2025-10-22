@@ -107,7 +107,7 @@ public class EnemyStatsVD : MonoBehaviour
     private void ApplyKnockback(float force, Vector2 direction)
     {
         // Correção de Bug
-        rb.velocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
         rb.AddForce(direction * force, ForceMode2D.Impulse);
     }
 

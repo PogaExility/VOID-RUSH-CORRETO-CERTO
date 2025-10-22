@@ -54,7 +54,7 @@ public class PlayerClimbingVD : MonoBehaviour
         if (isClimbing)
         {
             // O movimento horizontal é zerado para que o jogador não deslize para os lados
-            rb.velocity = new Vector2(0, verticalInput * climbingSpeed);
+            rb.linearVelocity = new Vector2(0, verticalInput * climbingSpeed);
             playerMovement.SetGravityScale(0f);
             playerMovement.enabled = false; // Desativa o script principal
         }
