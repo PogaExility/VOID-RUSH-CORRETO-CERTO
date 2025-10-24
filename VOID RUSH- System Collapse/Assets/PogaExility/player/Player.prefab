@@ -1194,7 +1194,6 @@ GameObject:
   - component: {fileID: 1720038249475775308}
   - component: {fileID: 480668888183648268}
   - component: {fileID: 2215104731333047473}
-  - component: {fileID: -4255177302283980981}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -1360,7 +1359,7 @@ MonoBehaviour:
   stateCheckText: {fileID: 0}
   collisionLayer:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 32832
   moveSpeed: 8
   acceleration: 50
   deceleration: 60
@@ -1375,6 +1374,8 @@ MonoBehaviour:
   parabolaSteeringForce: 100
   parabolaMaxAirSpeed: 20
   parabolaAirDrag: 0.98
+  crawlSpeed: 4
+  climbingSpeed: 5
 --- !u!95 &6689212545231447408
 Animator:
   serializedVersion: 7
@@ -1443,6 +1444,13 @@ MonoBehaviour:
   wallJumpSkill: {fileID: 11400000, guid: da8203bf8b24d2b439f873fe6858b65a, type: 2}
   wallDashSkill: {fileID: 11400000, guid: 4b89ac77f7e847f4685e312bc7eed78d, type: 2}
   wallDashJumpSkill: {fileID: 11400000, guid: 36704b31bbc9d9943ac64e5a550749a4, type: 2}
+  platformLayer:
+    serializedVersion: 2
+    m_Bits: 32768
+  dropDuration: 0.25
+  ladderLayer:
+    serializedVersion: 2
+    m_Bits: 49152
   blockSkill: {fileID: 11400000, guid: 2aed61335be90224cbdd9250157995e5, type: 2}
   inventoryLocked: 0
 --- !u!114 &5749790382507345129
@@ -1562,22 +1570,6 @@ MonoBehaviour:
   animatorController: {fileID: 4961355594823665309}
   IsReloading: 0
   attackPoint: {fileID: 906576621458026276}
---- !u!114 &-4255177302283980981
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3345193402010468786}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a6edbd356b39ab845ade55ff34830d20, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  climbingSpeed: 5
-  ladderLayer:
-    serializedVersion: 2
-    m_Bits: 16384
 --- !u!1 &3653114368772367964
 GameObject:
   m_ObjectHideFlags: 0

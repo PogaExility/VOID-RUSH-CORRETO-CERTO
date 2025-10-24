@@ -63,6 +63,11 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         moveInput = input;
     }
+    [Header("Escada")]
+    public float climbingSpeed = 5f;
+
+    // --- Variáveis de estado para Escada ---
+    private bool isClimbing = false;
 
 
     private Rigidbody2D rb;
@@ -223,6 +228,35 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         // O tempo de 0.05s que você pediu.
         steeringGraceCoroutine = StartCoroutine(SteeringGracePeriodCoroutine(0.2f));
     }
+
+    // --- NOVAS FUNÇÕES PARA CONTROLE DE ESCADA ---
+
+    public void StartClimbing()
+    {
+        isClimbing = true;
+    }
+
+    public void Climb(float verticalInput)
+    {
+        if (!isClimbing) return;
+
+        // Aplica o movimento vertical e zera o horizontal
+        rb.linearVelocity = new Vector2(0, verticalInput * climbingSpeed);
+    }
+
+    public void StopClimbing()
+    {
+        isClimbing = false;
+        // Restaura a gravidade base imediatamente ao sair da escada
+        rb.gravityScale = baseGravity;
+    }
+
+    public bool IsClimbing()
+    {
+        return isClimbing;
+    }
+
+    // --- FIM DAS NOVAS FUNÇÕES ---
 
     void Awake()
     {
@@ -491,7 +525,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     }
 
 
-    // Em AdvancedPlayerMovement2D.cs
     private void HandleMovement()
     {
         if (playerController != null && playerController.IsAttacking)
@@ -499,8 +532,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             return;
         }
 
-        // --- ADICIONADO: Bloqueia movimento durante transições de rastejar e outros estados ---
-        if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback || isCrouchingDown || isStandingUp)
+        // --- MODIFICADO: Adicionado isClimbing ---
+        if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback || isCrouchingDown || isStandingUp || isClimbing)
         {
             return;
         }
@@ -526,10 +559,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         bool isPushingAgainstWall = !isGrounded && IsTouchingWall() && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
         if (isPushingAgainstWall) return;
 
-        // --- MODIFICADO: Usa crawlSpeed se estiver rastejando ---
         float currentSpeed = isCrawling ? crawlSpeed : moveSpeed;
         float targetSpeed = moveInput * currentSpeed;
-        // --- FIM DA MODIFICAÇÃO ---
 
         float speedDiff = targetSpeed - rb.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
@@ -537,7 +568,12 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     }
     private void HandleGravity()
     {
-        if (isWallSliding)
+        // --- MODIFICADO: Adicionado lógica para isClimbing ---
+        if (isClimbing)
+        {
+            rb.gravityScale = 0;
+        }
+        else if (isWallSliding)
         {
             rb.gravityScale = 0;
             float speed = currentWallSlideSpeed > 0 ? currentWallSlideSpeed : wallSlideSpeed;
@@ -548,8 +584,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             rb.gravityScale = rb.linearVelocity.y < 0 ? currentGravityScaleOnFall : baseGravity;
         }
     }
-    // --- NOVAS FUNÇÕES PARA CONTROLE DE RASTEJAR ---
-
     public void BeginCrouchTransition()
     {
         isCrouchingDown = true;
