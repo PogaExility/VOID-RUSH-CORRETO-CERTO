@@ -310,10 +310,23 @@ public class WeaponHandler : MonoBehaviour
         var equipmentSlot = weaponSlots[weaponSlotIndex];
         if (itemNoMouse.item != null && itemNoMouse.item.itemType != ItemType.Weapon) return;
 
+        // --- ADICIONADO: Lógica para salvar a munição da arma ativa ---
+        // Se estamos tentando mover a arma que está atualmente equipada...
+        if (weaponSlotIndex == currentWeaponIndex && activeWeaponInstance != null)
+        {
+            // ... e se essa arma for uma arma de longo alcance...
+            if (activeWeaponInstance is RangedWeapon rangedWeapon)
+            {
+                // ...salvamos a munição atual dela de volta no slot antes de trocar.
+                equipmentSlot.currentAmmo = rangedWeapon.CurrentAmmo;
+            }
+        }
+        // --- FIM DA ADIÇÃO ---
+
         // Troca os itens
         (itemNoMouse.item, equipmentSlot.item) = (equipmentSlot.item, itemNoMouse.item);
         (itemNoMouse.count, equipmentSlot.count) = (equipmentSlot.count, itemNoMouse.count);
-        (itemNoMouse.currentAmmo, equipmentSlot.currentAmmo) = (equipmentSlot.currentAmmo, itemNoMouse.currentAmmo); // Troca a munição também
+        (itemNoMouse.currentAmmo, equipmentSlot.currentAmmo) = (equipmentSlot.currentAmmo, itemNoMouse.currentAmmo);
 
         inventoryManager.RequestRedraw();
         OnWeaponSlotsChanged?.Invoke();

@@ -46,7 +46,15 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool physicsControlDisabled = false;
     private float currentGravityScaleOnFall;
 
+    [Header("Rastejar")]
+    public float crawlSpeed = 4f;
 
+    // --- Variáveis de estado para o Rastejar ---
+    private bool isCrawling = false;
+    private bool isCrouchingDown = false;
+    private bool isStandingUp = false;
+    private Vector2 originalColliderSize;
+    private Vector2 originalColliderOffset;
 
     [Header("Física de Dano")]
 
@@ -224,6 +232,10 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         currentGravityScaleOnFall = gravityScaleOnFall;
         defenseHandler = GetComponent<DefenseHandler>();
+
+        // --- ADICIONADO: Salva as dimensões originais do collider ---
+        originalColliderSize = capsuleCollider.size;
+        originalColliderOffset = capsuleCollider.offset;
     }
 
     void Update()
@@ -401,9 +413,14 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         }
     }
 
-
     public void DoJump(float multiplier)
     {
+        // --- ADICIONADO: Bloqueio físico de pulo ao rastejar ---
+        if (isCrawling || isCrouchingDown || isStandingUp)
+        {
+            return;
+        }
+        // --- FIM DA ADIÇÃO ---
 
         if (isInParabolaArc)
         {
@@ -481,8 +498,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         {
             return;
         }
-        // ADICIONE A VERIFICAÇÃO "isInKnockback" AQUI
-        if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback)
+
+        // --- ADICIONADO: Bloqueia movimento durante transições de rastejar e outros estados ---
+        if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback || isCrouchingDown || isStandingUp)
         {
             return;
         }
@@ -508,7 +526,11 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         bool isPushingAgainstWall = !isGrounded && IsTouchingWall() && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
         if (isPushingAgainstWall) return;
 
-        float targetSpeed = moveInput * moveSpeed;
+        // --- MODIFICADO: Usa crawlSpeed se estiver rastejando ---
+        float currentSpeed = isCrawling ? crawlSpeed : moveSpeed;
+        float targetSpeed = moveInput * currentSpeed;
+        // --- FIM DA MODIFICAÇÃO ---
+
         float speedDiff = targetSpeed - rb.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
         rb.AddForce(speedDiff * accelRate * Vector2.right);
@@ -526,7 +548,67 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             rb.gravityScale = rb.linearVelocity.y < 0 ? currentGravityScaleOnFall : baseGravity;
         }
     }
+    // --- NOVAS FUNÇÕES PARA CONTROLE DE RASTEJAR ---
 
+    public void BeginCrouchTransition()
+    {
+        isCrouchingDown = true;
+        // Desabilitamos o controle para que a animação toque sem o jogador escorregar
+        physicsControlDisabled = true;
+        // Zeramos a velocidade para garantir que ele pare
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+    }
+
+    public void CompleteCrouch()
+    {
+        isCrouchingDown = false;
+        isCrawling = true;
+
+        // Reduz o tamanho e ajusta o offset do collider
+        float newHeight = originalColliderSize.y / 2;
+        capsuleCollider.size = new Vector2(originalColliderSize.x, newHeight);
+        
+        // Desloca o centro do collider para baixo para que ele permaneça no chão
+        float newOffsetY = originalColliderOffset.y - (originalColliderSize.y / 4);
+        capsuleCollider.offset = new Vector2(originalColliderOffset.x, newOffsetY);
+
+        // Devolve o controle da física ao jogador
+        physicsControlDisabled = false;
+    }
+
+    public void BeginStandUpTransition()
+    {
+        isStandingUp = true;
+        // Desabilitamos o controle para a animação de levantar
+        physicsControlDisabled = true;
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+    }
+
+    public void CompleteStandUp()
+    {
+        isStandingUp = false;
+        isCrawling = false;
+
+        // Restaura o collider ao seu tamanho e posição originais
+        capsuleCollider.size = originalColliderSize;
+        capsuleCollider.offset = originalColliderOffset;
+
+        // Devolve o controle da física
+        physicsControlDisabled = false;
+    }
+    
+    // Funções de verificação para o PlayerController
+    public bool IsCrawling()
+    {
+        return isCrawling;
+    }
+
+    public bool IsOnCrawlTransition()
+    {
+        return isCrouchingDown || isStandingUp;
+    }
+    
+    // --- FIM DAS NOVAS FUNÇÕES ---
 
     private void UpdateTimers() { if (!isGrounded) coyoteTimeCounter -= Time.deltaTime; }
     public void CutJump() { if (rb.linearVelocity.y > 0) { rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f); } }
@@ -545,7 +627,17 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public void SetVelocity(float x, float y) { rb.linearVelocity = new Vector2(x, y); }
     public bool CanJumpFromGround() { return coyoteTimeCounter > 0f; }
     public bool IsTouchingWall() { return isTouchingWallLeft || isTouchingWallRight; }
-    public void OnDashStart() { isDashing = true; }
+    public void OnDashStart()
+    {
+        // --- ADICIONADO: Bloqueio físico de dash ao rastejar ---
+        if (isCrawling || isCrouchingDown || isStandingUp)
+        {
+            return;
+        }
+        // --- FIM DA ADIÇÃO ---
+
+        isDashing = true;
+    }
     public void OnDashEnd() { isDashing = false; }
     public void OnWallDashStart() { isWallDashing = true; }
     public void OnWallDashEnd() { isWallDashing = false; }
