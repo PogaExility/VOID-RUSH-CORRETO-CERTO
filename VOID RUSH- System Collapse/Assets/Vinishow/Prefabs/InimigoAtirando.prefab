@@ -138,6 +138,7 @@ GameObject:
   - component: {fileID: 5427905731880656022}
   - component: {fileID: 6516726819288666478}
   - component: {fileID: 863119666816260595}
+  - component: {fileID: 4777662005644837644}
   m_Layer: 10
   m_Name: Capsule
   m_TagString: Untagged
@@ -325,6 +326,18 @@ MonoBehaviour:
   ledgeCheckPoint: {fileID: 2709804386890107229}
   attackPoint: {fileID: 5689303032566104639}
   environmentCheckDistance: 0.2
+--- !u!114 &4777662005644837644
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4979295523320596477}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6bc41316b6a30e4bbd4dd900548285b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5308743402230364129
 GameObject:
   m_ObjectHideFlags: 0
