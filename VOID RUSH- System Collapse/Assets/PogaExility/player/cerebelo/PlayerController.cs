@@ -34,6 +34,19 @@ public class PlayerController : MonoBehaviour
     public SkillSO wallDashSkill;
     public SkillSO wallDashJumpSkill;
 
+    [Header("Plataformas")]
+    [Tooltip("A camada (Layer) em que as plataformas 'one-way' se encontram.")]
+    [SerializeField] private LayerMask platformLayer;
+    [Tooltip("Por quanto tempo a colisão ficará desativada ao descer.")]
+    [SerializeField] private float dropDuration = 0.25f;
+
+    [Header("Escada")]
+    [SerializeField] private LayerMask ladderLayer;
+
+    // --- Variáveis de estado para Escada ---
+    private bool isOnLadder = false;
+    private float verticalInput;
+
     [Header("Skills de Combate")]
     public SkillSO blockSkill;
 
@@ -52,6 +65,7 @@ public class PlayerController : MonoBehaviour
     private bool isActionInterruptingAim = false;
     private bool _isAttacking;
     private ObjetoInterativo interagivelProximo;
+    private bool _isIgnoringPlatforms = false;
 
 
     public bool IsAttacking
@@ -149,35 +163,79 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // --- ADIÇÃO ---
-        // A lógica de rastejar é tratada primeiro para ter prioridade.
-        HandleCrawlInput();
-        // --- FIM DA ADIÇÃO ---
-
-        // O resto da lógica de Update só roda se não estiver atacando ou rastejando.
-        // A trava de movimento já está dentro de cada função Handle.
+        // Captura de inputs gerais
+        verticalInput = Input.GetAxisRaw("Vertical");
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
+
+        // Lida com as mecânicas de estado
+        HandleCrawlInput();
+        HandleClimbing();
+
+        // Tenta descer da plataforma. Se conseguir, 'dropped' será verdadeiro.
+        bool dropped = HandlePlatformDrop();
+
+        // Lida com inputs de ação
+        HandleInteractionInput();
+        HandlePowerModeToggle();
+
+        // SÓ tenta pular/usar skills se NÃO tiver acabado de descer de uma plataforma.
+        if (!dropped)
+        {
+            HandleSkillInput();
+        }
+
+        HandleCombatInput();
+        ProcessAttackBuffer();
+        HandleWeaponSwitching();
+
+        // Atualiza animações e estados de frame
+        UpdateAnimations();
 
         bool isGroundedNow = movementScript.IsGrounded();
         if (isGroundedNow && !wasGroundedLastFrame)
         {
             isLanding = true;
         }
-
-        HandleInteractionInput();
-        HandlePowerModeToggle();
-        HandleSkillInput();
-        HandleCombatInput();
-        ProcessAttackBuffer();
-        HandleWeaponSwitching();
-        UpdateAnimations();
-
         wasGroundedLastFrame = isGroundedNow;
 
         if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
     }
+    // --- NOVAS FUNÇÕES PARA DESCER DE PLATAFORMAS ---
 
-    // --- NOVAS FUNÇÕES PARA A LÓGICA DE RASTEJAR ---
+
+    private bool HandlePlatformDrop()
+    {
+        // Verifica se o jogador está segurando 'S' E apertou o botão de Pulo neste frame.
+        // Também verifica se está no chão para evitar ativar isso no ar.
+        if (Input.GetKey(KeyCode.S) && Input.GetButtonDown("Jump") && movementScript.IsGrounded())
+        {
+            StartCoroutine(PlatformDropRoutine());
+            return true; // Indica que a ação de descer foi realizada
+        }
+        return false; // Nenhuma ação de descer foi realizada
+    }
+
+    private IEnumerator PlatformDropRoutine()
+    {
+        // Pega a layer do jogador e a layer das plataformas
+        int playerLayer = gameObject.layer;
+        int platformLayerIndex = LayerMask.NameToLayer("Plataforma");
+
+        // --- ADICIONADO: Empurrão para baixo ---
+        // Força uma pequena velocidade para baixo para garantir que o jogador se descole
+        movementScript.SetVelocity(movementScript.GetRigidbody().linearVelocity.x, -1f);
+        // --- FIM DA ADIÇÃO ---
+
+        // Desliga a colisão entre elas
+        Physics2D.IgnoreLayerCollision(playerLayer, platformLayerIndex, true);
+
+        // Espera um pouquinho para a gravidade puxar o jogador para baixo da plataforma
+        yield return new WaitForSeconds(dropDuration);
+
+        // Religa a colisão
+        Physics2D.IgnoreLayerCollision(playerLayer, platformLayerIndex, false);
+    }
+
 
     private void HandleCrawlInput()
     {
@@ -436,7 +494,21 @@ public class PlayerController : MonoBehaviour
         // Trava de ataque meelee
         if (IsAttacking) return;
 
-        // --- LÓGICA DE ANIMAÇÃO DE RASTEJAR (TEM PRIORIDADE) ---
+        // --- LÓGICA DE ANIMAÇÃO DE ESCADA (PRIORIDADE MÁXIMA) ---
+        if (movementScript.IsClimbing())
+        {
+            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.subindoEscada);
+            // Controla a velocidade da animação para subir, descer ou parar
+            animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, verticalInput);
+            return;
+        }
+        else
+        {
+            // Garante que a velocidade do animator volte ao normal ao sair da escada
+            animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+        }
+
+        // --- LÓGICA DE ANIMAÇÃO DE RASTEJAR (PRIORIDADE ALTA) ---
         if (movementScript.IsOnCrawlTransition())
         {
             return;
@@ -456,16 +528,12 @@ public class PlayerController : MonoBehaviour
             }
             return;
         }
-        // --- FIM DA LÓGICA DE RASTEJAR ---
-
 
         // --- LÓGICA DE ANIMAÇÃO NORMAL ---
         PlayerAnimState desiredState;
 
         if (playerStats.IsDead()) { desiredState = PlayerAnimState.morrendo; }
-        // --- MUDANÇA CRÍTICA AQUI ---
         else if (isLanding && !isInAimMode) { desiredState = PlayerAnimState.pousando; }
-        // --- FIM DA MUDANÇA ---
         else if (animatorController.GetCurrentAnimatorStateInfo(AnimatorTarget.PlayerBody, 0).IsName("dano")) { desiredState = PlayerAnimState.dano; }
         else if (!movementScript.IsGrounded())
         {
@@ -503,6 +571,7 @@ public class PlayerController : MonoBehaviour
                 }
             }
         }
+
 
         if (isInAimMode)
         {
@@ -585,4 +654,41 @@ public class PlayerController : MonoBehaviour
         isLanding = false;
         movementScript.OnLandingComplete();
     }
+    // --- NOVAS FUNÇÕES PARA MECÂNICA DE ESCADA ---
+
+    private void HandleClimbing()
+    {
+        // Se o jogador está em contato com a escada e pressiona para cima ou para baixo
+        if (isOnLadder && Mathf.Abs(verticalInput) > 0.1f)
+        {
+            movementScript.StartClimbing();
+        }
+
+        // Se o jogador está no estado de escalada, aplica o movimento
+        if (movementScript.IsClimbing())
+        {
+            movementScript.Climb(verticalInput);
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        // Verifica se o objeto com o qual colidiu está na camada da escada
+        if ((ladderLayer.value & (1 << collision.gameObject.layer)) > 0)
+        {
+            isOnLadder = true;
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        // Verifica se o objeto que está deixando está na camada da escada
+        if ((ladderLayer.value & (1 << collision.gameObject.layer)) > 0)
+        {
+            isOnLadder = false;
+            movementScript.StopClimbing();
+        }
+    }
+
+    // --- FIM DAS NOVAS FUNÇÕES ---
 }

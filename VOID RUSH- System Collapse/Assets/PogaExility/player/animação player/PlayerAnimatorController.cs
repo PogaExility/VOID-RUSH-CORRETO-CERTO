@@ -31,11 +31,11 @@ public enum PlayerAnimState
     Combo1,
     Combo2,
     Combo3,
-    // --- ADICIONADO ---
     abaixando,
     rastejando,
-    levantando
-    // --- FIM DA ADIÇÃO ---
+    levantando,
+    subindoEscada
+
 }
 
 public class PlayerAnimatorController : MonoBehaviour
@@ -75,12 +75,11 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int Combo1Hash = Animator.StringToHash("Combo1");
     private static readonly int Combo2Hash = Animator.StringToHash("Combo2");
     private static readonly int Combo3Hash = Animator.StringToHash("Combo3");
-
-    // --- ADICIONADO ---
     private static readonly int AbaixandoHash = Animator.StringToHash("abaixando");
     private static readonly int RastejandoHash = Animator.StringToHash("rastejando");
     private static readonly int LevantandoHash = Animator.StringToHash("levantando");
-    // --- FIM DA ADIÇÃO ---
+    private static readonly int SubindoEscadaHash = Animator.StringToHash("subindoEscada");
+
     #endregion
 
 
@@ -202,13 +201,10 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.Combo1: return Combo1Hash;
             case PlayerAnimState.Combo2: return Combo2Hash;
             case PlayerAnimState.Combo3: return Combo3Hash;
-
-            // --- ADICIONADO ---
             case PlayerAnimState.abaixando: return AbaixandoHash;
             case PlayerAnimState.rastejando: return RastejandoHash;
             case PlayerAnimState.levantando: return LevantandoHash;
-            // --- FIM DA ADIÇÃO ---
-
+            case PlayerAnimState.subindoEscada: return SubindoEscadaHash;
             default: return ParadoHash;
         }
     }
