@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(AIPerceptionSystem), typeof(AIPlatformerMotor))]
+[RequireComponent(typeof(AIPerceptionSystem), typeof(AIPlatformerMotor), typeof(AINavigationSystem))]
 public class AIController_Stalker : MonoBehaviour
 {
     #region REFERENCES & STATE
@@ -36,6 +36,8 @@ public class AIController_Stalker : MonoBehaviour
     void Update()
     {
         if (_motor.IsTransitioningState || _isAnalyzing) return;
+        // Descomente a linha abaixo para reativar a lógica de combate
+        // if (_perception != null && _perception.IsAwareOfPlayer) { ProcessCombatLogic(); } else { ProcessPatrolLogic(); }
         ProcessPatrolLogic();
     }
 
@@ -66,16 +68,49 @@ public class AIController_Stalker : MonoBehaviour
                     _motor.StartCrouch();
                     _motor.Move(patrolTopSpeed / 2);
                     break;
-                case AINavigationSystem.ObstacleType.JumpablePlatform: _motor.Jump(jumpForce); break;
-                case AINavigationSystem.ObstacleType.FullWall: StartCoroutine(AnalyzeWallRoutine()); break;
-                case AINavigationSystem.ObstacleType.Ledge: StartCoroutine(AnalyzeLedgeRoutine()); break;
-                case AINavigationSystem.ObstacleType.None: default: _motor.Move(patrolTopSpeed); break;
+                case AINavigationSystem.ObstacleType.JumpablePlatform:
+                    _motor.HardStop();
+                    _motor.StartVault();
+                    break;
+                case AINavigationSystem.ObstacleType.FullWall:
+                    StartCoroutine(AnalyzeWallRoutine());
+                    break;
+                case AINavigationSystem.ObstacleType.DroppableLedge:
+                    _motor.Move(patrolTopSpeed);
+                    break;
+                case AINavigationSystem.ObstacleType.Ledge:
+                    StartCoroutine(AnalyzeLedgeRoutine());
+                    break;
+                case AINavigationSystem.ObstacleType.None:
+                default:
+                    _motor.Move(patrolTopSpeed);
+                    break;
             }
         }
     }
 
     #region Helper Routines and Combat
-    private void ProcessCombatLogic() {/*...*/}
+    private void ProcessCombatLogic()
+    {
+        if (_player == null) return;
+        FaceTarget(_player.position);
+        if (Vector2.Distance(transform.position, _player.position) <= attackRange)
+        {
+            _motor.Stop();
+        }
+        else
+        {
+            var query = _navigation.QueryEnvironment();
+            switch (query.detectedObstacle)
+            {
+                case AINavigationSystem.ObstacleType.FullWall: _motor.HardStop(); break;
+                case AINavigationSystem.ObstacleType.JumpablePlatform: _motor.StartVault(); break; // Deve escalar em combate também
+                case AINavigationSystem.ObstacleType.Ledge: _motor.HardStop(); break;
+                default: _motor.Move(huntTopSpeed); break;
+            }
+        }
+    }
+
     private IEnumerator AnalyzeWallRoutine()
     {
         if (_isAnalyzing) yield break;
@@ -88,6 +123,7 @@ public class AIController_Stalker : MonoBehaviour
         StartCoroutine(FlipCooldownRoutine());
         _isAnalyzing = false;
     }
+
     private IEnumerator AnalyzeLedgeRoutine()
     {
         if (_isAnalyzing) yield break;
@@ -100,6 +136,10 @@ public class AIController_Stalker : MonoBehaviour
         StartCoroutine(FlipCooldownRoutine());
         _isAnalyzing = false;
     }
+
+    // ==================================================================
+    // FUNÇÕES COMPLETAS E CORRIGIDAS
+    // ==================================================================
     private void FaceTarget(Vector3 targetPosition)
     {
         if (_player == null) return;

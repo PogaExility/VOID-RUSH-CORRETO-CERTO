@@ -3,11 +3,11 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(AdvancedPlayerMovement2D))]
 public class PlayerClimbingVD : MonoBehaviour
 {
-    [Header("Configuração da Escada")]
+    [Header("Configuraï¿½ï¿½o da Escada")]
     [SerializeField] private float climbingSpeed = 5f;
     [SerializeField] private LayerMask ladderLayer;
 
-    // Referências
+    // Referï¿½ncias
     private Rigidbody2D rb;
     private AdvancedPlayerMovement2D playerMovement;
 
@@ -21,7 +21,7 @@ public class PlayerClimbingVD : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         playerMovement = GetComponent<AdvancedPlayerMovement2D>();
-        // É mais seguro pegar a gravidade do script de movimento, caso ele a modifique.
+        // ï¿½ mais seguro pegar a gravidade do script de movimento, caso ele a modifique.
         originalGravityScale = playerMovement.baseGravity;
     }
 
@@ -29,16 +29,16 @@ public class PlayerClimbingVD : MonoBehaviour
     {
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        // --- LÓGICA DE PULO ADICIONADA ---
-        // Se o jogador está escalando e aperta o botão de pulo...
+        // --- Lï¿½GICA DE PULO ADICIONADA ---
+        // Se o jogador estï¿½ escalando e aperta o botï¿½o de pulo...
         if (isClimbing && Input.GetButtonDown("Jump"))
         {
             isClimbing = false; // Para de escalar
-            // Não precisa chamar playerMovement.DoJump() aqui, 
+            // Nï¿½o precisa chamar playerMovement.DoJump() aqui, 
             // pois o script principal vai ler o input no mesmo frame.
-            return; // Sai da função Update deste script para o playerMovement assumir.
+            return; // Sai da funï¿½ï¿½o Update deste script para o playerMovement assumir.
         }
-        // --- FIM DA LÓGICA DE PULO ---
+        // --- FIM DA Lï¿½GICA DE PULO ---
 
         if (isOnLadder && Mathf.Abs(verticalInput) > 0.1f)
         {
@@ -50,19 +50,19 @@ public class PlayerClimbingVD : MonoBehaviour
             isClimbing = false;
         }
 
-        // Se o jogador está escalando...
+        // Se o jogador estï¿½ escalando...
         if (isClimbing)
         {
-            // O movimento horizontal é zerado para que o jogador não deslize para os lados
-            rb.velocity = new Vector2(0, verticalInput * climbingSpeed);
+            // O movimento horizontal ï¿½ zerado para que o jogador nï¿½o deslize para os lados
+            rb.linearVelocity = new Vector2(0, verticalInput * climbingSpeed);
             playerMovement.SetGravityScale(0f);
             playerMovement.enabled = false; // Desativa o script principal
         }
         else
         {
-            // Se não está escalando, devolve o controle.
+            // Se nï¿½o estï¿½ escalando, devolve o controle.
             playerMovement.enabled = true; // Reativa o script principal
-            // O próprio script principal agora é responsável por restaurar a gravidade.
+            // O prï¿½prio script principal agora ï¿½ responsï¿½vel por restaurar a gravidade.
         }
     }
 

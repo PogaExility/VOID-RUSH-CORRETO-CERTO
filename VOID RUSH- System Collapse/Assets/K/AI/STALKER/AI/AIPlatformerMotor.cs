@@ -32,6 +32,10 @@ public class AIPlatformerMotor : MonoBehaviour
     [Header("▶ Atributos de Agachar")]
     public float crouchHeight = 1.9f;
     public float standUpImmunityDuration = 0.2f;
+    [Header("▶ Atributos de Escalar")]
+    public float vaultHeight = 1.2f;
+    public float vaultForwardDistance = 1.0f;
+    public float vaultDuration = 0.5f;
     [Header("▶ Atributos Físicos")]
     public LayerMask groundLayer;
     public Transform groundCheck;
@@ -61,7 +65,7 @@ public class AIPlatformerMotor : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!IsClimbing) { _rb.linearVelocity = new Vector2(_currentSpeed * currentFacingDirection, _rb.linearVelocity.y); }
+        if (!IsClimbing && !IsTransitioningState) { _rb.linearVelocity = new Vector2(_currentSpeed * currentFacingDirection, _rb.linearVelocity.y); }
     }
     #endregion
 
@@ -71,6 +75,37 @@ public class AIPlatformerMotor : MonoBehaviour
     public void HardStop() { _currentSpeed = 0; _rb.linearVelocity = new Vector2(0, _rb.linearVelocity.y); }
     public void Brake() { _currentSpeed = Mathf.MoveTowards(_currentSpeed, 0, deceleration * Time.deltaTime); }
     public void Jump(float jumpForce) { if (IsGrounded()) { _rb.AddForce(new Vector2(0f, jumpForce), ForceMode2D.Impulse); } }
+
+    public void StartVault()
+    {
+        if (IsTransitioningState) return;
+        StartCoroutine(VaultCoroutine());
+    }
+
+    private IEnumerator VaultCoroutine()
+    {
+        IsTransitioningState = true;
+        _rb.linearVelocity = Vector2.zero;
+        _rb.gravityScale = 0;
+
+        Vector2 startPos = transform.position;
+        Vector2 endPos = new Vector2(
+            transform.position.x + (vaultForwardDistance * currentFacingDirection),
+            transform.position.y + vaultHeight
+        );
+
+        float elapsedTime = 0f;
+        while (elapsedTime < vaultDuration)
+        {
+            transform.position = Vector2.Lerp(startPos, endPos, (elapsedTime / vaultDuration));
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.position = endPos;
+        _rb.gravityScale = _originalGravityScale;
+        IsTransitioningState = false;
+    }
 
     public void StartCrouch()
     {

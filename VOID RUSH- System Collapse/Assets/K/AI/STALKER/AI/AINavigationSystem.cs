@@ -2,7 +2,15 @@
 
 public class AINavigationSystem : MonoBehaviour
 {
-    public enum ObstacleType { None, CrouchTunnel, JumpablePlatform, FullWall, Ledge }
+    // Enum atualizado para incluir a nova percepção de "queda segura"
+    public enum ObstacleType { None, CrouchTunnel, JumpablePlatform, FullWall, Ledge, DroppableLedge }
+
+    // Enum para a sua lógica de escalada configurável
+    public enum VaultHeightLogic
+    {
+        BaseOnly,      // Apenas obstáculos de 1 tile de altura são escaláveis.
+        UpToMidHeight  // Obstáculos de 1 E 2 tiles de altura são escaláveis.
+    }
 
     #region REFERÊNCIAS
     private AIPlatformerMotor _motor;
@@ -13,13 +21,21 @@ public class AINavigationSystem : MonoBehaviour
     public Transform Probe_Height_1_Base;
     public Transform Probe_Height_2_Mid;
     public Transform Probe_Height_3_Top;
+
     [Header("▶ Sondas Especialistas")]
     public Transform Probe_Ledge_Check;
     public Transform Probe_Ceiling_Check;
+
     [Header("▶ Cortina de Segurança (3 Sondas)")]
     public Transform Probe_Crouch_Safety_Front;
     public Transform Probe_Crouch_Safety_Mid;
     public Transform Probe_Crouch_Safety_Back;
+
+    [Header("▶ LÓGICA TÁTICA CONFIGURÁVEL")]
+    [Tooltip("Define qual a altura máxima que a IA considera escalável.")]
+    public VaultHeightLogic vaultLogic = VaultHeightLogic.BaseOnly;
+    [Tooltip("A altura máxima (em tiles, ex: 3 = 3 tiles) que a IA considera segura para descer.")]
+    public float maxDropDownHeight = 3.0f;
 
     [Header("▶ Configuração das Sondas")]
     public LayerMask groundLayer;
@@ -48,42 +64,41 @@ public class AINavigationSystem : MonoBehaviour
 
         if (_motor.IsCrouching)
         {
-            // =====================================================================================
-            // SUA LÓGICA "FODA-SE" IMPLEMENTADA AQUI
-            // =====================================================================================
-            // Quando agachada, a IA só se importa com paredes que bloqueiam seu torso ou com quedas.
-
+            // Lógica de agachar (está funcionando perfeitamente)
             bool seesMidWall = ProbeForWall(Probe_Height_2_Mid);
-
-            if (seesMidWall)
-            {
-                // Se a sonda do meio está bloqueada, É uma parede de verdade. Pare.
-                result.detectedObstacle = ObstacleType.FullWall;
-            }
-            else if (ProbeForLedge(Probe_Ledge_Check))
-            {
-                // Se não há uma parede, verifique se há uma queda.
-                result.detectedObstacle = ObstacleType.Ledge;
-            }
-
-            // Se NENHUMA das condições acima for atendida (ou seja, se APENAS a sonda
-            // da base estiver ativa), o veredito permanecerá 'None'. A IA irá ignorar
-            // a rampa e continuar andando, deixando a física fazer o trabalho de subir.
+            if (seesMidWall) { result.detectedObstacle = ObstacleType.FullWall; }
+            else if (ProbeForLedge(out float _)) { result.detectedObstacle = ObstacleType.Ledge; }
         }
         else
         {
-            // --- LÓGICA QUANDO ESTÁ EM PÉ (Inalterada e Correta) ---
+            // Lógica de estado em pé
             bool seesBaseWall = ProbeForWall(Probe_Height_1_Base);
             bool seesMidWall = ProbeForWall(Probe_Height_2_Mid);
             bool seesTopWall = ProbeForWall(Probe_Height_3_Top);
             bool seesCeiling = ProbeForCeiling(Probe_Ceiling_Check);
 
             if (seesCeiling && seesTopWall) { result.detectedObstacle = ObstacleType.CrouchTunnel; }
-            else if (seesBaseWall && !seesMidWall && !seesTopWall) { result.detectedObstacle = ObstacleType.JumpablePlatform; }
-            else if (seesBaseWall) { result.detectedObstacle = ObstacleType.FullWall; }
-            else if (ProbeForLedge(Probe_Ledge_Check)) { result.detectedObstacle = ObstacleType.Ledge; }
+            else if (seesBaseWall)
+            {
+                // Sua lógica de escalada configurável
+                bool isVaultable = false;
+                switch (vaultLogic)
+                {
+                    case VaultHeightLogic.BaseOnly:
+                        if (!seesMidWall && !seesTopWall) isVaultable = true;
+                        break;
+                    case VaultHeightLogic.UpToMidHeight:
+                        if (!seesTopWall) isVaultable = true;
+                        break;
+                }
+                result.detectedObstacle = isVaultable ? ObstacleType.JumpablePlatform : ObstacleType.FullWall;
+            }
+            else if (ProbeForLedge(out float distanceToGroundBelow))
+            {
+                // Sua lógica de queda controlada
+                result.detectedObstacle = distanceToGroundBelow <= maxDropDownHeight ? ObstacleType.DroppableLedge : ObstacleType.Ledge;
+            }
         }
-
         return result;
     }
 
@@ -92,14 +107,29 @@ public class AINavigationSystem : MonoBehaviour
         bool frontIsClear = !ProbeForCeiling(Probe_Crouch_Safety_Front);
         bool midIsClear = !ProbeForCeiling(Probe_Crouch_Safety_Mid);
         bool backIsClear = !ProbeForCeiling(Probe_Crouch_Safety_Back);
-
         return frontIsClear && midIsClear && backIsClear;
     }
 
     #region Sondas e Gizmos
     private bool ProbeForWall(Transform origin) => origin != null && Physics2D.Raycast(origin.position, transform.right, wallProbeDistance, groundLayer);
-    private bool ProbeForLedge(Transform origin) => origin != null && !Physics2D.Raycast(origin.position, Vector2.down, ledgeProbeDistance, groundLayer);
     private bool ProbeForCeiling(Transform origin) => origin != null && Physics2D.Raycast(origin.position, Vector2.up, ceilingProbeHeight, groundLayer);
+
+    private bool ProbeForLedge(out float distance)
+    {
+        distance = float.MaxValue;
+        if (Probe_Ledge_Check == null) return false;
+
+        if (!Physics2D.Raycast(Probe_Ledge_Check.position, Vector2.down, ledgeProbeDistance, groundLayer))
+        {
+            RaycastHit2D hit = Physics2D.Raycast(Probe_Ledge_Check.position, Vector2.down, maxDropDownHeight + ledgeProbeDistance, groundLayer);
+            if (hit.collider != null)
+            {
+                distance = hit.distance;
+            }
+            return true;
+        }
+        return false;
+    }
 
     void OnDrawGizmosSelected()
     {
@@ -107,7 +137,7 @@ public class AINavigationSystem : MonoBehaviour
         DrawProbeGizmo(Probe_Height_1_Base, ProbeForWall(Probe_Height_1_Base), Color.red, transform.right, wallProbeDistance);
         DrawProbeGizmo(Probe_Height_2_Mid, ProbeForWall(Probe_Height_2_Mid), Color.red, transform.right, wallProbeDistance);
         DrawProbeGizmo(Probe_Height_3_Top, ProbeForWall(Probe_Height_3_Top), Color.red, transform.right, wallProbeDistance);
-        DrawProbeGizmo(Probe_Ledge_Check, ProbeForLedge(Probe_Ledge_Check), Color.magenta, Vector2.down, ledgeProbeDistance);
+        DrawProbeGizmo(Probe_Ledge_Check, ProbeForLedge(out float _), Color.magenta, Vector2.down, ledgeProbeDistance);
         DrawProbeGizmo(Probe_Ceiling_Check, ProbeForCeiling(Probe_Ceiling_Check), Color.yellow, Vector2.up, ceilingProbeHeight);
         DrawProbeGizmo(Probe_Crouch_Safety_Front, !ProbeForCeiling(Probe_Crouch_Safety_Front), Color.cyan, Vector2.up, ceilingProbeHeight);
         DrawProbeGizmo(Probe_Crouch_Safety_Mid, !ProbeForCeiling(Probe_Crouch_Safety_Mid), Color.cyan, Vector2.up, ceilingProbeHeight);
