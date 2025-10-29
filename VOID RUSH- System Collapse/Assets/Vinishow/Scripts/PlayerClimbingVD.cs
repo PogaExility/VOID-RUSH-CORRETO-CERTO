@@ -3,11 +3,11 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(AdvancedPlayerMovement2D))]
 public class PlayerClimbingVD : MonoBehaviour
 {
-    [Header("Configura��o da Escada")]
+    [Header("Configuração da Escada")]
     [SerializeField] private float climbingSpeed = 5f;
     [SerializeField] private LayerMask ladderLayer;
 
-    // Refer�ncias
+    // Referências
     private Rigidbody2D rb;
     private AdvancedPlayerMovement2D playerMovement;
 
@@ -21,7 +21,7 @@ public class PlayerClimbingVD : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         playerMovement = GetComponent<AdvancedPlayerMovement2D>();
-        // � mais seguro pegar a gravidade do script de movimento, caso ele a modifique.
+        // É mais seguro pegar a gravidade do script de movimento, caso ele a modifique.
         originalGravityScale = playerMovement.baseGravity;
     }
 
@@ -29,16 +29,16 @@ public class PlayerClimbingVD : MonoBehaviour
     {
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        // --- L�GICA DE PULO ADICIONADA ---
-        // Se o jogador est� escalando e aperta o bot�o de pulo...
+        // --- LÓGICA DE PULO ADICIONADA ---
+        // Se o jogador está escalando e aperta o botão de pulo...
         if (isClimbing && Input.GetButtonDown("Jump"))
         {
             isClimbing = false; // Para de escalar
-            // N�o precisa chamar playerMovement.DoJump() aqui, 
+            // Não precisa chamar playerMovement.DoJump() aqui, 
             // pois o script principal vai ler o input no mesmo frame.
-            return; // Sai da fun��o Update deste script para o playerMovement assumir.
+            return; // Sai da função Update deste script para o playerMovement assumir.
         }
-        // --- FIM DA L�GICA DE PULO ---
+        // --- FIM DA LÓGICA DE PULO ---
 
         if (isOnLadder && Mathf.Abs(verticalInput) > 0.1f)
         {
@@ -50,19 +50,19 @@ public class PlayerClimbingVD : MonoBehaviour
             isClimbing = false;
         }
 
-        // Se o jogador est� escalando...
+        // Se o jogador está escalando...
         if (isClimbing)
         {
-            // O movimento horizontal � zerado para que o jogador n�o deslize para os lados
+            // O movimento horizontal é zerado para que o jogador não deslize para os lados
             rb.linearVelocity = new Vector2(0, verticalInput * climbingSpeed);
             playerMovement.SetGravityScale(0f);
             playerMovement.enabled = false; // Desativa o script principal
         }
         else
         {
-            // Se n�o est� escalando, devolve o controle.
+            // Se não está escalando, devolve o controle.
             playerMovement.enabled = true; // Reativa o script principal
-            // O pr�prio script principal agora � respons�vel por restaurar a gravidade.
+            // O próprio script principal agora é responsável por restaurar a gravidade.
         }
     }
 
