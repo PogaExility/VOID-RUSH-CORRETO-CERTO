@@ -12,6 +12,13 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public Camera mainCamera;
     public TextMeshProUGUI stateCheckText;
     public LayerMask collisionLayer;
+    [Tooltip("Defina aqui qual layer é usada para as plataformas atravessáveis.")]
+    public LayerMask platformLayer; // <-- ADICIONE ESTA LINHA
+
+    // --- Variáveis para o sistema de plataforma ---
+    private int playerLayer;
+    private int platformLayerInt;
+    private bool isDroppingFromPlatform = false;
 
     [Header("Movimento")]
     public float moveSpeed = 8f;
@@ -85,6 +92,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isWallDashing = false;
     private bool isIgnoringSteeringInput = false;
     private Coroutine steeringGraceCoroutine;
+    private Collider2D groundCollider;
 
 
 
@@ -236,6 +244,12 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         // --- ADICIONADO: Salva as dimensões originais do collider ---
         originalColliderSize = capsuleCollider.size;
         originalColliderOffset = capsuleCollider.offset;
+
+        // --- LÓGICA DA PLATAFORMA ---
+        // Pega o número inteiro da layer do jogador e da plataforma.
+        playerLayer = gameObject.layer;
+        // Pega o nome da layer definida no Inspector e converte para seu número inteiro.
+        platformLayerInt = LayerMask.NameToLayer("Plataforma");
     }
 
     void Update()
@@ -249,6 +263,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             return;
         }
 
+        // --- LÓGICA DA PLATAFORMA ---
+        // Verifica se o jogador quer descer da plataforma.
+        HandlePlatformDropInput();
 
 
         isJumping = rb.linearVelocity.y > 0.1f && !isGrounded;
@@ -276,6 +293,11 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         // --- FIM DA CORREÇÃO ---
 
         CheckCollisions();
+
+        // --- LÓGICA DA PLATAFORMA ---
+        // Gerencia a colisão ao pular através da plataforma.
+        HandlePlatformPassthrough();
+
         HandleMovement();
         HandleGravity();
     }
@@ -283,6 +305,65 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public void Freeze() { rb.linearVelocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Kinematic; }
     public void Unfreeze() { rb.bodyType = RigidbodyType2D.Dynamic; }
 
+
+    /// <summary>
+    /// Gerencia a ativação/desativação da colisão com a plataforma baseado na velocidade vertical.
+    /// </summary>
+    private void HandlePlatformPassthrough()
+    {
+        // Se estivermos no meio da corrotina de descer, não faz nada para evitar conflitos.
+        if (isDroppingFromPlatform)
+        {
+            return;
+        }
+
+        // Se a velocidade Y for positiva (subindo), desativa a colisão Player-Plataforma.
+        if (rb.linearVelocity.y > 0.01f)
+        {
+            Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, true);
+        }
+        // Senão (está parado no ar ou caindo), reativa a colisão.
+        else
+        {
+            Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, false);
+        }
+    }
+
+    /// <summary>
+    /// Verifica o input do jogador para iniciar o processo de descer da plataforma.
+    /// </summary>
+    private void HandlePlatformDropInput()
+    {
+        // Condições: Tecla 'S' pressionada, jogador está no chão, e não está já caindo de uma plataforma.
+        if (Input.GetKeyDown(KeyCode.S) && isGrounded && !isDroppingFromPlatform)
+        {
+            // Verifica se o chão que estamos pisando (groundCollider) existe
+            // e se a layer dele está contida na nossa LayerMask de plataformas.
+            // A operação `(platformLayer.value & (1 << groundCollider.gameObject.layer)) > 0` é a forma correta
+            // de verificar se uma layer específica faz parte de uma LayerMask.
+            if (groundCollider != null && (platformLayer.value & (1 << groundCollider.gameObject.layer)) > 0)
+            {
+                StartCoroutine(DropDownCoroutine());
+            }
+        }
+    }
+
+    
+
+    /// <summary>
+    /// Corrotina que desativa a colisão com a plataforma por um breve momento para permitir a queda.
+    /// </summary>
+    private IEnumerator DropDownCoroutine()
+    {
+        isDroppingFromPlatform = true;
+        Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, true);
+
+        // Espera um pequeno instante para o jogador atravessar.
+        yield return new WaitForSeconds(0.3f);
+
+        Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, false);
+        isDroppingFromPlatform = false;
+    }
 
     public void ExecuteKnockback(float force, Vector2 attackDirection, float upwardModifier = 0.5f, float duration = 0.2f)
     {
@@ -477,17 +558,39 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     private bool PerformGroundCheck()
     {
-
         float raycastDistance = 0.1f;
         Vector2 capsuleCenter = (Vector2)transform.position + capsuleCollider.offset;
         float halfWidth = (capsuleCollider.size.x / 2f) - 0.05f;
         Vector2 leftOrigin = new Vector2(capsuleCenter.x - halfWidth, capsuleCenter.y);
         Vector2 centerOrigin = capsuleCenter;
         Vector2 rightOrigin = new Vector2(capsuleCenter.x + halfWidth, capsuleCenter.y);
+
+        // Dispara os três raios para baixo, como antes.
+        // A diferença é que agora usamos a layer "collisionLayer" que você já tinha.
         RaycastHit2D hitLeft = Physics2D.Raycast(leftOrigin, Vector2.down, capsuleCollider.size.y / 2f + raycastDistance, collisionLayer);
         RaycastHit2D hitCenter = Physics2D.Raycast(centerOrigin, Vector2.down, capsuleCollider.size.y / 2f + raycastDistance, collisionLayer);
         RaycastHit2D hitRight = Physics2D.Raycast(rightOrigin, Vector2.down, capsuleCollider.size.y / 2f + raycastDistance, collisionLayer);
-        return hitLeft.collider != null || hitCenter.collider != null || hitRight.collider != null;
+
+        // Verifica se algum dos raios atingiu algo.
+        if (hitLeft.collider != null)
+        {
+            groundCollider = hitLeft.collider; // Guarda o colisor atingido
+            return true;
+        }
+        if (hitCenter.collider != null)
+        {
+            groundCollider = hitCenter.collider; // Guarda o colisor atingido
+            return true;
+        }
+        if (hitRight.collider != null)
+        {
+            groundCollider = hitRight.collider; // Guarda o colisor atingido
+            return true;
+        }
+
+        // Se nenhum raio atingiu o chão, limpa a referência e retorna false.
+        groundCollider = null;
+        return false;
     }
 
 
