@@ -2,73 +2,88 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.Tilemaps;
 
-[RequireComponent(typeof(TilemapCollider2D))]
+// ADIï¿½ï¿½O: Garantir que o PlatformEffector2D tambï¿½m exista.
+[RequireComponent(typeof(TilemapCollider2D), typeof(PlatformEffector2D))]
 public class OneWayPlatformVD : MonoBehaviour
 {
-    [Header("Configuração")]
-    [Tooltip("Duração em segundos que a colisão com o jogador será ignorada.")]
-    [SerializeField] private float ignoreDuration = 0.5f;
+    [Header("Configuraï¿½ï¿½o da Plataforma")]
+    [Tooltip("Duraï¿½ï¿½o em segundos que a plataforma ficarï¿½ desativada para o jogador cair.")]
+    [SerializeField] private float dropDuration = 0.5f; // Aumentei o valor padrï¿½o para evitar o problema de ser "puxado" de volta.
 
-    // Referência para o colisor da plataforma.
-    private TilemapCollider2D platformCollider;
+    // Referï¿½ncias para os componentes.
+    private TilemapCollider2D tilemapCollider;
+    private PlatformEffector2D platformEffector; // NOVO: Referï¿½ncia para o effector.
 
-    // Controle para evitar que a corrotina seja chamada múltiplas vezes.
-    private bool isIgnoringCollision = false;
+    // Variï¿½vel de controle para evitar que a funï¿½ï¿½o seja chamada mï¿½ltiplas vezes seguidas.
+    private bool isDropping = false;
 
+    // A funï¿½ï¿½o Awake ï¿½ chamada quando o script ï¿½ carregado. Ideal para pegar referï¿½ncias.
     void Awake()
     {
-        platformCollider = GetComponent<TilemapCollider2D>();
-    }
+        tilemapCollider = GetComponent<TilemapCollider2D>();
+        platformEffector = GetComponent<PlatformEffector2D>(); // NOVO: Pega o componente effector.
 
-    // Usamos OnCollisionEnter2D para detectar o primeiro toque do jogador subindo.
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (isIgnoringCollision) return;
-
-        if (collision.gameObject.CompareTag("Player"))
+        if (tilemapCollider == null || platformEffector == null)
         {
-            // Verifica se o jogador está se movendo para cima com velocidade suficiente.
-            // O ponto de contato (contacts[0].normal.y) nos diz a direção da colisão. 
-            // Um valor próximo de -1 significa que o jogador bateu na parte de baixo da plataforma.
-            if (collision.contacts[0].normal.y < -0.5f && collision.rigidbody.velocity.y > 0.1f)
-            {
-                StartCoroutine(IgnoreCollisionCoroutine(collision.collider));
-            }
+            Debug.LogError("Um ou mais componentes necessï¿½rios (TilemapCollider2D, PlatformEffector2D) nï¿½o foram encontrados!", this);
         }
     }
 
-    // Usamos OnCollisionStay2D para checar continuamente se o jogador quer descer.
+    // Esta funï¿½ï¿½o ï¿½ chamada continuamente para cada frame que um outro colisor estï¿½ em contato com este.
     private void OnCollisionStay2D(Collision2D collision)
     {
-        if (isIgnoringCollision) return;
-
+        // Verifica se ï¿½ o jogador.
         if (collision.gameObject.CompareTag("Player"))
         {
-            // Se o jogador pressionar 'S' e estiver em cima da plataforma.
-            // O ponto de contato (contacts[0].normal.y) próximo de 1 significa que o jogador está em cima.
-            if (Input.GetKey(KeyCode.S) && collision.contacts[0].normal.y > 0.5f)
+            // --- NOVA Lï¿½GICA PARA EVITAR O PULO EXTRA ---
+            // Verifica se o jogador estï¿½ se movendo para cima (pulando atravï¿½s da plataforma).
+            // collision.rigidbody.velocity.y > 0.1f ï¿½ uma forma segura de checar se ele tem velocidade vertical positiva.
+            if (collision.rigidbody.linearVelocity.y > 0.1f)
             {
-                StartCoroutine(IgnoreCollisionCoroutine(collision.collider));
+                // Desativa o effector para que o jogador passe direto sem "pousar".
+                platformEffector.enabled = false;
+            }
+
+            // --- Lï¿½GICA ANTIGA PARA DESCER DA PLATAFORMA ---
+            // Se a rotina de queda jï¿½ estiver ativa, nï¿½o faz nada.
+            if (isDropping)
+            {
+                return;
+            }
+
+            // Verifica se a tecla "S" estï¿½ sendo segurada.
+            if (Input.GetKey(KeyCode.S))
+            {
+                StartCoroutine(DisableColliderCoroutine());
             }
         }
     }
 
-    // Corrotina unificada para ignorar a colisão temporariamente.
-    private IEnumerator IgnoreCollisionCoroutine(Collider2D playerCollider)
+    // --- NOVA FUNï¿½ï¿½O ---
+    // Esta funï¿½ï¿½o ï¿½ chamada no exato momento em que um colisor PARA de tocar no colisor deste objeto.
+    private void OnCollisionExit2D(Collision2D collision)
     {
-        // 1. Ativa a trava de controle.
-        isIgnoringCollision = true;
+        // Verifica se foi o jogador que parou de tocar a plataforma.
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            // Reativa o effector, garantindo que a plataforma volte a ser sï¿½lida.
+            // Isso acontece depois que o jogador jï¿½ atravessou ela por baixo.
+            platformEffector.enabled = true;
+        }
+    }
 
-        // 2. Manda a física ignorar a colisão entre a plataforma e o jogador.
-        Physics2D.IgnoreCollision(platformCollider, playerCollider, true);
+    // Coroutine para descer da plataforma (pressionando 'S').
+    private IEnumerator DisableColliderCoroutine()
+    {
+        isDropping = true;
 
-        // 3. Espera o tempo definido.
-        yield return new WaitForSeconds(ignoreDuration);
+        // Desativa o colisor do Tilemap inteiro para o jogador cair.
+        tilemapCollider.enabled = false;
 
-        // 4. Manda a física voltar a considerar a colisão.
-        Physics2D.IgnoreCollision(platformCollider, playerCollider, false);
+        yield return new WaitForSeconds(dropDuration);
 
-        // 5. Libera a trava de controle.
-        isIgnoringCollision = false;
+        // Reativa o colisor.
+        tilemapCollider.enabled = true;
+        isDropping = false;
     }
 }
