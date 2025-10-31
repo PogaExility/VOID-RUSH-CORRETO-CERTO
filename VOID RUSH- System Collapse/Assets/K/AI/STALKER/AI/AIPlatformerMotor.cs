@@ -134,6 +134,41 @@ public class AIPlatformerMotor : MonoBehaviour
         IsTransitioningState = false;
     }
 
+    public void StartVaultAndCrouch()
+    {
+        if (IsTransitioningState) return;
+        StartCoroutine(VaultAndCrouchCoroutine());
+    }
+
+    private IEnumerator VaultAndCrouchCoroutine()
+    {
+        IsTransitioningState = true;
+        _rb.linearVelocity = Vector2.zero;
+        _rb.gravityScale = 0;
+
+        Vector2 startPos = transform.position;
+        Vector2 endPos = new Vector2(
+            transform.position.x + (vaultForwardDistance * currentFacingDirection),
+            transform.position.y + vaultHeight
+        );
+
+        float elapsedTime = 0f;
+        while (elapsedTime < vaultDuration)
+        {
+            transform.position = Vector2.Lerp(startPos, endPos, (elapsedTime / vaultDuration));
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.position = endPos;
+        _rb.gravityScale = _originalGravityScale;
+
+        // AÇÃO FINAL: Ao final da escalada, entra imediatamente no estado agachado.
+        StartCrouch();
+
+        IsTransitioningState = false;
+    }
+
     public void Flip() { isFacingRight = !isFacingRight; currentFacingDirection *= -1; transform.Rotate(0f, 180f, 0f); }
     #endregion
 
