@@ -18,7 +18,18 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     // --- Variáveis para o sistema de plataforma ---
     private int playerLayer;
     private int platformLayerInt;
-    private bool isDroppingFromPlatform = false;
+    private bool isIgnoringPlatformsTemporarily = false;
+    public bool IsIgnoringPlatforms()
+    {
+        bool isJumpingUp = rb.linearVelocity.y > 0.01f;
+        return isJumpingUp || Input.GetKey(KeyCode.S) || isIgnoringPlatformsTemporarily;
+    }
+    public Collider2D GetGroundCollider()
+    {
+        return groundCollider;
+    }
+
+
 
     [Header("Movimento")]
     public float moveSpeed = 8f;
@@ -70,7 +81,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         moveInput = input;
     }
-
+    [Header("Escalada")] // <-- ADICIONE ESTE HEADER
+    [SerializeField] private float climbingSpeed = 5f;
+    [SerializeField] private LayerMask ladderLayer;
 
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
@@ -93,8 +106,15 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isIgnoringSteeringInput = false;
     private Coroutine steeringGraceCoroutine;
     private Collider2D groundCollider;
-
-
+    private ContactFilter2D platformContactFilter; 
+    private Collider2D[] overlapResults = new Collider2D[1];
+    private bool isClimbing = false; 
+    private float verticalInput;
+    private bool isInLadderZone = false;
+    public float GetVerticalInput()
+    {
+        return verticalInput;
+    }
 
     public void DisablePhysicsControl()
     {
@@ -248,26 +268,29 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         // --- LÓGICA DA PLATAFORMA ---
         // Pega o número inteiro da layer do jogador e da plataforma.
         playerLayer = gameObject.layer;
-        // Pega o nome da layer definida no Inspector e converte para seu número inteiro.
         platformLayerInt = LayerMask.NameToLayer("Plataforma");
+
+        // --- NOVA CONFIGURAÇÃO ---
+        // Configura o filtro para procurar apenas por colisores na layer "Plataforma".
+        platformContactFilter.SetLayerMask(platformLayer);
     }
 
     void Update()
     {
-        Debug.Log("Estou no ar? " + CheckState(PlayerState.IsInAir));
-        Debug.Log("Estou tocando a parede? " + CheckState(PlayerState.IsTouchingWall));
-        // FIM DA ADIÇÃO
+        // Pega o input vertical no início do Update para ser usado por outras funções.
+        verticalInput = Input.GetAxisRaw("Vertical");
+
+        // --- CORREÇÃO DO ERRO DE DIGITAÇÃO AQUI ---
         if (physicsControlDisabled)
         {
             UpdateTimers();
             return;
         }
 
-        // --- LÓGICA DA PLATAFORMA ---
-        // Verifica se o jogador quer descer da plataforma.
+        // --- NOVA LÓGICA DE ESCALADA ---
+        HandleClimbingInput();
+
         HandlePlatformDropInput();
-
-
         isJumping = rb.linearVelocity.y > 0.1f && !isGrounded;
         if (!isWallSliding && !isWallJumping && !isInKnockback)
         {
@@ -277,92 +300,138 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         UpdateDebugUI();
     }
 
-
-
     void FixedUpdate()
     {
         if (physicsControlDisabled)
         {
-            //rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
             return;
         }
-        if (isWallSliding && (!IsTouchingWall() || IsGrounded()))
+
+        // A lógica agora é dividida: ou o jogador está escalando, ou está em movimento normal.
+        if (isClimbing)
         {
-            StopWallSlide();
+            HandleClimbingMovement();
         }
-        // --- FIM DA CORREÇÃO ---
+        else
+        {
+            if (isWallSliding && (!IsTouchingWall() || IsGrounded()))
+            {
+                StopWallSlide();
+            }
 
-        CheckCollisions();
-
-        // --- LÓGICA DA PLATAFORMA ---
-        // Gerencia a colisão ao pular através da plataforma.
-        HandlePlatformPassthrough();
-
-        HandleMovement();
-        HandleGravity();
+            CheckCollisions();
+            HandlePlatformPassthrough();
+            HandleMovement();
+            HandleGravity();
+        }
     }
 
     public void Freeze() { rb.linearVelocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Kinematic; }
     public void Unfreeze() { rb.bodyType = RigidbodyType2D.Dynamic; }
 
 
-    /// <summary>
-    /// Gerencia a ativação/desativação da colisão com a plataforma baseado na velocidade vertical.
-    /// </summary>
-    private void HandlePlatformPassthrough()
+    private void HandleClimbingInput()
     {
-        // Se estivermos no meio da corrotina de descer, não faz nada para evitar conflitos.
-        if (isDroppingFromPlatform)
+        // A condição para começar a escalar agora usa a nova variável.
+        // Estar na ZONA da escada E apertar para cima ou para baixo.
+        if (isInLadderZone && Mathf.Abs(verticalInput) > 0.1f)
         {
-            return;
+            isClimbing = true;
         }
 
-        // Se a velocidade Y for positiva (subindo), desativa a colisão Player-Plataforma.
-        if (rb.linearVelocity.y > 0.01f)
+        // CONDIÇÃO PARA SAIR DA ESCALADA (PULANDO)
+        if (isClimbing && Input.GetButtonDown("Jump"))
         {
-            Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, true);
-        }
-        // Senão (está parado no ar ou caindo), reativa a colisão.
-        else
-        {
-            Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, false);
+            isClimbing = false;
+            // --- ADIÇÃO PRINCIPAL AQUI ---
+            // Aplica a força do pulo para que o jogador pule para cima.
+            DoJump(1f);
         }
     }
 
-    /// <summary>
-    /// Verifica o input do jogador para iniciar o processo de descer da plataforma.
-    /// </summary>
+
+    private void HandleClimbingMovement()
+    {
+        // A checagem de segurança agora também usa a nova variável.
+        if (!isInLadderZone)
+        {
+            isClimbing = false;
+            return;
+        }
+
+        // O resto da lógica de movimento permanece o mesmo.
+        rb.gravityScale = 0f;
+        float horizontalSpeed = moveInput * moveSpeed;
+        float verticalSpeed = verticalInput * climbingSpeed;
+        rb.linearVelocity = new Vector2(horizontalSpeed, verticalSpeed);
+    }
+
+    // Adicione esta função pública para que o PlayerController possa usar
+    public bool IsClimbing()
+    {
+        return isClimbing;
+    }
+
+    private void HandlePlatformPassthrough()
+    {
+        // PRIORIDADE 1: Se o período de carência temporário estiver ativo (para resolver o "Toque").
+        if (isIgnoringPlatformsTemporarily)
+        {
+            Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, true);
+            return; // Sai da função, a carência tem prioridade máxima.
+        }
+
+        // PRIORIDADE 2: Se o jogador estiver segurando 'S' continuamente (para resolver o "Segurar").
+        if (Input.GetKey(KeyCode.S))
+        {
+            Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, true);
+            return; // Sai da função, o "Segurar" é a segunda prioridade.
+        }
+
+        // PRIORIDADE 3 (COMPORTAMENTO PADRÃO): Se nenhuma das condições acima for verdade.
+        // Ignora a colisão apenas se estiver pulando para cima.
+        bool isJumpingUp = rb.linearVelocity.y > 0.01f;
+        Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, isJumpingUp);
+    }
+
     private void HandlePlatformDropInput()
     {
-        // Condições: Tecla 'S' pressionada, jogador está no chão, e não está já caindo de uma plataforma.
-        if (Input.GetKeyDown(KeyCode.S) && isGrounded && !isDroppingFromPlatform)
+        // Condições: Tecla 'S' pressionada pela primeira vez, jogador no chão, e nenhuma corrotina de queda já ativa.
+        if (Input.GetKeyDown(KeyCode.S) && isGrounded && !isIgnoringPlatformsTemporarily)
         {
-            // Verifica se o chão que estamos pisando (groundCollider) existe
-            // e se a layer dele está contida na nossa LayerMask de plataformas.
-            // A operação `(platformLayer.value & (1 << groundCollider.gameObject.layer)) > 0` é a forma correta
-            // de verificar se uma layer específica faz parte de uma LayerMask.
+            // Verifica se o chão é de fato uma plataforma.
             if (groundCollider != null && (platformLayer.value & (1 << groundCollider.gameObject.layer)) > 0)
             {
+                // Inicia o período de carência.
                 StartCoroutine(DropDownCoroutine());
             }
         }
     }
 
-    
-
     /// <summary>
-    /// Corrotina que desativa a colisão com a plataforma por um breve momento para permitir a queda.
+    /// Corrotina que ativa o período de carência ENQUANTO o jogador estiver
+    /// fisicamente sobrepondo uma plataforma.
     /// </summary>
     private IEnumerator DropDownCoroutine()
     {
-        isDroppingFromPlatform = true;
-        Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, true);
+        // Ativa o estado que força a colisão a ser ignorada.
+        isIgnoringPlatformsTemporarily = true;
 
-        // Espera um pequeno instante para o jogador atravessar.
-        yield return new WaitForSeconds(0.3f);
+        // Pequena espera inicial para garantir que a física processe a queda
+        // antes da primeira verificação do loop.
+        yield return new WaitForFixedUpdate();
 
-        Physics2D.IgnoreLayerCollision(playerLayer, platformLayerInt, false);
-        isDroppingFromPlatform = false;
+        // Loop dinâmico: continua rodando ENQUANTO o colisor do jogador
+        // estiver sobrepondo qualquer colisor na layer de plataforma.
+        while (capsuleCollider.Overlap(platformContactFilter, overlapResults) > 0)
+        {
+            // Espera até o próximo frame de física antes de checar de novo.
+            yield return new WaitForFixedUpdate();
+        }
+
+        // Quando o loop termina, significa que o jogador está livre.
+        // Desativa o estado de carência.
+        isIgnoringPlatformsTemporarily = false;
     }
 
     public void ExecuteKnockback(float force, Vector2 attackDirection, float upwardModifier = 0.5f, float duration = 0.2f)
@@ -437,7 +506,27 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
 
 
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        // Se o colisor que entramos pertence à layer de escada...
+        if ((ladderLayer.value & (1 << collision.gameObject.layer)) > 0)
+        {
+            // ...marcamos que estamos na zona de escalada.
+            isInLadderZone = true;
+        }
+    }
 
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        // Se o colisor que saímos pertence à layer de escada...
+        if ((ladderLayer.value & (1 << collision.gameObject.layer)) > 0)
+        {
+            // ...marcamos que não estamos mais na zona de escalada.
+            isInLadderZone = false;
+            // Forçamos a saída do modo de escalada por segurança.
+            isClimbing = false;
+        }
+    }
 
 
 
@@ -643,15 +732,14 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         if (isWallSliding)
         {
             rb.gravityScale = 0;
-            float speed = currentWallSlideSpeed > 0 ? currentWallSlideSpeed : wallSlideSpeed;
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, -speed);
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, -wallSlideSpeed);
         }
         else
         {
+            // Restaura a gravidade correta (base ou de queda).
             rb.gravityScale = rb.linearVelocity.y < 0 ? currentGravityScaleOnFall : baseGravity;
         }
     }
-    // --- NOVAS FUNÇÕES PARA CONTROLE DE RASTEJAR ---
 
     public void BeginCrouchTransition()
     {

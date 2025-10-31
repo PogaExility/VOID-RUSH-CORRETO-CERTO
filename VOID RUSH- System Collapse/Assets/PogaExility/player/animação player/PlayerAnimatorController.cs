@@ -34,7 +34,8 @@ public enum PlayerAnimState
     abaixando,
     rastejando,
     levantando,
-    subindoEscada
+    subindoEscada,
+    descendoEscada
 
 }
 
@@ -78,8 +79,8 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int AbaixandoHash = Animator.StringToHash("abaixando");
     private static readonly int RastejandoHash = Animator.StringToHash("rastejando");
     private static readonly int LevantandoHash = Animator.StringToHash("levantando");
-    private static readonly int SubindoEscadaHash = Animator.StringToHash("subindoEscada");
-
+    private static readonly int SubindoEscadaHash = Animator.StringToHash("subindoEscada"); 
+    private static readonly int DescendoEscadaHash = Animator.StringToHash("descendoEscada");
     #endregion
 
 
@@ -127,6 +128,16 @@ public class PlayerAnimatorController : MonoBehaviour
         currentStateByTarget[target] = state;
         int stateHash = GetStateHash(state);
         targetAnimator.Play(stateHash, layer, 0f);
+    }
+    public void PlayState(AnimatorTarget target, PlayerAnimState state, float normalizedTime)
+    {
+        Animator targetAnimator = GetTargetAnimator(target);
+        if (targetAnimator == null) return;
+
+        int stateHash = GetStateHash(state);
+
+        // A diferença está aqui: o terceiro parâmetro é o tempo normalizado.
+        targetAnimator.Play(stateHash, 0, normalizedTime);
     }
 
     private Animator GetTargetAnimator(AnimatorTarget target)
@@ -205,6 +216,7 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.rastejando: return RastejandoHash;
             case PlayerAnimState.levantando: return LevantandoHash;
             case PlayerAnimState.subindoEscada: return SubindoEscadaHash;
+            case PlayerAnimState.descendoEscada: return DescendoEscadaHash;
             default: return ParadoHash;
         }
     }
