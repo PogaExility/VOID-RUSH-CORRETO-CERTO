@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 330229cc6d22e0b47ad01f68acd71d7b
+guid: 3875a3b7517403f4ab06ef69689627b8
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -8084776959461164513
-    second: IndustrialTile_18_0
+      213: 6619786214764455658
+    second: EscadaTile_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +51,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 32
+  spritePixelsToUnits: 16
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: IndustrialTile_18_0
+      name: EscadaTile_0
       rect:
         serializedVersion: 2
         x: 0
-        y: 15
-        width: 32
-        height: 17
+        y: 0
+        width: 16
+        height: 16
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: f1afd0bb03a1dcf80800000000000000
-      internalID: -8084776959461164513
+      spriteID: ae6201c3d743edb50800000000000000
+      internalID: 6619786214764455658
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      IndustrialTile_18_0: -8084776959461164513
+      EscadaTile_0: 6619786214764455658
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

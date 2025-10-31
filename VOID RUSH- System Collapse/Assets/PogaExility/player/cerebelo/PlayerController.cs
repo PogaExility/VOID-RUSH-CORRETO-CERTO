@@ -1,12 +1,13 @@
+
+
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-
 [RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(SkillRelease))]
 public class PlayerController : MonoBehaviour
 {
-
     [Header("Referências de Gerenciamento")]
     public CursorManager cursorManager;
 
@@ -159,9 +160,29 @@ public class PlayerController : MonoBehaviour
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
 
         bool isGroundedNow = movementScript.IsGrounded();
-        if (isGroundedNow && !wasGroundedLastFrame)
+        bool justLanded = isGroundedNow && !wasGroundedLastFrame;
+
+        // --- LÓGICA DE POUSO CORRIGIDA E FINAL ---
+        if (justLanded)
         {
-            isLanding = true;
+            // Pega o colisor do chão em que o jogador pousou.
+            Collider2D ground = movementScript.GetGroundCollider();
+            bool landedOnPlatform = false;
+
+            // Verifica se o chão existe e se pertence à layer de plataforma.
+            if (ground != null && (movementScript.platformLayer.value & (1 << ground.gameObject.layer)) > 0)
+            {
+                landedOnPlatform = true;
+            }
+
+            // CONDIÇÕES PARA TOCAR A ANIMAÇÃO DE POUSO:
+            // 1. O chão NÃO é uma plataforma (pouso normal).
+            // OU
+            // 2. O chão É uma plataforma, MAS o jogador NÃO está tentando ignorá-la.
+            if (!landedOnPlatform || !movementScript.IsIgnoringPlatforms())
+            {
+                isLanding = true;
+            }
         }
 
         HandleInteractionInput();
@@ -176,9 +197,6 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
     }
-
-    // --- NOVAS FUNÇÕES PARA A LÓGICA DE RASTEJAR ---
-
     private void HandleCrawlInput()
     {
         // Pressionou para começar a rastejar
@@ -436,7 +454,42 @@ public class PlayerController : MonoBehaviour
         // Trava de ataque meelee
         if (IsAttacking) return;
 
-        // --- LÓGICA DE ANIMAÇÃO DE RASTEJAR (TEM PRIORIDADE) ---
+        // --- LÓGICA DE ANIMAÇÃO DE ESCALADA (COM ANIMAÇÕES SEPARADAS) ---
+        if (movementScript.IsClimbing())
+        {
+            float verticalInput = movementScript.GetVerticalInput();
+
+            // Se o jogador está se movendo na escada
+            if (Mathf.Abs(verticalInput) > 0.1f)
+            {
+                // Garante que a velocidade da animação seja normal.
+                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+
+                // Escolhe a animação correta com base na direção.
+                if (verticalInput > 0)
+                {
+                    animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.subindoEscada);
+                }
+                else
+                {
+                    animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.descendoEscada);
+                }
+            }
+            else // Se o jogador está parado na escada
+            {
+                // Pausa a animação no frame atual.
+                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 0f);
+            }
+
+            return; // Sai da função para não executar as outras lógicas.
+        }
+        else
+        {
+            // Garante que a velocidade do animator volte ao normal quando não estiver escalando.
+            animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+        }
+
+        // --- LÓGICA DE ANIMAÇÃO DE RASTEJAR (PRIORIDADE 2) ---
         if (movementScript.IsOnCrawlTransition())
         {
             return;
@@ -456,18 +509,14 @@ public class PlayerController : MonoBehaviour
             }
             return;
         }
-        // --- FIM DA LÓGICA DE RASTEJAR ---
-
 
         // --- LÓGICA DE ANIMAÇÃO NORMAL ---
         PlayerAnimState desiredState;
 
         if (playerStats.IsDead()) { desiredState = PlayerAnimState.morrendo; }
-        // --- MUDANÇA CRÍTICA AQUI ---
         else if (isLanding && !isInAimMode) { desiredState = PlayerAnimState.pousando; }
-        // --- FIM DA MUDANÇA ---
         else if (animatorController.GetCurrentAnimatorStateInfo(AnimatorTarget.PlayerBody, 0).IsName("dano")) { desiredState = PlayerAnimState.dano; }
-        else if (!movementScript.IsGrounded())
+        else if (!movementScript.IsGrounded() || movementScript.IsIgnoringPlatforms())
         {
             if (movementScript.IsWallSliding()) desiredState = PlayerAnimState.derrapagem;
             else if (movementScript.IsDashing() || movementScript.IsWallDashing()) desiredState = PlayerAnimState.dashAereo;
@@ -506,7 +555,7 @@ public class PlayerController : MonoBehaviour
 
         if (isInAimMode)
         {
-            if (!movementScript.IsGrounded())
+            if (!movementScript.IsGrounded() || movementScript.IsIgnoringPlatforms())
             {
                 if (movementScript.GetVerticalVelocity() > 0.1f)
                     animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.pulandoCotoco, 1);
