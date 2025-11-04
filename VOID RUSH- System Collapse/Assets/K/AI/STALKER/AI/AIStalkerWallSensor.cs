@@ -1,111 +1,102 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
-// ====================================================================================
-// DEFINIÇÕES DE DADOS (AGORA DENTRO DESTE ARQUIVO PARA EVITAR ERROS)
-// ====================================================================================
-public enum LedgeType
-{
-    None,
-    SolidWall,
-    HighOpening,
-    LowOpening
-}
-
-public struct WallAnalysisData
+// O relatório detalhado que o sensor produz para o cérebro.
+public struct WallAnalysisReport
 {
     public bool IsWallDetected;
-    public LedgeType TypeOfLedge;
-    public Vector2 LedgePosition;
+    public float WallHeight;
+    public Vector2 WallTopPosition;
+    public List<TraversalOpportunity> Opportunities; // Lista de buracos
 }
-// ====================================================================================
 
+// Uma estrutura que descreve um único buraco.
+public struct TraversalOpportunity
+{
+    public Vector2 EntryPosition; // Coordenada da base do buraco
+    public int HeightInTiles; // 2 ou 3
+    public bool RequiresCrouch;
+}
 
-// NOME DA CLASSE CORRIGIDO PARA CORRESPONDER AO NOME DO ARQUIVO: AIStalkerWallSensor
 [RequireComponent(typeof(AIPlatformerMotor))]
 public class AIStalkerWallSensor : MonoBehaviour
 {
-    private AIPlatformerMotor _motor;
-    private CapsuleCollider2D _collider;
+    [Header("▶ Referências Essenciais")]
+    [Tooltip("A sonda que define o ponto de partida para o scan da parede. Use o mesmo objeto do 'Probe_Wall_Base' do NavigationSystem.")]
+    public Transform wallScanOriginProbe; // <-- A ADIÇÃO CRÍTICA
 
-    [Header("▶ Configuração do Sensor")]
-    public float wallDetectionDistance = 0.5f;
-    public float spaceAnalysisDistance = 1.0f;
+    [Header("▶ Configuração do Scanner")]
     public LayerMask groundLayer;
+    public float wallDetectionDistance = 0.5f;
+    [Tooltip("Altura máxima que o sensor irá escanear.")]
+    public float maxScanHeight = 15f;
+    [Tooltip("O tamanho de um 'tile' ou 'bloco' do seu jogo.")]
+    public float tileSize = 1.0f;
 
-    [Header("▶ Depuração Visual")]
-    public bool showDebugGizmos = true;
-    private Vector2 _lastLedgePosition;
-    private LedgeType _lastLedgeType;
+    private AIPlatformerMotor _motor;
 
     void Awake()
     {
         _motor = GetComponent<AIPlatformerMotor>();
-        _collider = GetComponent<CapsuleCollider2D>();
+        if (wallScanOriginProbe == null)
+        {
+            Debug.LogError("ERRO CRÍTICO: 'wallScanOriginProbe' não foi atribuído no Inspector do AIStalkerWallSensor!", this);
+            this.enabled = false;
+        }
     }
 
-    public WallAnalysisData AnalyzeWallInFront()
+    public WallAnalysisReport AnalyzeWallInFront()
     {
-        var analysis = new WallAnalysisData();
-        RaycastHit2D wallHit = Physics2D.BoxCast((Vector2)transform.position + new Vector2(0, _motor.StandingHeight / 2), new Vector2(_collider.size.x, _motor.StandingHeight * 0.9f), 0f, transform.right, wallDetectionDistance, groundLayer);
-
-        if (!wallHit.collider)
+        var report = new WallAnalysisReport
         {
-            analysis.IsWallDetected = false;
-            analysis.TypeOfLedge = LedgeType.None;
-            _lastLedgeType = LedgeType.None;
-            return analysis;
+            Opportunities = new List<TraversalOpportunity>(),
+            IsWallDetected = false,
+            WallHeight = 0f
+        };
+
+        // 1. Encontra a superfície da parede usando a SONDA CORRETA.
+        RaycastHit2D baseHit = Physics2D.Raycast(wallScanOriginProbe.position, transform.right, wallDetectionDistance, groundLayer);
+        if (!baseHit.collider) return report;
+
+        report.IsWallDetected = true;
+        Vector2 scanOrigin = new Vector2(baseHit.point.x, wallScanOriginProbe.position.y);
+
+        // 2. Escaneia a parede de baixo para cima, procurando por buracos.
+        int consecutiveOpenSpaces = 0;
+        for (float currentHeight = tileSize / 2; currentHeight < maxScanHeight; currentHeight += tileSize)
+        {
+            Vector2 scanPoint = scanOrigin + new Vector2(0, currentHeight);
+            bool isSpaceBlocked = Physics2D.Raycast(scanPoint, transform.right, wallDetectionDistance, groundLayer);
+
+            if (!isSpaceBlocked)
+            {
+                consecutiveOpenSpaces++;
+            }
+            else
+            {
+                if (consecutiveOpenSpaces >= 2)
+                {
+                    var opportunity = new TraversalOpportunity();
+                    opportunity.HeightInTiles = consecutiveOpenSpaces;
+                    opportunity.EntryPosition = new Vector2(scanPoint.x, scanPoint.y - (consecutiveOpenSpaces * tileSize));
+                    report.Opportunities.Add(opportunity);
+                }
+                consecutiveOpenSpaces = 0;
+            }
         }
 
-        analysis.IsWallDetected = true;
-        RaycastHit2D ledgeHit = Physics2D.Raycast(wallHit.point + new Vector2(_collider.size.x * _motor.currentFacingDirection, _motor.StandingHeight), Vector2.down, _motor.StandingHeight * 2, groundLayer);
-
-        if (!ledgeHit.collider)
+        // 3. Mede a altura total da parede.
+        RaycastHit2D topHit = Physics2D.Raycast(scanOrigin + new Vector2(0, maxScanHeight), Vector2.down, maxScanHeight, groundLayer);
+        if (topHit.collider)
         {
-            analysis.TypeOfLedge = LedgeType.SolidWall;
-            _lastLedgeType = LedgeType.SolidWall;
-            return analysis;
+            report.WallTopPosition = topHit.point;
+            report.WallHeight = topHit.point.y - wallScanOriginProbe.position.y;
+        }
+        else
+        {
+            report.WallHeight = maxScanHeight;
         }
 
-        analysis.LedgePosition = ledgeHit.point;
-        _lastLedgePosition = ledgeHit.point;
-
-        float crouchHeight = 1.9f;
-        Vector2 standingCheckOrigin = ledgeHit.point + new Vector2(0.1f * _motor.currentFacingDirection, _motor.StandingHeight / 2 + 0.1f);
-        bool canStand = !Physics2D.BoxCast(standingCheckOrigin, new Vector2(_collider.size.x, _motor.StandingHeight * 0.9f), 0f, transform.right, spaceAnalysisDistance, groundLayer);
-
-        if (canStand)
-        {
-            analysis.TypeOfLedge = LedgeType.HighOpening;
-            _lastLedgeType = LedgeType.HighOpening;
-            return analysis;
-        }
-
-        Vector2 crouchingCheckOrigin = ledgeHit.point + new Vector2(0.1f * _motor.currentFacingDirection, crouchHeight / 2 + 0.1f);
-        bool canCrouch = !Physics2D.BoxCast(crouchingCheckOrigin, new Vector2(_collider.size.x, crouchHeight * 0.9f), 0f, transform.right, spaceAnalysisDistance, groundLayer);
-
-        if (canCrouch)
-        {
-            analysis.TypeOfLedge = LedgeType.LowOpening;
-            _lastLedgeType = LedgeType.LowOpening;
-            return analysis;
-        }
-
-        analysis.TypeOfLedge = LedgeType.SolidWall;
-        _lastLedgeType = LedgeType.SolidWall;
-        return analysis;
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        if (!showDebugGizmos || !Application.isPlaying) return;
-        if (_lastLedgeType == LedgeType.HighOpening) Gizmos.color = Color.green;
-        else if (_lastLedgeType == LedgeType.LowOpening) Gizmos.color = Color.yellow;
-        else if (_lastLedgeType == LedgeType.SolidWall) Gizmos.color = Color.red;
-        else Gizmos.color = Color.clear;
-
-        if (_lastLedgeType != LedgeType.None && _lastLedgeType != LedgeType.SolidWall)
-        {
-            Gizmos.DrawSphere(_lastLedgePosition, 0.2f);
-        }
+        return report;
     }
 }

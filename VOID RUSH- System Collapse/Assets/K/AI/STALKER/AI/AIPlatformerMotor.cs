@@ -9,7 +9,7 @@ public class AIPlatformerMotor : MonoBehaviour
     private CapsuleCollider2D _collider;
     [HideInInspector] public float currentFacingDirection = 1f;
     [HideInInspector] public bool isFacingRight = true;
-    [HideInInspector] public float _currentSpeed = 0f;
+    private float _currentSpeed = 0f;
     private float _originalGravityScale;
     private Vector2 _standingColliderSize;
     private Vector2 _standingColliderOffset;
@@ -17,7 +17,6 @@ public class AIPlatformerMotor : MonoBehaviour
     private Vector2 _crouchingColliderSize;
     private Vector2 _crouchingColliderOffset;
     public bool IsCrouching { get; private set; }
-    public bool IsClimbing { get; private set; }
     public bool IsTransitioningState { get; private set; } = false;
     public float StandingHeight { get; private set; }
     #endregion
@@ -28,14 +27,13 @@ public class AIPlatformerMotor : MonoBehaviour
     [Header("▶ Atributos de Movimento")]
     public float acceleration = 5f;
     public float deceleration = 8f;
-    public float climbSpeed = 4f;
     [Header("▶ Atributos de Agachar")]
     public float crouchHeight = 1.9f;
     public float standUpImmunityDuration = 0.2f;
-    [Header("▶ Atributos de Escalar")]
-    public float vaultHeight = 1.2f;
-    public float vaultForwardDistance = 1.0f;
-    public float vaultDuration = 0.5f;
+    [Header("▶ ATRIBUTOS DA NOVA ESCALADA TÁTICA")]
+    public float climbUpSpeed = 5f;
+    public float climbForwardSpeed = 5f;
+    public float climbForwardDistance = 1.0f;
     [Header("▶ Atributos Físicos")]
     public LayerMask groundLayer;
     public Transform groundCheck;
@@ -47,17 +45,13 @@ public class AIPlatformerMotor : MonoBehaviour
     {
         _rb = GetComponent<Rigidbody2D>();
         _collider = GetComponent<CapsuleCollider2D>();
-        if (bodyTransform == null) { Debug.LogError("ERRO CRÍTICO: O 'bodyTransform' não foi atribuído no Inspector!", this); this.enabled = false; return; }
-
         isFacingRight = transform.localScale.x > 0;
         currentFacingDirection = isFacingRight ? 1 : -1;
         _originalGravityScale = _rb.gravityScale;
-
         _standingColliderSize = _collider.size;
         _standingColliderOffset = _collider.offset;
         StandingHeight = _standingColliderSize.y;
-        _standingBodyLocalPosition = bodyTransform.localPosition;
-
+        if (bodyTransform != null) _standingBodyLocalPosition = bodyTransform.localPosition;
         _crouchingColliderSize = new Vector2(_standingColliderSize.x, crouchHeight);
         float heightDifference = _standingColliderSize.y - crouchHeight;
         _crouchingColliderOffset = new Vector2(_standingColliderOffset.x, _standingColliderOffset.y - (heightDifference / 2));
@@ -65,51 +59,72 @@ public class AIPlatformerMotor : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!IsClimbing && !IsTransitioningState) { _rb.linearVelocity = new Vector2(_currentSpeed * currentFacingDirection, _rb.linearVelocity.y); }
+        if (!IsTransitioningState) { _rb.linearVelocity = new Vector2(_currentSpeed * currentFacingDirection, _rb.linearVelocity.y); }
     }
     #endregion
 
-    #region PUBLIC API (COMMANDS)
+    #region PUBLIC COMMANDS
     public void Move(float topSpeed) { _currentSpeed = Mathf.MoveTowards(_currentSpeed, topSpeed, acceleration * Time.deltaTime); }
-    public void Stop() { _currentSpeed = Mathf.MoveTowards(_currentSpeed, 0, deceleration * Time.deltaTime); }
     public void HardStop() { _currentSpeed = 0; _rb.linearVelocity = new Vector2(0, _rb.linearVelocity.y); }
-    public void Brake() { _currentSpeed = Mathf.MoveTowards(_currentSpeed, 0, deceleration * Time.deltaTime); }
-    public void Jump(float jumpForce) { if (IsGrounded()) { _rb.AddForce(new Vector2(0f, jumpForce), ForceMode2D.Impulse); } }
 
-    public void StartVault()
+    public void StartVault(float vaultHeight)
     {
         if (IsTransitioningState) return;
-        StartCoroutine(VaultCoroutine());
+        Vector2 targetPosition = new Vector2(transform.position.x, transform.position.y + vaultHeight);
+        StartCoroutine(ClimbToPositionCoroutine(targetPosition, false));
     }
 
-    private IEnumerator VaultCoroutine()
+    public void ClimbToPosition(Vector2 targetPosition, bool crouchAtEnd)
+    {
+        if (IsTransitioningState) return;
+        StartCoroutine(ClimbToPositionCoroutine(targetPosition, crouchAtEnd));
+    }
+
+    public void StartPerch(Vector2 targetPosition)
+    {
+        Debug.LogWarning("MOTOR: Iniciando manobra de PERCH.");
+        StartCoroutine(ClimbToPositionCoroutine(targetPosition, false));
+    }
+
+    private IEnumerator ClimbToPositionCoroutine(Vector2 ledgePosition, bool crouchAtEnd)
     {
         IsTransitioningState = true;
         _rb.linearVelocity = Vector2.zero;
         _rb.gravityScale = 0;
 
         Vector2 startPos = transform.position;
-        Vector2 endPos = new Vector2(
-            transform.position.x + (vaultForwardDistance * currentFacingDirection),
-            transform.position.y + vaultHeight
-        );
+        Vector2 verticalTargetPos = new Vector2(transform.position.x, ledgePosition.y);
+        float verticalDistance = Mathf.Abs(verticalTargetPos.y - startPos.y);
+        float verticalDuration = verticalDistance / climbUpSpeed;
 
         float elapsedTime = 0f;
-        while (elapsedTime < vaultDuration)
+        while (elapsedTime < verticalDuration)
         {
-            transform.position = Vector2.Lerp(startPos, endPos, (elapsedTime / vaultDuration));
+            transform.position = Vector2.Lerp(startPos, verticalTargetPos, elapsedTime / verticalDuration);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
+        transform.position = verticalTargetPos;
 
-        transform.position = endPos;
+        Vector2 forwardTargetPos = new Vector2(transform.position.x + (climbForwardDistance * currentFacingDirection), transform.position.y);
+        float forwardDuration = climbForwardDistance / climbForwardSpeed;
+        elapsedTime = 0f;
+        while (elapsedTime < forwardDuration)
+        {
+            transform.position = Vector2.Lerp(verticalTargetPos, forwardTargetPos, elapsedTime / forwardDuration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        transform.position = forwardTargetPos;
+
+        if (crouchAtEnd) StartCrouch();
         _rb.gravityScale = _originalGravityScale;
         IsTransitioningState = false;
     }
 
     public void StartCrouch()
     {
-        if (IsCrouching) return;
+        if (IsCrouching || bodyTransform == null) return;
         IsCrouching = true;
         _collider.size = _crouchingColliderSize;
         _collider.offset = _crouchingColliderOffset;
@@ -119,7 +134,7 @@ public class AIPlatformerMotor : MonoBehaviour
 
     public void StopCrouch()
     {
-        if (!IsCrouching) return;
+        if (!IsCrouching || bodyTransform == null) return;
         IsCrouching = false;
         _collider.size = _standingColliderSize;
         _collider.offset = _standingColliderOffset;
@@ -134,45 +149,6 @@ public class AIPlatformerMotor : MonoBehaviour
         IsTransitioningState = false;
     }
 
-    public void StartVaultAndCrouch()
-    {
-        if (IsTransitioningState) return;
-        StartCoroutine(VaultAndCrouchCoroutine());
-    }
-
-    private IEnumerator VaultAndCrouchCoroutine()
-    {
-        IsTransitioningState = true;
-        _rb.linearVelocity = Vector2.zero;
-        _rb.gravityScale = 0;
-
-        Vector2 startPos = transform.position;
-        Vector2 endPos = new Vector2(
-            transform.position.x + (vaultForwardDistance * currentFacingDirection),
-            transform.position.y + vaultHeight
-        );
-
-        float elapsedTime = 0f;
-        while (elapsedTime < vaultDuration)
-        {
-            transform.position = Vector2.Lerp(startPos, endPos, (elapsedTime / vaultDuration));
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        transform.position = endPos;
-        _rb.gravityScale = _originalGravityScale;
-
-        // AÇÃO FINAL: Ao final da escalada, entra imediatamente no estado agachado.
-        StartCrouch();
-
-        IsTransitioningState = false;
-    }
-
     public void Flip() { isFacingRight = !isFacingRight; currentFacingDirection *= -1; transform.Rotate(0f, 180f, 0f); }
-    #endregion
-
-    #region PUBLIC API (QUERIES)
-    public bool IsGrounded() => groundCheck != null && Physics2D.Raycast(groundCheck.position, Vector2.down, groundCheckDistance, groundLayer);
     #endregion
 }
