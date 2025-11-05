@@ -53,7 +53,25 @@ public class PlayerController : MonoBehaviour
     private bool isActionInterruptingAim = false;
     private bool _isAttacking;
     private ObjetoInterativo interagivelProximo;
+    private PlayerSounds playerSounds;
+    public void PlayFootstepSound()
+    {
+        // Se as referências não existirem, sai para evitar erros.
+        if (AudioManager.Instance == null || playerSounds == null) return;
 
+        // Pega um som de passo aleatório da nossa "mochila de sons".
+        AudioClip footstepClip = playerSounds.GetRandomFootstep();
+
+        // Se encontrou um clipe, toca ele.
+        if (footstepClip != null)
+        {
+            // Toca o som audível para o jogador.
+            AudioManager.Instance.PlaySoundEffect(footstepClip, transform.position);
+        }
+
+        // A lógica para o SoundEmitter para a IA ainda não foi adicionada,
+        // mas quando formos fazer, será aqui.
+    }
 
     public bool IsAttacking
 
@@ -74,12 +92,13 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-    void Awake()
+void Awake()
     {
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
         skillRelease = GetComponent<SkillRelease>();
         defenseHandler = GetComponent<DefenseHandler>();
         playerStats = GetComponent<PlayerStats>();
+        playerSounds = GetComponent<PlayerSounds>(); // <-- ADICIONE ESTA LINHA
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         if (cursorManager == null) cursorManager = FindAnyObjectByType<CursorManager>();
         if (weaponHandler == null) weaponHandler = GetComponent<WeaponHandler>();
@@ -138,7 +157,6 @@ public class PlayerController : MonoBehaviour
             interagivelProximo.Interagir();
         }
     }
-
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
@@ -165,23 +183,26 @@ public class PlayerController : MonoBehaviour
         // --- LÓGICA DE POUSO CORRIGIDA E FINAL ---
         if (justLanded)
         {
-            // Pega o colisor do chão em que o jogador pousou.
             Collider2D ground = movementScript.GetGroundCollider();
             bool landedOnPlatform = false;
 
-            // Verifica se o chão existe e se pertence à layer de plataforma.
             if (ground != null && (movementScript.platformLayer.value & (1 << ground.gameObject.layer)) > 0)
             {
                 landedOnPlatform = true;
             }
 
-            // CONDIÇÕES PARA TOCAR A ANIMAÇÃO DE POUSO:
-            // 1. O chão NÃO é uma plataforma (pouso normal).
-            // OU
-            // 2. O chão É uma plataforma, MAS o jogador NÃO está tentando ignorá-la.
             if (!landedOnPlatform || !movementScript.IsIgnoringPlatforms())
             {
                 isLanding = true;
+
+                // --- ADIÇÃO DA LÓGICA DE SOM DE POUSO ---
+                if (AudioManager.Instance != null && playerSounds != null && playerSounds.landSound != null)
+                {
+                    AudioManager.Instance.PlaySoundEffect(playerSounds.landSound, transform.position);
+
+                    // AINDA NÃO VAMOS CRIAR O EMISSOR DE SOM PARA O POUSO.
+                    // Podemos adicionar isso depois, se necessário.
+                }
             }
         }
 

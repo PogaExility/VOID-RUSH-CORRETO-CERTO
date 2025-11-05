@@ -84,6 +84,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     [Header("Escalada")] // <-- ADICIONE ESTE HEADER
     [SerializeField] private float climbingSpeed = 5f;
     [SerializeField] private LayerMask ladderLayer;
+    [Header("Efeitos Sonoros")]
+    [SerializeField] private GameObject soundEmitterPrefab;
+
 
     private Rigidbody2D rb;
     private CapsuleCollider2D capsuleCollider;
@@ -111,6 +114,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     private bool isClimbing = false; 
     private float verticalInput;
     private bool isInLadderZone = false;
+    private PlayerSounds playerSounds;
     public float GetVerticalInput()
     {
         return verticalInput;
@@ -256,6 +260,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         capsuleCollider = GetComponent<CapsuleCollider2D>();
+        playerSounds = GetComponent<PlayerSounds>(); // <-- ADICIONE ESTA LINHA
         if (playerController == null) playerController = GetComponent<PlayerController>();
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         currentGravityScaleOnFall = gravityScaleOnFall;
@@ -582,7 +587,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             }
         }
     }
-
     public void DoJump(float multiplier)
     {
         // --- ADICIONADO: Bloqueio físico de pulo ao rastejar ---
@@ -599,7 +603,25 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
         isJumping = true;
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier);
+
+        // --- LÓGICA DE SOM CORRIGIDA ---
+
+        // 1. Toca o som audível, usando o clipe do PlayerSounds.
+        // Verifica se as referências existem para evitar erros.
+        if (AudioManager.Instance != null && playerSounds != null && playerSounds.jumpSound != null)
+        {
+            // Chama o AudioManager CORRETO, com "I" maiúsculo, e passa o AudioClip.
+            AudioManager.Instance.PlaySoundEffect(playerSounds.jumpSound, transform.position);
+        }
+
+        // 2. Cria o emissor de som físico para a IA.
+        // A lógica aqui permanece a mesma.
+        if (soundEmitterPrefab != null)
+        {
+            Instantiate(soundEmitterPrefab, transform.position, Quaternion.identity);
+        }
     }
+
     public void DoWallJump(Vector2 force)
     {
         StopAllCoroutines();
@@ -828,9 +850,35 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         // --- FIM DA ADIÇÃO ---
 
         isDashing = true;
+        isDashing = true;
+
+        // --- LÓGICA DE SOM DE DASH ---
+        if (AudioManager.Instance != null && playerSounds != null && playerSounds.dashSound != null)
+        {
+            AudioManager.Instance.PlaySoundEffect(playerSounds.dashSound, transform.position);
+        }
+
+        if (soundEmitterPrefab != null)
+        {
+            Instantiate(soundEmitterPrefab, transform.position, Quaternion.identity);
+        }
     }
     public void OnDashEnd() { isDashing = false; }
-    public void OnWallDashStart() { isWallDashing = true; }
+    public void OnWallDashStart()
+    {
+        isWallDashing = true;
+
+        // --- LÓGICA DE SOM DE DASH (REUTILIZADA) ---
+        if (AudioManager.Instance != null && playerSounds != null && playerSounds.dashSound != null)
+        {
+            AudioManager.Instance.PlaySoundEffect(playerSounds.dashSound, transform.position);
+        }
+
+        if (soundEmitterPrefab != null)
+        {
+            Instantiate(soundEmitterPrefab, transform.position, Quaternion.identity);
+        }
+    }
     public void OnWallDashEnd() { isWallDashing = false; }
     public bool IsDashing() { return isDashing; }
 
