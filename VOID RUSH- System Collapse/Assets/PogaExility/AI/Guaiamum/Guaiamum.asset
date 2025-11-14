@@ -19,12 +19,15 @@ MonoBehaviour:
   patrolSpeed: 2
   chaseSpeed: 5
   maxJumpableHeight: 1.2
+  maxJumpForce: 15
+  acceleration: 50
+  deceleration: 60
   visionRange: 15
   ladderLayer:
     serializedVersion: 2
     m_Bits: 16384
   engagementRange: 20
-  visionAngle: 120
+  visionAngle: 90
   playerLayer:
     serializedVersion: 2
     m_Bits: 8

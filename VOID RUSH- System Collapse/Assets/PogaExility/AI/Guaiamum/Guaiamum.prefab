@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6637096437970306272}
   m_Layer: 10
-  m_Name: 'LedgeProbe      '
+  m_Name: 'NavigationProbe      '
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -43,11 +43,7 @@ GameObject:
   - component: {fileID: 5632390456722810369}
   - component: {fileID: 9097262362509936820}
   - component: {fileID: 361310302349752269}
-  - component: {fileID: 1866799691796449392}
-  - component: {fileID: 5214847287894335028}
-  - component: {fileID: 4632754989628870639}
-  - component: {fileID: 2161940137619915923}
-  - component: {fileID: 7677895328556518751}
+  - component: {fileID: 890871444427804209}
   m_Layer: 10
   m_Name: Guaiamum
   m_TagString: Enemy
@@ -69,10 +65,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 228154131472365179}
-  - {fileID: 7273435848867260713}
-  - {fileID: 1848216874470406136}
-  - {fileID: 441714529663944379}
-  - {fileID: 2562684382077244922}
   - {fileID: 6637096437970306272}
   - {fileID: 6982009832938522685}
   m_Father: {fileID: 0}
@@ -196,7 +188,7 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 1, y: 2}
   m_Direction: 0
---- !u!114 &1866799691796449392
+--- !u!114 &890871444427804209
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -205,78 +197,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 2443079763411659991}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6d3e9dd368c1e74468dbddeddc06c9c3, type: 3}
+  m_Script: {fileID: 11500000, guid: 79f6310fd9ae6d44f8fd79f1d5fb0945, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  wallProbe: {fileID: 7273435848867260713}
-  obstacleProbe: {fileID: 2562684382077244922}
-  groundProbe: {fileID: 6982009832938522685}
-  ladderProbe: {fileID: 441714529663944379}
-  horizontalProbeDistance: 0.5
-  groundAheadProbeDistance: 0.1
-  ladderCheckRadius: 1.5
-  acceleration: 50
-  deceleration: 60
-  maxJumpForce: 15
-  maxObstacleHeightScan: 2
---- !u!114 &5214847287894335028
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2443079763411659991}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d5d3003856f94047afeed88dad62605, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  profile: {fileID: 11400000, guid: 0ee5c55ec4307544b83e0ff6801e3be2, type: 2}
   eyes: {fileID: 228154131472365179}
-  eyeRotationSpeed: 8
-  hearingSensitivity: 0.5
---- !u!114 &4632754989628870639
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2443079763411659991}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a6fb5937179a8c545ae97b3dcbeb9c39, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &2161940137619915923
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2443079763411659991}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 742e0c2b5cf40cb4cad242bd8d7976f4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  enemyData: {fileID: 11400000, guid: 0ee5c55ec4307544b83e0ff6801e3be2, type: 2}
---- !u!114 &7677895328556518751
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2443079763411659991}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1d569918820341e4bae4a137682eed01, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  wallProbe: {fileID: 7273435848867260713}
-  obstacleProbe: {fileID: 2562684382077244922}
-  ledgeProbe: {fileID: 6637096437970306272}
-  horizontalProbeDistance: 0.5
-  ledgeProbeDistance: 0.8
-  maxObstacleHeightScan: 2
+  groundProbe: {fileID: 6982009832938522685}
+  navigationProbe: {fileID: 6637096437970306272}
 --- !u!1 &3796713204982196637
 GameObject:
   m_ObjectHideFlags: 0
@@ -303,130 +230,6 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -0.98, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4039244154319958124}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &5704705515204925473
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 441714529663944379}
-  m_Layer: 10
-  m_Name: LadderProbe
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &441714529663944379
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5704705515204925473}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.02, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4039244154319958124}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &6000226618751436217
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1848216874470406136}
-  m_Layer: 10
-  m_Name: 'PathfinderProbe    '
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1848216874470406136
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6000226618751436217}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 4.44, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4039244154319958124}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &7740742125731715374
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7273435848867260713}
-  m_Layer: 10
-  m_Name: WallProbe
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &7273435848867260713
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7740742125731715374}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.52, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4039244154319958124}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &8110889307935713872
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2562684382077244922}
-  m_Layer: 10
-  m_Name: ObstacleProbe
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2562684382077244922
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8110889307935713872}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.08, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

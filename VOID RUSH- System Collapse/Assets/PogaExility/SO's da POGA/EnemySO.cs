@@ -37,16 +37,19 @@ public class EnemySO : ScriptableObject
     // =================================================================================================
     // MOVIMENTO E NAVEGAÇÃO
     // =================================================================================================
-
     [Header("▶ Movimento")]
     [Tooltip("Velocidade ao patrulhar.")]
     public float patrolSpeed = 2f;
-
     [Tooltip("Velocidade ao perseguir o jogador.")]
     public float chaseSpeed = 5f;
-
     [Tooltip("A altura máxima de um obstáculo que a IA tentará pular.")]
     public float maxJumpableHeight = 1.2f;
+    [Tooltip("A força máxima de um pulo (com 100% de força).")]
+    public float maxJumpForce = 15f;
+    [Tooltip("Quão rápido a IA atinge a velocidade máxima.")]
+    public float acceleration = 50f;
+    [Tooltip("Quão rápido a IA para quando não recebe comando de movimento.")]
+    public float deceleration = 60f;
 
     // =================================================================================================
     // PERCEPÇÃO E COGNIÇÃO
