@@ -17934,9 +17934,9 @@ GameObject:
   - component: {fileID: 559536141}
   - component: {fileID: 559536144}
   - component: {fileID: 559536145}
-  m_Layer: 6
+  m_Layer: 16
   m_Name: Alavanca
-  m_TagString: Chao
+  m_TagString: InteractiveProps
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -18051,7 +18051,7 @@ Transform:
   m_GameObject: {fileID: 559536138}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 15.96, y: -29.99, z: 0}
+  m_LocalPosition: {x: 16.19, y: -30.07, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -39142,6 +39142,63 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 71e2bf77410f6814c9a1c76472cd4418, type: 3}
+--- !u!1001 &5964832108887872976
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2443079763411659991, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_Name
+      value: Guaiamum
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 11.823104
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -29.86
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4039244154319958124, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4ede4804682d2854fa10c1946d0c649b, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -39168,3 +39225,4 @@ SceneRoots:
   - {fileID: 517687932}
   - {fileID: 1296858801}
   - {fileID: 559536143}
+  - {fileID: 5964832108887872976}

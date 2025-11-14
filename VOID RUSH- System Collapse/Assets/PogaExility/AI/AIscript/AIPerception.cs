@@ -1,82 +1,196 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using System.Collections;
+using System.Collections.Generic; // Adicionado para a lista de pontos do Gizmo
 
+/// <summary>
+/// O módulo de "Sentidos" da IA. Este componente é o único responsável por
+/// perceber o mundo ao redor, incluindo visão e audição. Ele gerencia os estados de
+/// consciência da IA e fornece informações processadas para o AIController.
+/// </summary>
 public class AIPerception : MonoBehaviour
 {
+    // =================================================================================================
+    // CONFIGURAÇÃO
+    // =================================================================================================
+
     [Header("▶ Referências Essenciais")]
     [Tooltip("O ponto de origem da visão (geralmente um objeto filho na altura da cabeça).")]
     [SerializeField] private Transform eyes;
 
-    // Componentes e Estado Interno
+    [Header("▶ Atributos da Percepção")]
+    [Tooltip("Velocidade com que os olhos giram para rastrear um alvo.")]
+    [SerializeField] private float eyeRotationSpeed = 8f;
+    [Tooltip("Quão sensível a IA é a sons. Valores maiores detectam sons mais distantes/baixos.")]
+    [SerializeField][Range(0f, 1f)] private float hearingSensitivity = 0.5f;
+
+    // =================================================================================================
+    // ESTADO E REFERÊNCIAS INTERNAS
+    // =================================================================================================
+
+    public enum AwarenessState { Dormant, Patrolling, Suspicious, Alert, Hunting }
+
+    public AwarenessState CurrentAwareness { get; private set; } = AwarenessState.Patrolling;
+    public Vector2 LastKnownPlayerPosition { get; private set; }
+    public bool IsAwareOfPlayer => CurrentAwareness == AwarenessState.Alert || CurrentAwareness == AwarenessState.Hunting;
+    public Transform Eyes => eyes;
+
     private Transform playerTransform;
-    private EnemySO enemyData; // Os dados serão fornecidos pelo AIController
+    private Rigidbody2D playerRb;
+    private EnemySO enemyData;
     private AIController controller;
 
-    #region Inicialização
+    private float awarenessTimer;
+    private Vector2 lastKnownPlayerVelocity;
+    private Quaternion targetEyeLocalRotation = Quaternion.identity;
 
-    /// <summary>
-    /// Método de inicialização chamado pelo AIController.
-    /// </summary>
+    #region Inicialização e Ciclo de Vida
     public void Initialize(AIController ownerController, Transform target)
     {
         this.controller = ownerController;
         this.enemyData = ownerController.enemyData;
         this.playerTransform = target;
 
+        if (this.playerTransform != null)
+        {
+            this.playerRb = playerTransform.GetComponent<Rigidbody2D>();
+        }
+
         if (eyes == null)
         {
-            Debug.LogWarning($"O inimigo '{gameObject.name}' não tem o Transform 'eyes' atribuído no AIPerception. Usando o transform principal como fallback.", this);
+            Debug.LogWarning($"O inimigo '{gameObject.name}' não tem o Transform 'eyes' atribuído. Usando o transform principal.", this);
             eyes = this.transform;
         }
     }
 
+    private void Update()
+    {
+        if (enemyData == null || playerTransform == null) return;
+        UpdateAwareness();
+    }
+
+    private void LateUpdate()
+    {
+        UpdateGazeTarget();
+        UpdateGazeRotation();
+    }
     #endregion
 
-    #region Lógica de Percepção
-
-    /// <summary>
-    /// A principal função de consulta. Verifica se o jogador pode ser visto.
-    /// </summary>
-    /// <returns>Verdadeiro se o jogador estiver dentro do cone de visão e sem obstruções.</returns>
-    public bool CanSeePlayer()
+    #region API Pública
+    public void HearSound(Vector3 soundPosition, float intensity)
     {
-        if (playerTransform == null || enemyData == null) return false;
+        if (IsAwareOfPlayer) return;
+        if (intensity < (1f - hearingSensitivity)) return;
+
+        LastKnownPlayerPosition = soundPosition;
+        ChangeAwareness(AwarenessState.Suspicious);
+    }
+
+    public bool CheckVision()
+    {
+        if (playerTransform == null) return false;
 
         Vector2 origin = eyes.position;
         Vector2 target = playerTransform.position;
 
-        // 1. Verificação de Distância (a mais barata)
-        float distanceToPlayer = Vector2.Distance(origin, target);
-        if (distanceToPlayer > enemyData.visionRange)
-        {
-            return false;
-        }
+        float distance = Vector2.Distance(origin, target);
+        if (distance > enemyData.visionRange) return false;
 
-        // 2. Verificação de Ângulo
         Vector2 directionToPlayer = (target - origin).normalized;
-        Vector2 forwardDirection = transform.right; // Usa o transform.right do objeto PAI
+
+        // --- CORREÇÃO CRÍTICA AQUI ---
+        // A direção "para frente" é o 'up' dos olhos, por causa de como o LookRotation funciona em 2D.
+        Vector2 forwardDirection = eyes.up;
+
         float angleToPlayer = Vector2.Angle(forwardDirection, directionToPlayer);
+        if (angleToPlayer > enemyData.visionAngle / 2) return false;
 
-        if (angleToPlayer > enemyData.visionAngle / 2)
+        RaycastHit2D hit = Physics2D.Raycast(origin, directionToPlayer, distance, enemyData.obstacleLayer);
+        return hit.collider == null || hit.collider.gameObject.layer == playerTransform.gameObject.layer;
+    }
+    #endregion
+
+    #region Lógica Principal de Percepção
+    private void UpdateAwareness()
+    {
+        awarenessTimer -= Time.deltaTime;
+
+        if (CheckVision())
         {
-            return false;
+            ChangeAwareness(AwarenessState.Hunting);
         }
-
-        // 3. Verificação de Linha de Visão (a mais cara)
-        RaycastHit2D hit = Physics2D.Raycast(origin, directionToPlayer, distanceToPlayer, enemyData.visionBlockers);
-        if (hit.collider != null)
+        else
         {
-            // Se o raio atingiu algo, verifica se NÃO é o jogador. Se não for, a visão está bloqueada.
-            if (!hit.collider.CompareTag("Player")) // Certifique-se que o jogador tem a tag "Player"
+            if (CurrentAwareness == AwarenessState.Hunting)
             {
-                return false;
+                ChangeAwareness(AwarenessState.Alert);
+            }
+            else if (CurrentAwareness == AwarenessState.Alert && awarenessTimer <= 0)
+            {
+                ChangeAwareness(AwarenessState.Patrolling);
+            }
+            else if (CurrentAwareness == AwarenessState.Suspicious && awarenessTimer <= 0)
+            {
+                ChangeAwareness(AwarenessState.Patrolling);
             }
         }
-
-        // Se passou por todas as verificações, o jogador é visível.
-        return true;
     }
 
+    private void ChangeAwareness(AwarenessState newState)
+    {
+        if (CurrentAwareness == newState) return;
+
+        CurrentAwareness = newState;
+
+        switch (CurrentAwareness)
+        {
+            case AwarenessState.Hunting:
+                LastKnownPlayerPosition = playerTransform.position;
+                if (playerRb != null) lastKnownPlayerVelocity = playerRb.linearVelocity;
+                awarenessTimer = enemyData.memoryDuration;
+                break;
+            case AwarenessState.Alert:
+                LastKnownPlayerPosition = playerTransform.position;
+                if (playerRb != null) lastKnownPlayerVelocity = playerRb.linearVelocity;
+                awarenessTimer = enemyData.memoryDuration;
+                break;
+            case AwarenessState.Suspicious:
+                awarenessTimer = enemyData.memoryDuration / 2f;
+                break;
+        }
+    }
+    #endregion
+
+    #region Lógica de Rastreio Visual (Gaze Control)
+    private void UpdateGazeTarget()
+    {
+        Vector3 targetPos;
+        if (CurrentAwareness == AwarenessState.Hunting)
+        {
+            targetPos = playerTransform.position;
+        }
+        else if (CurrentAwareness == AwarenessState.Alert || CurrentAwareness == AwarenessState.Suspicious)
+        {
+            float timeSinceLost = enemyData.memoryDuration - awarenessTimer;
+            targetPos = LastKnownPlayerPosition + (Vector2)(lastKnownPlayerVelocity * Mathf.Min(timeSinceLost, 0.5f));
+        }
+        else
+        {
+            targetPos = eyes.position + transform.right; // Quando ocioso, olha para a frente do corpo.
+        }
+
+        Vector3 directionToTarget = targetPos - eyes.position;
+        Quaternion targetWorldRotation = Quaternion.LookRotation(Vector3.forward, directionToTarget.normalized);
+        targetEyeLocalRotation = Quaternion.Inverse(transform.rotation) * targetWorldRotation;
+    }
+
+    private void UpdateGazeRotation()
+    {
+        if (eyes != null)
+        {
+            eyes.localRotation = Quaternion.Slerp(eyes.localRotation, targetEyeLocalRotation, Time.deltaTime * eyeRotationSpeed);
+        }
+    }
     #endregion
 
     #region Gizmos para Debug
@@ -84,38 +198,42 @@ public class AIPerception : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
-        // Só desenha se tivermos os dados (mesmo antes de dar Play)
-        if (controller == null) controller = GetComponent<AIController>();
-        if (controller == null || controller.enemyData == null) return;
+        if (enemyData == null)
+        {
+            if (controller == null) controller = GetComponentInParent<AIController>();
+            if (controller == null || controller.enemyData == null) return;
+            enemyData = controller.enemyData;
+        }
 
-        EnemySO data = controller.enemyData;
         Vector3 origin = (eyes != null) ? eyes.position : transform.position;
-        Vector3 forward = transform.right;
+
+        // --- CORREÇÃO CRÍTICA AQUI TAMBÉM ---
+        // O Gizmo deve usar a mesma direção que a lógica: a direção atual dos olhos.
+        Vector3 forward = (eyes != null) ? eyes.up : transform.right;
 
         // Desenha o leque de raios
         int stepCount = 20;
-        float stepAngle = data.visionAngle / stepCount;
+        float stepAngle = enemyData.visionAngle / stepCount;
 
-        for (float angle = -data.visionAngle / 2; angle <= data.visionAngle / 2; angle += stepAngle)
+        switch (Application.isPlaying ? CurrentAwareness : AwarenessState.Patrolling)
         {
-            Quaternion rotation = Quaternion.Euler(0, 0, angle);
-            Vector3 direction = rotation * forward;
-
-            RaycastHit2D hit = Physics2D.Raycast(origin, direction, data.visionRange, data.visionBlockers);
-
-            Vector3 endPoint = origin + direction * data.visionRange;
-            if (hit.collider != null)
-            {
-                endPoint = hit.point;
-            }
-
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawLine(origin, endPoint);
+            case AwarenessState.Patrolling: Handles.color = new Color(1, 1, 0, 0.1f); break;
+            case AwarenessState.Suspicious: Handles.color = new Color(1, 0.5f, 0, 0.15f); break;
+            case AwarenessState.Alert: Handles.color = new Color(1, 0.2f, 0, 0.2f); break;
+            case AwarenessState.Hunting: Handles.color = new Color(1, 0, 0, 0.25f); break;
         }
 
-        // Desenha o polígono preenchido
-        // (Nota: esta parte é mais complexa de replicar 100% sem o sistema de Estados,
-        // mas o leque de raios já é o feedback visual mais importante).
+        Vector3 arcStartDirection = Quaternion.AngleAxis(-enemyData.visionAngle / 2, Vector3.forward) * forward;
+        Handles.DrawSolidArc(origin, Vector3.forward, arcStartDirection, enemyData.visionAngle, enemyData.visionRange);
+
+        // Desenha a última posição conhecida do jogador
+        if (Application.isPlaying && (IsAwareOfPlayer || CurrentAwareness == AwarenessState.Suspicious))
+        {
+            Handles.color = Color.yellow;
+            Handles.DrawWireDisc(LastKnownPlayerPosition, Vector3.forward, 0.5f);
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawLine(LastKnownPlayerPosition, LastKnownPlayerPosition + (Vector2)(lastKnownPlayerVelocity.normalized * 2f));
+        }
     }
 #endif
 

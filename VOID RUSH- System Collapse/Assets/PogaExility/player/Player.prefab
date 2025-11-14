@@ -1195,7 +1195,6 @@ GameObject:
   - component: {fileID: 480668888183648268}
   - component: {fileID: 2215104731333047473}
   - component: {fileID: 4073127510071999924}
-  - component: {fileID: 7916935564280125028}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -1361,7 +1360,10 @@ MonoBehaviour:
   stateCheckText: {fileID: 0}
   collisionLayer:
     serializedVersion: 2
-    m_Bits: 32832
+    m_Bits: 98368
+  platformLayer:
+    serializedVersion: 2
+    m_Bits: 32768
   moveSpeed: 8
   acceleration: 50
   deceleration: 60
@@ -1377,6 +1379,11 @@ MonoBehaviour:
   parabolaMaxAirSpeed: 20
   parabolaAirDrag: 0.98
   crawlSpeed: 4
+  climbingSpeed: 5
+  ladderLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  soundEmitterPrefab: {fileID: 0}
 --- !u!95 &6689212545231447408
 Animator:
   serializedVersion: 7
@@ -1580,22 +1587,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 32768
   dropDuration: 0.25
---- !u!114 &7916935564280125028
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3345193402010468786}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a6edbd356b39ab845ade55ff34830d20, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  climbingSpeed: 5
-  ladderLayer:
-    serializedVersion: 2
-    m_Bits: 16384
 --- !u!1 &3653114368772367964
 GameObject:
   m_ObjectHideFlags: 0
