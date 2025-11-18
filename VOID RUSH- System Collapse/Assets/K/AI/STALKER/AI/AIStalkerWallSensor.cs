@@ -1,46 +1,42 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-// O relatório detalhado que o sensor produz para o cérebro.
 public struct WallAnalysisReport
 {
     public bool IsWallDetected;
     public float WallHeight;
     public Vector2 WallTopPosition;
-    public List<TraversalOpportunity> Opportunities; // Lista de buracos
+    public List<TraversalOpportunity> Opportunities;
 }
 
-// Uma estrutura que descreve um único buraco.
 public struct TraversalOpportunity
 {
-    public Vector2 EntryPosition; // Coordenada da base do buraco
-    public int HeightInTiles; // 2 ou 3
+    public Vector2 EntryPosition;
+    public int HeightInTiles;
     public bool RequiresCrouch;
 }
 
 [RequireComponent(typeof(AIPlatformerMotor))]
 public class AIStalkerWallSensor : MonoBehaviour
 {
+    private AIPlatformerMotor _motor;
+
     [Header("▶ Referências Essenciais")]
-    [Tooltip("A sonda que define o ponto de partida para o scan da parede. Use o mesmo objeto do 'Probe_Wall_Base' do NavigationSystem.")]
-    public Transform wallScanOriginProbe; // <-- A ADIÇÃO CRÍTICA
+    public Transform wallScanOriginProbe;
 
     [Header("▶ Configuração do Scanner")]
     public LayerMask groundLayer;
+    public Vector2 wallCheckSize = new Vector2(0.2f, 0.8f);
     public float wallDetectionDistance = 0.5f;
-    [Tooltip("Altura máxima que o sensor irá escanear.")]
     public float maxScanHeight = 15f;
-    [Tooltip("O tamanho de um 'tile' ou 'bloco' do seu jogo.")]
     public float tileSize = 1.0f;
-
-    private AIPlatformerMotor _motor;
 
     void Awake()
     {
         _motor = GetComponent<AIPlatformerMotor>();
         if (wallScanOriginProbe == null)
         {
-            Debug.LogError("ERRO CRÍTICO: 'wallScanOriginProbe' não foi atribuído no Inspector do AIStalkerWallSensor!", this);
+            Debug.LogError("ERRO CRÍTICO: 'wallScanOriginProbe' não foi atribuído no Inspector!", this);
             this.enabled = false;
         }
     }
@@ -51,22 +47,26 @@ public class AIStalkerWallSensor : MonoBehaviour
         {
             Opportunities = new List<TraversalOpportunity>(),
             IsWallDetected = false,
-            WallHeight = 0f
         };
 
-        // 1. Encontra a superfície da parede usando a SONDA CORRETA.
-        RaycastHit2D baseHit = Physics2D.Raycast(wallScanOriginProbe.position, transform.right, wallDetectionDistance, groundLayer);
-        if (!baseHit.collider) return report;
+        Vector2 boxCenter = (Vector2)wallScanOriginProbe.position + (Vector2.right * _motor.currentFacingDirection * (wallCheckSize.x / 2));
+        Collider2D wallCollider = Physics2D.OverlapBox(boxCenter, wallCheckSize, 0f, groundLayer);
+
+        if (wallCollider == null)
+        {
+            return report; // Retorna o relatório vazio, IsWallDetected = false
+        }
 
         report.IsWallDetected = true;
-        Vector2 scanOrigin = new Vector2(baseHit.point.x, wallScanOriginProbe.position.y);
+        Vector2 scanOrigin = wallCollider.ClosestPoint(boxCenter);
 
-        // 2. Escaneia a parede de baixo para cima, procurando por buracos.
         int consecutiveOpenSpaces = 0;
-        for (float currentHeight = tileSize / 2; currentHeight < maxScanHeight; currentHeight += tileSize)
+        float lastSolidHeight = 0f;
+
+        for (float currentHeight = 0; currentHeight < maxScanHeight; currentHeight += tileSize)
         {
-            Vector2 scanPoint = scanOrigin + new Vector2(0, currentHeight);
-            bool isSpaceBlocked = Physics2D.Raycast(scanPoint, transform.right, wallDetectionDistance, groundLayer);
+            Vector2 scanStartPoint = new Vector2(scanOrigin.x, transform.position.y + currentHeight);
+            bool isSpaceBlocked = Physics2D.Raycast(scanStartPoint, transform.right, wallDetectionDistance, groundLayer);
 
             if (!isSpaceBlocked)
             {
@@ -74,29 +74,42 @@ public class AIStalkerWallSensor : MonoBehaviour
             }
             else
             {
+                lastSolidHeight = currentHeight;
                 if (consecutiveOpenSpaces >= 2)
                 {
-                    var opportunity = new TraversalOpportunity();
-                    opportunity.HeightInTiles = consecutiveOpenSpaces;
-                    opportunity.EntryPosition = new Vector2(scanPoint.x, scanPoint.y - (consecutiveOpenSpaces * tileSize));
-                    report.Opportunities.Add(opportunity);
+                    report.Opportunities.Add(new TraversalOpportunity
+                    {
+                        HeightInTiles = consecutiveOpenSpaces,
+                        EntryPosition = new Vector2(scanOrigin.x, scanStartPoint.y - (consecutiveOpenSpaces * tileSize))
+                    });
                 }
                 consecutiveOpenSpaces = 0;
             }
         }
 
-        // 3. Mede a altura total da parede.
-        RaycastHit2D topHit = Physics2D.Raycast(scanOrigin + new Vector2(0, maxScanHeight), Vector2.down, maxScanHeight, groundLayer);
-        if (topHit.collider)
+        // Se o scan terminou com espaços abertos, significa que encontramos o topo da parede.
+        if (consecutiveOpenSpaces > 0)
         {
-            report.WallTopPosition = topHit.point;
-            report.WallHeight = topHit.point.y - wallScanOriginProbe.position.y;
+            report.WallHeight = lastSolidHeight;
+            report.WallTopPosition = new Vector2(scanOrigin.x, transform.position.y + lastSolidHeight);
         }
         else
         {
+            // Se o scan terminou com blocos sólidos, a parede é mais alta que o scan.
             report.WallHeight = maxScanHeight;
+            report.WallTopPosition = new Vector2(scanOrigin.x, transform.position.y + maxScanHeight);
         }
 
         return report;
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (wallScanOriginProbe != null && _motor != null)
+        {
+            Gizmos.color = Color.cyan;
+            Vector2 boxCenter = (Vector2)wallScanOriginProbe.position + (Vector2.right * _motor.currentFacingDirection * (wallCheckSize.x / 2));
+            Gizmos.DrawWireCube(boxCenter, wallCheckSize);
+        }
     }
 }
