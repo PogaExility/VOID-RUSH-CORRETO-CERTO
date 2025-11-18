@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 1231447824118772413}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.98, z: 0}
+  m_LocalPosition: {x: 0, y: -0.05, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -43,7 +43,8 @@ GameObject:
   - component: {fileID: 5632390456722810369}
   - component: {fileID: 9097262362509936820}
   - component: {fileID: 361310302349752269}
-  - component: {fileID: 890871444427804209}
+  - component: {fileID: 3313643948944022076}
+  - component: {fileID: 6549574545213287522}
   m_Layer: 10
   m_Name: Guaiamum
   m_TagString: Enemy
@@ -188,7 +189,7 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 1, y: 2}
   m_Direction: 0
---- !u!114 &890871444427804209
+--- !u!114 &3313643948944022076
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -197,13 +198,31 @@ MonoBehaviour:
   m_GameObject: {fileID: 2443079763411659991}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 79f6310fd9ae6d44f8fd79f1d5fb0945, type: 3}
+  m_Script: {fileID: 11500000, guid: 575b43f813d696245aabc0ef915e14d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  profile: {fileID: 11400000, guid: 0ee5c55ec4307544b83e0ff6801e3be2, type: 2}
-  eyes: {fileID: 228154131472365179}
-  groundProbe: {fileID: 6982009832938522685}
-  navigationProbe: {fileID: 6637096437970306272}
+  enemyData: {fileID: 11400000, guid: 810665af0f8d6fb40911b68d5135ee4e, type: 2}
+  nivel: 1
+  pontoDeVisao: {fileID: 228154131472365179}
+--- !u!114 &6549574545213287522
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2443079763411659991}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b10b3199773996439d43a500c2525ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  camadaChao:
+    serializedVersion: 2
+    m_Bits: 64
+  posicaoDetectorParede: {fileID: 6637096437970306272}
+  posicaoDetectorChao: {fileID: 6982009832938522685}
+  distanciaDetectorParede: 0.5
+  distanciaDetectorChao: 1
 --- !u!1 &3796713204982196637
 GameObject:
   m_ObjectHideFlags: 0
