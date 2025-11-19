@@ -351,6 +351,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4676949479588431994, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_SortingLayer
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4676949479588431994, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_SortingLayerID
+      value: -377785049
+      objectReference: {fileID: 0}
     - target: {fileID: 4708386788519731153, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.x
       value: 85.5526
@@ -443,6 +451,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.x
       value: 0.17016602
       objectReference: {fileID: 0}
+    - target: {fileID: 6503040067368474003, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -3.9868164
+      objectReference: {fileID: 0}
     - target: {fileID: 6524787660073136504, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -514,6 +526,10 @@ PrefabInstance:
     - target: {fileID: 8863454702010381993, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8890170484128094207, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -1.7074051
       objectReference: {fileID: 0}
     - target: {fileID: 8949308043955040630, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchorMax.y
@@ -25647,7 +25663,7 @@ TilemapRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 1061211075
   m_SortingLayer: 4
-  m_SortingOrder: -1
+  m_SortingOrder: 0
   m_ChunkSize: {x: 32, y: 32, z: 32}
   m_ChunkCullingBounds: {x: 0.25, y: 0.15625, z: 0}
   m_MaxChunkCount: 16
@@ -26468,7 +26484,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3e1c9c8a7991904caeedb27c5847f36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dropDuration: 0.6
+  dropDuration: 0.5
 --- !u!251 &2104768258
 PlatformEffector2D:
   m_ObjectHideFlags: 0
