@@ -422,16 +422,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentFacingDirection: 1
   isFacingRight: 1
-  _currentSpeed: 0
   bodyTransform: {fileID: 6485459896483529973}
   acceleration: 2.5
   deceleration: 4
-  climbSpeed: 4
   crouchHeight: 0.6551724
   standUpImmunityDuration: 0.2
-  vaultHeight: 1.2
-  vaultForwardDistance: 1
-  vaultDuration: 0.5
+  climbUpSpeed: 5
+  climbForwardSpeed: 5
+  climbForwardDistance: 1
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -449,22 +447,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7362f68f1429b394fb7b178be75424ca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Probe_Height_1_Base: {fileID: 8986919701445200101}
-  Probe_Height_2_Mid: {fileID: 3040637477713657040}
-  Probe_Height_3_Top: {fileID: 1721302582425673791}
+  Probe_Wall_Base: {fileID: 8986919701445200101}
+  Probe_Wall_Mid: {fileID: 3040637477713657040}
+  Probe_Wall_Top: {fileID: 1721302582425673791}
   Probe_Ledge_Check: {fileID: 5511967849121691990}
   Probe_Ceiling_Check: {fileID: 7151929598489357073}
-  Probe_Crouch_Safety_Front: {fileID: 7981987888853148419}
   Probe_Crouch_Safety_Mid: {fileID: 5626941571963428760}
-  Probe_Crouch_Safety_Back: {fileID: 5736354394595566627}
-  vaultLogic: 0
-  maxDropDownHeight: 3
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
   wallProbeDistance: 0.2
   ledgeProbeDistance: 1
   ceilingProbeHeight: 0.5
+  maxDropDownHeight: 3
   showDebugGizmos: 1
 --- !u!114 &208760096713734105
 MonoBehaviour:
@@ -491,12 +486,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   patrolTopSpeed: 4
-  huntTopSpeed: 7
-  jumpForce: 1
-  attackRange: 1.5
-  flipCooldown: 0.5
-  ledgeAnalysisDuration: 2
-  wallAnalysisDuration: 1.5
 --- !u!114 &380973000226061322
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -509,12 +498,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 931dd359b32e9f6458548b0da2aae05a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  wallDetectionDistance: 0.5
-  spaceAnalysisDistance: 1
+  wallScanOriginProbe: {fileID: 8986919701445200101}
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
-  showDebugGizmos: 1
+  wallCheckSize: {x: 0.2, y: 0.8}
+  wallDetectionDistance: 0.5
+  maxScanHeight: 15
+  tileSize: 1
 --- !u!1 &7120330187940866159
 GameObject:
   m_ObjectHideFlags: 0

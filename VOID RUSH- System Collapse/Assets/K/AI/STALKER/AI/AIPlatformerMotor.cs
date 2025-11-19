@@ -27,6 +27,7 @@ public class AIPlatformerMotor : MonoBehaviour
     [Header("▶ Atributos de Movimento")]
     public float acceleration = 5f;
     public float deceleration = 8f;
+    public float jumpForce = 15f; // ADICIONADO PARA PATHFINDING
     [Header("▶ Atributos de Agachar")]
     public float crouchHeight = 1.9f;
     public float standUpImmunityDuration = 0.2f;
@@ -59,13 +60,68 @@ public class AIPlatformerMotor : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!IsTransitioningState) { _rb.linearVelocity = new Vector2(_currentSpeed * currentFacingDirection, _rb.linearVelocity.y); }
+        if (!IsTransitioningState)
+        {
+            // Mantendo compatibilidade com Unity antigo e novo (linearVelocity vs velocity)
+            _rb.linearVelocity = new Vector2(_currentSpeed * currentFacingDirection, _rb.linearVelocity.y);
+        }
     }
     #endregion
 
     #region PUBLIC COMMANDS
     public void Move(float topSpeed) { _currentSpeed = Mathf.MoveTowards(_currentSpeed, topSpeed, acceleration * Time.deltaTime); }
     public void HardStop() { _currentSpeed = 0; _rb.linearVelocity = new Vector2(0, _rb.linearVelocity.y); }
+
+    // --- INTEGRAÇÃO PATHFINDING ---
+    public void MoveTo(Vector3 targetPos, float speed)
+    {
+        if (IsTransitioningState) return;
+
+        float distX = targetPos.x - transform.position.x;
+        float distY = targetPos.y - transform.position.y;
+        float distTotal = Vector2.Distance(transform.position, targetPos);
+
+        // Zona morta para evitar tremedeira (Jitter)
+        if (Mathf.Abs(distX) < 0.15f) distX = 0;
+
+        // 1. Movimento Horizontal
+        if (distX > 0)
+        {
+            if (!isFacingRight) Flip();
+            Move(speed);
+        }
+        else if (distX < 0)
+        {
+            if (isFacingRight) Flip();
+            Move(speed);
+        }
+        else
+        {
+            // Só para se estiver no chão. No ar, mantém inércia.
+            if (IsGrounded()) _currentSpeed = 0;
+        }
+
+        // 2. Lógica de Pulo Melhorada
+        // Pula se o alvo está alto E (estamos no chão OU estamos caindo mas o alvo é próximo)
+        bool needToJump = distY > 0.5f; // Alvo está acima
+        bool closeEnoughToJump = Mathf.Abs(distX) < 1.5f; // Estamos perto horizontalmente
+
+        if (needToJump && IsGrounded() && closeEnoughToJump)
+        {
+            // Aplica força apenas se não estiver já subindo
+            if (_rb.linearVelocity.y <= 0.1f)
+            {
+                _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, jumpForce);
+            }
+        }
+    }
+
+    public bool IsGrounded()
+    {
+        // Torna público para o Controller usar
+        return Physics2D.Raycast(transform.position, Vector2.down, 1.2f, groundLayer);
+    }
+    // ------------------------------
 
     public void StartVault(float vaultHeight)
     {
