@@ -199,4 +199,9 @@ public class PlayerStats : MonoBehaviour
     {
         return _currentHealth / MaxHealth <= lowHealthThreshold;
     }
+
+    internal void TakeDamage(float danoAoContato)
+    {
+        throw new NotImplementedException();
+    }
 }

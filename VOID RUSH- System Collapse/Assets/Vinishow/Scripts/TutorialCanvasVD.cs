@@ -5,7 +5,7 @@ using UnityEngine.UI;
 public class TutorialCanvasVD : MonoBehaviour
 {
     [Header("Referências da UI")]
-    [Tooltip("O painel principal que contém a imagem do tutorial.")]
+    [Tooltip("O painel principal que contém a imagem e o botão do tutorial.")]
     [SerializeField] private CanvasGroup painelTutorial;
 
     [Tooltip("O botão que o jogador usará para fechar o tutorial.")]
@@ -15,92 +15,74 @@ public class TutorialCanvasVD : MonoBehaviour
     [Tooltip("A velocidade em segundos para o fade-in e fade-out.")]
     [SerializeField] private float tempoDeFade = 0.5f;
 
-    // Controle para evitar que o tutorial seja ativado múltiplas vezes.
     private bool tutorialAtivo = false;
-    private CanvasGroup canvasGroupBotao;
 
     void Awake()
     {
-        // Garante que o Canvas comece invisível e desativado.
+        // Garante que o painel comece invisível e não interativo.
         painelTutorial.alpha = 0f;
         painelTutorial.interactable = false;
         painelTutorial.blocksRaycasts = false;
 
-        // Pega o CanvasGroup do botão e o configura.
-        canvasGroupBotao = botaoFechar.GetComponent<CanvasGroup>();
-        if (canvasGroupBotao == null)
-        {
-            Debug.LogWarning("O botão de fechar não tem um componente CanvasGroup! Adicionando um.", botaoFechar);
-            canvasGroupBotao = botaoFechar.gameObject.AddComponent<CanvasGroup>();
-        }
-        canvasGroupBotao.alpha = 0f;
-        canvasGroupBotao.interactable = false;
+        // Desativa a interatividade do botão no início.
+        botaoFechar.interactable = false;
 
         // Adiciona a função de fechar ao clique do botão.
         botaoFechar.onClick.AddListener(FecharTutorial);
 
-        // Desativa o objeto do canvas para não atrapalhar no início.
         gameObject.SetActive(false);
     }
 
-    // Esta é a função pública que o gatilho vai chamar.
     public void IniciarTutorial()
     {
         if (tutorialAtivo) return;
 
         tutorialAtivo = true;
-
-        // Ativa o objeto do Canvas para que ele possa ser visto.
         gameObject.SetActive(true);
-
-        // Inicia a sequência de animação.
         StartCoroutine(ExecutarSequenciaDeFade());
     }
 
+    // MODIFICADO: A sequência agora é muito mais simples.
     private IEnumerator ExecutarSequenciaDeFade()
     {
         // 1. Congela o tempo do jogo.
         Time.timeScale = 0f;
 
-        // 2. Executa o fade-in do painel principal e espera ele terminar.
+        // 2. Executa o fade-in do painel principal (que inclui o botão).
         yield return StartCoroutine(Fade(painelTutorial, 1f, tempoDeFade));
 
-        // 3. Executa o fade-in do botão e espera ele terminar.
-        yield return StartCoroutine(Fade(canvasGroupBotao, 1f, tempoDeFade));
-
-        // 4. Torna o botão clicável.
-        canvasGroupBotao.interactable = true;
+        // 3. Torna o painel e o botão interativos.
+        painelTutorial.interactable = true;
+        botaoFechar.interactable = true;
     }
 
     private void FecharTutorial()
     {
-        // Inicia a rotina para fechar e limpar tudo.
         StartCoroutine(FadeOutECleanup());
     }
 
     private IEnumerator FadeOutECleanup()
     {
-        // Desativa a interatividade do botão imediatamente.
-        canvasGroupBotao.interactable = false;
+        // Desativa a interatividade imediatamente.
+        painelTutorial.interactable = false;
+        botaoFechar.interactable = false;
 
-        // Executa o fade-out do painel principal (que também afetará o botão).
+        // Executa o fade-out do painel.
         yield return StartCoroutine(Fade(painelTutorial, 0f, tempoDeFade));
 
         // Descongela o tempo do jogo.
         Time.timeScale = 1f;
 
-        // Desativa o objeto do Canvas.
         gameObject.SetActive(false);
         tutorialAtivo = false;
     }
 
-    // Rotina genérica para fazer o fade de qualquer CanvasGroup.
+    // A rotina de Fade continua a mesma, pois já usa unscaledDeltaTime.
     private IEnumerator Fade(CanvasGroup group, float alphaFinal, float duracao)
     {
         float tempoPassado = 0f;
         float alphaInicial = group.alpha;
 
-        // Habilita a detecção de cliques no início do fade-in.
         if (alphaFinal > 0)
         {
             group.blocksRaycasts = true;
@@ -108,15 +90,13 @@ public class TutorialCanvasVD : MonoBehaviour
 
         while (tempoPassado < duracao)
         {
-            // Usamos Time.unscaledDeltaTime porque o tempo normal (deltaTime) está congelado!
             tempoPassado += Time.unscaledDeltaTime;
             group.alpha = Mathf.Lerp(alphaInicial, alphaFinal, tempoPassado / duracao);
-            yield return null; // Espera o próximo frame.
+            yield return null;
         }
 
-        group.alpha = alphaFinal; // Garante que o valor final seja exato.
+        group.alpha = alphaFinal;
 
-        // Desabilita a detecção de cliques no final do fade-out.
         if (alphaFinal == 0)
         {
             group.blocksRaycasts = false;
