@@ -425,6 +425,7 @@ MonoBehaviour:
   bodyTransform: {fileID: 6485459896483529973}
   acceleration: 2.5
   deceleration: 4
+  jumpForce: 15
   crouchHeight: 0.6551724
   standUpImmunityDuration: 0.2
   climbUpSpeed: 5
@@ -456,7 +457,7 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
-  wallProbeDistance: 0.2
+  wallProbeDistance: 0.9
   ledgeProbeDistance: 1
   ceilingProbeHeight: 0.5
   maxDropDownHeight: 3
@@ -485,7 +486,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd6f6489fcc813e4a859b1c4886a4548, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  targetPlayer: {fileID: 0}
+  _isAnalyzing: 0
   patrolTopSpeed: 4
+  chaseTopSpeed: 6
 --- !u!114 &380973000226061322
 MonoBehaviour:
   m_ObjectHideFlags: 0
