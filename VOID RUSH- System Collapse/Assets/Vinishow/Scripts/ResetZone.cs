@@ -1,21 +1,25 @@
 using UnityEngine;
-using UnityEngine.SceneManagement; // É MUITO importante adicionar esta linha!
 
 public class ResetZone : MonoBehaviour
 {
-    // Esta função é chamada automaticamente pela Unity quando outro objeto
-    // com um Rigidbody entra no Trigger deste objeto.
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // Nós verificamos se o objeto que entrou tem a tag "Player".
-        // Isso evita que a cena resete se um inimigo ou outro objeto encostar.
+        // 1. Verifica se quem entrou foi o jogador.
         if (other.CompareTag("Player"))
         {
-            Debug.Log("Player entrou na zona de reset. Recarregando a cena...");
+            // 2. Verifica se o RespawnManager existe.
+            if (RespawnManager.Instance != null)
+            {
+                // 3. Pega o Transform do jogador que colidiu.
+                Transform playerTransform = other.transform;
 
-            // Recarrega a cena ATUAL.
-            // A gente pega o nome da cena ativa e manda carregar ela de novo.
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                // 4. Chama a função RespawnPlayer, passando a referência do Transform do jogador.
+                RespawnManager.Instance.RespawnPlayer(playerTransform);
+            }
+            else
+            {
+                Debug.LogError("O jogador entrou na ResetZone, mas não há um RespawnManager na cena!");
+            }
         }
     }
 }
