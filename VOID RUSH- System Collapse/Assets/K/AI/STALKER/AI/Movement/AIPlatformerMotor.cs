@@ -12,7 +12,7 @@ public class AIPlatformerMotor : MonoBehaviour
     public Transform bodyTransform;
 
     [Header("▶ Configuração Física")]
-    public float maxSpeed = 5f; // Renomeado de walkSpeed para consistência
+    public float maxSpeed = 5f;
     public float climbSpeed = 4f;
     public float acceleration = 20f;
     public float jumpForce = 14f;
@@ -26,18 +26,16 @@ public class AIPlatformerMotor : MonoBehaviour
     public LayerMask groundLayer;
     public float groundCheckDist = 0.1f;
 
-    // Cache
     private Vector2 _standSize;
     private Vector2 _standOffset;
     private Vector3 _standBodyPos;
     private Vector2 _crouchSize;
     private Vector2 _crouchOffset;
 
-    // Estados
     public bool IsCrouching { get; private set; }
     public bool IsClimbing { get; private set; }
-    public bool IsGrounded { get; private set; } // Restaurado
-    public bool IsBusy { get; private set; } // Mantido para compatibilidade
+    public bool IsGrounded { get; private set; }
+    public bool IsBusy { get; private set; }
 
     void Awake()
     {
@@ -45,12 +43,10 @@ public class AIPlatformerMotor : MonoBehaviour
         _collider = GetComponent<CapsuleCollider2D>();
         _originalGravity = _rb.gravityScale;
 
-        // Snapshot Inicial
         _standSize = _collider.size;
         _standOffset = _collider.offset;
         if (bodyTransform != null) _standBodyPos = bodyTransform.localPosition;
 
-        // Cálculo Crouch
         _crouchSize = new Vector2(_standSize.x, crouchHeight);
         float diff = _standSize.y - crouchHeight;
         _crouchOffset = new Vector2(_standOffset.x, _standOffset.y - (diff / 2));
@@ -58,7 +54,7 @@ public class AIPlatformerMotor : MonoBehaviour
 
     void FixedUpdate()
     {
-        CheckGround(); // Restaurado
+        CheckGround();
 
         if (IsClimbing)
         {
@@ -66,15 +62,12 @@ public class AIPlatformerMotor : MonoBehaviour
 
             if (IsCrouching)
             {
-                // Modo Híbrido (Duto): Mantém movimento X, força leve subida Y
-                // Note: MoveTowards define a velocidade X no _rb.linearVelocity diretamente? 
-                // Não, MoveTowards abaixo calcula e aplica. Aqui apenas garantimos o Y.
-                // Mas como MoveTowards roda a cada frame, precisamos aplicar o Y lá ou aqui.
-                // Vamos aplicar a lógica de movimento aqui baseada na velocidade atual.
+                // Modo Híbrido (Duto): Força Y para entrar
+                float curX = _rb.linearVelocity.x;
+                _rb.linearVelocity = new Vector2(curX, ventEntryLiftForce);
             }
             else
             {
-                // Escalada Padrão: Y sobe, X travado
                 _rb.linearVelocity = new Vector2(0, climbSpeed);
             }
         }
@@ -84,36 +77,22 @@ public class AIPlatformerMotor : MonoBehaviour
         }
     }
 
-    // --- COMANDOS DE MOVIMENTO ---
-
     public void MoveTowards(float targetX)
     {
         float deltaX = targetX - transform.position.x;
-
-        // Zona morta
-        if (Mathf.Abs(deltaX) < stopDistance)
-        {
-            StopMoving();
-            return;
-        }
+        if (Mathf.Abs(deltaX) < stopDistance) { StopMoving(); return; }
 
         float dir = Mathf.Sign(deltaX);
-        // Flip visual
         if (dir > 0 && transform.localScale.x < 0) Flip();
         else if (dir < 0 && transform.localScale.x > 0) Flip();
 
         float targetSpeed = dir * maxSpeed;
         if (IsCrouching) targetSpeed *= 0.5f;
 
-        // Aplica Aceleração
         float newX = Mathf.MoveTowards(_rb.linearVelocity.x, targetSpeed, acceleration * Time.fixedDeltaTime);
         float newY = _rb.linearVelocity.y;
 
-        // OVERRIDE PARA DUTO (Híbrido)
-        if (IsClimbing && IsCrouching)
-        {
-            newY = ventEntryLiftForce; // Força subir a quina
-        }
+        if (IsClimbing && IsCrouching) newY = ventEntryLiftForce;
 
         _rb.linearVelocity = new Vector2(newX, newY);
     }
@@ -122,25 +101,17 @@ public class AIPlatformerMotor : MonoBehaviour
     {
         float newX = Mathf.MoveTowards(_rb.linearVelocity.x, 0, acceleration * Time.fixedDeltaTime);
         float newY = _rb.linearVelocity.y;
-
-        if (IsClimbing && IsCrouching) newY = ventEntryLiftForce; // Mantém sustentação paralisado
-        else if (IsClimbing) newY = 0; // Trava na parede
-
+        if (IsClimbing && IsCrouching) newY = ventEntryLiftForce;
+        else if (IsClimbing) newY = 0;
         _rb.linearVelocity = new Vector2(newX, newY);
     }
 
     public void Jump()
     {
-        if (IsClimbing || !IsGrounded) return; // Não pula da parede (por enquanto) nem do ar
-
-        // Se estiver agachado, tenta levantar antes, senão cancela
-        if (IsCrouching) return;
-
+        if (IsClimbing || !IsGrounded || IsCrouching) return;
         _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, 0);
         _rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
     }
-
-    // --- ESTADOS ---
 
     public void StartClimb()
     {
@@ -178,8 +149,6 @@ public class AIPlatformerMotor : MonoBehaviour
         _collider.offset = _standOffset;
         if (bodyTransform != null) bodyTransform.localPosition = _standBodyPos;
     }
-
-    // --- AUXILIARES ---
 
     void Flip()
     {

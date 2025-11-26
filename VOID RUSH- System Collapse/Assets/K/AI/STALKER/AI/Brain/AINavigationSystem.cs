@@ -21,10 +21,7 @@ public class AINavigationSystem : MonoBehaviour
     public LayerMask groundLayer;
     public float wallProbeDistance = 0.1f;
     public float ceilingProbeHeight = 1.0f;
-
-    [Header("▶ Responsividade")]
-    [Tooltip("Tempo reduzido para ser quase instantâneo, mas filtrando ruído.")]
-    public float ventRecognitionDelay = 0.15f; // REDUZIDO DE 1.0 PARA 0.15
+    public float ventRecognitionDelay = 0.15f;
 
     public bool showDebugGizmos = true;
 

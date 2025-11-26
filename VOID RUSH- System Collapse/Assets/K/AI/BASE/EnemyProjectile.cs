@@ -1,25 +1,36 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
 public class EnemyProjectile : MonoBehaviour
 {
-    // Você pode pegar esses valores do AIController se quiser
-    public float damage = 10f;
-    public float knockbackForce = 20f;
+    private float _damage;
+    private float _knockback;
+
+    public void Initialize(float damage, float knockback, Vector2 dir, float speed)
+    {
+        _damage = damage;
+        _knockback = knockback;
+        GetComponent<Rigidbody2D>().linearVelocity = dir * speed;
+
+        // Rotaciona visualmente
+        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.Euler(0, 0, angle);
+
+        Destroy(gameObject, 5f); // Autodestruição
+    }
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        // Tenta encontrar o componente de stats do jogador
-        if (other.TryGetComponent<PlayerStats>(out PlayerStats player))
+        if (other.TryGetComponent<PlayerStats>(out var player))
         {
-            // Calcula a direção do knockback
-            Vector2 knockbackDirection = (other.transform.position - transform.position).normalized;
-
-            // Aplica dano e knockback ao jogador
-            player.TakeDamage(damage, knockbackDirection, knockbackForce);
+            Vector2 dir = GetComponent<Rigidbody2D>().linearVelocity.normalized;
+            player.TakeDamage(_damage, dir, _knockback);
+            Destroy(gameObject);
         }
-
-        // Destroi o projétil ao colidir com qualquer coisa (exceto o próprio inimigo, se necessário)
-        // Adicione uma verificação de tag se não quiser que ele se destrua em certos objetos.
-        Destroy(gameObject);
+        // Destrói se bater no chão/parede (Layer "Chao")
+        else if (other.gameObject.layer == LayerMask.NameToLayer("Chao"))
+        {
+            Destroy(gameObject);
+        }
     }
 }

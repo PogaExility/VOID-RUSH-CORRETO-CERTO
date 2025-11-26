@@ -1,142 +1,132 @@
 ﻿using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
-using K.Pathfinding;
 
 [RequireComponent(typeof(AIPlatformerMotor), typeof(AINavigationSystem))]
 public class AIController_Stalker : MonoBehaviour
 {
-    [Header("Targeting")]
     public Transform target;
-    [SerializeField] private K.Pathfinding.Grid grid;
-
-    [Header("AI Settings")]
-    public float reactionTime = 0.2f;
+    public float repathRate = 0.5f;
     public float nextWaypointDistance = 0.5f;
 
     private AIPlatformerMotor _motor;
     private AINavigationSystem _nav;
-    private List<Node> _currentPath;
+
+    private List<Vector3> _path;
     private int _pathIndex;
+    private float _timer;
 
     void Start()
     {
         _motor = GetComponent<AIPlatformerMotor>();
         _nav = GetComponent<AINavigationSystem>();
-
-        if (grid == null) grid = FindFirstObjectByType<K.Pathfinding.Grid>();
-        StartCoroutine(ThinkRoutine());
     }
 
-    IEnumerator ThinkRoutine()
+    void Update()
     {
-        WaitForSeconds wait = new WaitForSeconds(reactionTime);
-        while (true)
+        // 1. Calcular Rota (Waypoints)
+        _timer += Time.deltaTime;
+        if (_timer > repathRate && target != null)
         {
-            if (target != null && grid != null)
-            {
-                List<Node> path = Pathfinding.FindPath(transform.position, target.position, grid);
-                if (path != null && path.Count > 0)
-                {
-                    _currentPath = path;
-                    if (_pathIndex >= _currentPath.Count) _pathIndex = 0;
-                }
-            }
-            yield return wait;
+            _timer = 0;
+            if (WaypointManager.Instance != null)
+                _path = WaypointManager.Instance.GetPath(transform.position, target.position);
+
+            if (_path != null && _path.Count > 0) _pathIndex = 0;
         }
-    }
 
-    void FixedUpdate()
-    {
-        // Se não tem caminho, para.
-        if (_currentPath == null || _pathIndex >= _currentPath.Count)
+        // 2. LÓGICA REATIVA (PRIORIDADE MÁXIMA)
+        // Isso garante que ele use o sistema de duto que criamos, independente do waypoint
+
+        // A. Duto Detectado? Entra.
+        if (_nav.IsVentOpening())
         {
-            _motor.StopMoving();
-            if (_motor.IsClimbing) _motor.StopClimb();
+            _motor.StartCrouch();
+            // Empurra na direção que está olhando
+            float dir = transform.localScale.x;
+            _motor.MoveTowards(transform.position.x + dir);
             return;
         }
 
-        // --- RACIOCÍNIO ---
-        Node currentNode = _currentPath[_pathIndex];
-        Vector3 targetPoint = currentNode.worldPosition;
-
-        switch (currentNode.action)
+        // B. Dentro do Duto? Desliga escalada se entrou.
+        if (_motor.IsClimbing && _motor.IsCrouching && !_nav.CanStandUpSafely())
         {
-            case ActionType.Walk:
-            case ActionType.Crouch:
-                if (_motor.IsClimbing) _motor.StopClimb();
-
-                // Lógica de Agachar/Levantar
-                if (currentNode.action == ActionType.Crouch || _nav.ShouldStartCrouching())
-                    _motor.StartCrouch();
-                else if (_nav.CanStandUpSafely())
-                    _motor.StopCrouch();
-
-                _motor.MoveTowards(targetPoint.x);
-                break;
-
-            case ActionType.Jump:
-                if (_motor.IsClimbing) _motor.StopClimb();
-
-                // CORREÇÃO AQUI: Substituído _motor.Crouch(false) por StopCrouch()
-                if (_nav.CanStandUpSafely()) _motor.StopCrouch();
-
-                _motor.MoveTowards(targetPoint.x);
-                if (_motor.IsGrounded) _motor.Jump();
-                break;
-
-            case ActionType.Climb:
-                // Só escala se o sensor confirmar parede
-                if (_nav.HasClimbableWall())
-                {
-                    _motor.StartClimb();
-                }
-                else
-                {
-                    // Senão, anda até encostar
-                    _motor.MoveTowards(targetPoint.x);
-                }
-                break;
-
-            case ActionType.Fall:
-                _motor.MoveTowards(targetPoint.x);
-                break;
+            _motor.StopClimb();
         }
 
-        // --- EXCEÇÃO DE TÚNEL (VENT) ---
-        if (_nav.IsVentOpening())
+        // C. Segurança de Teto (Se tem teto, não levanta)
+        if (_motor.IsCrouching && !_nav.CanStandUpSafely())
         {
-            float dirToTarget = Mathf.Sign(targetPoint.x - transform.position.x);
-            float facingDir = transform.localScale.x;
-
-            if (Mathf.Approximately(dirToTarget, facingDir))
+            // Se estiver em manobra híbrida (Climb+Crouch), continua empurrando
+            if (_motor.IsClimbing)
             {
-                _motor.StartCrouch();
-                _motor.MoveTowards(targetPoint.x);
+                float dir = transform.localScale.x;
+                _motor.MoveTowards(transform.position.x + dir);
             }
+            return; // Trava o resto da lógica
         }
 
-        // --- AVANÇO ---
-        float distX = Mathf.Abs(transform.position.x - targetPoint.x);
-        float distY = Mathf.Abs(transform.position.y - targetPoint.y);
+        // 3. EXECUÇÃO DO CAMINHO
+        if (_path == null || _pathIndex >= _path.Count)
+        {
+            _motor.StopMoving();
+            // Se parou e não tem teto, levanta
+            if (_motor.IsCrouching && _nav.CanStandUpSafely()) _motor.StopCrouch();
+            return;
+        }
 
-        if (distX < nextWaypointDistance && distY < 1.5f)
+        Vector3 dest = _path[_pathIndex];
+        float dist = Vector2.Distance(transform.position, dest);
+
+        // Chegou no ponto?
+        if (dist < nextWaypointDistance)
         {
             _pathIndex++;
+            return;
         }
 
-        Debug.DrawLine(transform.position, targetPoint, Color.green);
+        // --- INFERÊNCIA DE AÇÃO (Baseado na Posição do Waypoint + Sensores) ---
+
+        // 1. Waypoint está ALTO? (Escalar ou Pular)
+        if (dest.y > transform.position.y + 1.0f)
+        {
+            // Se tem parede, escala
+            if (_nav.HasClimbableWall() && !_motor.IsCrouching)
+            {
+                _motor.StartClimb();
+            }
+            // Se não tem parede e está no chão, pula
+            else if (_motor.IsGrounded && !_motor.IsClimbing)
+            {
+                _motor.Jump();
+            }
+        }
+        else
+        {
+            // Se o destino não é alto, para de escalar
+            if (_motor.IsClimbing) _motor.StopClimb();
+        }
+
+        // 2. Teto baixo no caminho? (Sensor de Chão)
+        if (_nav.ShouldStartCrouching())
+        {
+            _motor.StartCrouch();
+        }
+        else if (_nav.CanStandUpSafely() && !_motor.IsClimbing)
+        {
+            _motor.StopCrouch();
+        }
+
+        // 3. Move X
+        _motor.MoveTowards(dest.x);
     }
 
     void OnDrawGizmos()
     {
-        if (_currentPath != null)
+        if (_path != null)
         {
-            for (int i = _pathIndex; i < _currentPath.Count - 1; i++)
-            {
-                Gizmos.color = Color.green;
-                Gizmos.DrawLine(_currentPath[i].worldPosition, _currentPath[i + 1].worldPosition);
-            }
+            Gizmos.color = Color.green;
+            for (int i = 0; i < _path.Count - 1; i++)
+                Gizmos.DrawLine(_path[i], _path[i + 1]);
         }
     }
 }
