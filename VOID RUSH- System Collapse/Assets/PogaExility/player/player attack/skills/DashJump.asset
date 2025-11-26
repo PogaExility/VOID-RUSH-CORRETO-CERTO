@@ -13,12 +13,15 @@ MonoBehaviour:
   m_Name: DashJump
   m_EditorClassIdentifier: 
   skillName: DashJump
+  cooldownDuration: 0
   energyCost: 0
   skillClass: 0
-  requiredKeys: 71000000
-  triggerKeys: 20000000
+  skillTier: 0
+  requiredKeys: 20000000
+  triggerKeys: 71000000
   cancelIfKeysHeld: 
   actionToPerform: 3
+  combatActionToPerform: 0
   conditionGroups:
   - logicType: 0
     states: 02000000
@@ -35,7 +38,7 @@ MonoBehaviour:
   dashJump_DashSpeed: 25
   dashJump_DashDuration: 0.2
   dashJump_JumpForce: 10
-  dashJump_InputBuffer: 10
+  dashJump_InputBuffer: 1000
   dashJump_ParabolaDamping: 0.5
   dashJump_GravityScaleOnFall: 2
   wallDashJump_LaunchForceX: 25
@@ -43,3 +46,7 @@ MonoBehaviour:
   wallDashJump_InputBuffer: 0.15
   wallDashJump_ParabolaDamping: 1
   wallDashJump_GravityScaleOnFall: 2.5
+  block_ParryWindow: 0.15
+  block_DamageReduction: 0.75
+  parry_CounterDamageMultiplier: 2
+  parry_StunDuration: 1.5

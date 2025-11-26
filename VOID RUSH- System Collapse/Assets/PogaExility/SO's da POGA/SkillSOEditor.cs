@@ -25,6 +25,10 @@ public class SkillSOEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("cooldownDuration"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("energyCost"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("skillClass"));
+
+        // --- ADIÇÃO: Exibe o campo SkillTier logo abaixo da Classe ---
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("skillTier"));
+
         EditorGUILayout.Space(10);
 
         // --- Bloco do Sistema de Ativação (Sempre Visível) ---
@@ -35,11 +39,11 @@ public class SkillSOEditor : Editor
         EditorGUILayout.Space(10);
 
         // --- Bloco de Lógica da Ação ---
-       
-       
+
+
 
         // --- A NOVA UI DE CONDIÇÕES AVANÇADAS ---
-      
+
         EditorGUILayout.PropertyField(serializedObject.FindProperty("conditionGroups"), true);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("forbiddenStates"), true);
         EditorGUILayout.Space(10);

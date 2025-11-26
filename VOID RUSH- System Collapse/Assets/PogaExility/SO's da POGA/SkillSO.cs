@@ -3,6 +3,15 @@ using System.Collections.Generic; // Essencial para usar List<T>
 using System; // Essencial para a tag [Serializable]
 
 /// <summary>
+/// Define o nível da habilidade para saber em qual slot do PlayerController ela deve entrar.
+/// </summary>
+public enum SkillTier
+{
+    Base,
+    Upgraded
+}
+
+/// <summary>
 /// Uma estrutura que define um grupo de condições de estado.
 /// Permite criar lógicas "E" (Todas as condições precisam ser verdadeiras)
 /// e "OU" (Pelo menos uma condição precisa ser verdadeira).
@@ -25,8 +34,6 @@ public class ConditionGroup
 [CreateAssetMenu(fileName = "NewSkill", menuName = "NEXUS/Skill (Avançado)")]
 public class SkillSO : ScriptableObject
 {
-
-
     [Header("Informações Gerais")]
     [Tooltip("Nome da habilidade para referência no editor.")]
     public string skillName;
@@ -37,9 +44,8 @@ public class SkillSO : ScriptableObject
     [Tooltip("A categoria geral da habilidade (usado para organizar o editor).")]
     public SkillClass skillClass;
 
- 
- 
-
+    [Tooltip("Define se esta habilidade ocupa o slot BASE ou o slot UPGRADED (Power Mode).")]
+    public SkillTier skillTier; // <--- NOVA VARIÁVEL AQUI
 
     [Header("Sistema de Ativação")]
     [Tooltip("Todas as teclas que DEVEM estar sendo seguradas para que a skill possa ser ativada.")]
@@ -47,11 +53,10 @@ public class SkillSO : ScriptableObject
     [Tooltip("QUALQUER uma destas teclas, quando pressionada, irá disparar a ação.")]
     public List<KeyCode> triggerKeys = new List<KeyCode>();
 
-    // --- ADICIONE ESTA NOVA LISTA AQUI ---
     [Tooltip("Se QUALQUER uma destas teclas estiver sendo segurada, a ativação desta skill falha. Útil para evitar que Pulo e DashJump ativem juntos.")]
     public List<KeyCode> cancelIfKeysHeld = new List<KeyCode>();
 
-    
+
     //ATIVAÇÃO DE SKILL FODA
     [Header("Lógica da Ação (Movimento)")]
     [Tooltip("A ação de MOVIMENTO que esta skill executa.")]

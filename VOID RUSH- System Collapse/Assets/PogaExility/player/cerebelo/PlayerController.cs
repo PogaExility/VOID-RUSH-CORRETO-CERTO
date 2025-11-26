@@ -92,7 +92,7 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-void Awake()
+    void Awake()
     {
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
         skillRelease = GetComponent<SkillRelease>();
@@ -654,5 +654,93 @@ void Awake()
         Debug.Log("Animação de pouso TERMINOU. Liberando o jogador.");
         isLanding = false;
         movementScript.OnLandingComplete();
+    }
+    // Função atualizada para suportar Base vs Upgraded
+    public void EquipSkill(SkillSO newSkill)
+    {
+        if (newSkill == null)
+        {
+            Debug.LogWarning("Tentativa de equipar uma Skill nula.");
+            return;
+        }
+
+        // Verifica a categoria da habilidade
+        if (newSkill.skillClass == SkillClass.Movimento)
+        {
+            // Verifica qual a AÇÃO específica para decidir o slot
+            switch (newSkill.actionToPerform)
+            {
+                case MovementSkillType.SuperJump:
+                    // Verifica o Nível (Tier) da habilidade no SO
+                    if (newSkill.skillTier == SkillTier.Upgraded)
+                    {
+                        upgradedJumpSkill = newSkill;
+                    }
+                    else // Se for Base
+                    {
+                        baseJumpSkill = newSkill;
+                    }
+                    break;
+
+                case MovementSkillType.Dash:
+                    // Verifica o Nível (Tier) da habilidade no SO
+                    if (newSkill.skillTier == SkillTier.Upgraded)
+                    {
+                        upgradedDashSkill = newSkill;
+                    }
+                    else // Se for Base
+                    {
+                        baseDashSkill = newSkill;
+                    }
+                    break;
+
+                // As skills abaixo ainda não possuem slots "Upgraded" definidos nas variáveis,
+                // então elas sempre vão para o slot padrão independentemente do Tier.
+                case MovementSkillType.DashJump:
+                    dashJumpSkill = newSkill;
+                    break;
+
+                case MovementSkillType.WallSlide:
+                    wallSlideSkill = newSkill;
+                    break;
+
+                case MovementSkillType.WallJump:
+                    wallJumpSkill = newSkill;
+                    break;
+
+                case MovementSkillType.WallDash:
+                    wallDashSkill = newSkill;
+                    break;
+
+                case MovementSkillType.WallDashJump:
+                    wallDashJumpSkill = newSkill;
+                    break;
+
+                default:
+                    Debug.LogWarning($"Tipo de Movimento {newSkill.actionToPerform} não tem slot definido no EquipSkill.");
+                    break;
+            }
+        }
+        else if (newSkill.skillClass == SkillClass.Combate)
+        {
+            switch (newSkill.combatActionToPerform)
+            {
+                case CombatSkillType.Block:
+                    blockSkill = newSkill;
+                    break;
+
+                // Futuros tipos de combate viriam aqui...
+
+                default:
+                    Debug.LogWarning($"Tipo de Combate {newSkill.combatActionToPerform} não tem slot definido no EquipSkill.");
+                    break;
+            }
+        }
+
+        // Atualiza as referências ativas (activeJumpSkill e activeDashSkill)
+        // Isso garante que a mudança tenha efeito imediato no gameplay.
+        SetPowerMode(isPowerModeActive);
+
+        Debug.Log($"Skill '{newSkill.skillName}' (Tier: {newSkill.skillTier}) equipada com sucesso.");
     }
 }
