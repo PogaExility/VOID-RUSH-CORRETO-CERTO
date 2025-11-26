@@ -1,13 +1,12 @@
-
-
-
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+
 [RequireComponent(typeof(AdvancedPlayerMovement2D), typeof(SkillRelease))]
 public class PlayerController : MonoBehaviour
 {
+    #region 1. Referências e Variáveis
     [Header("Referências de Gerenciamento")]
     public CursorManager cursorManager;
 
@@ -38,50 +37,35 @@ public class PlayerController : MonoBehaviour
     [Header("Skills de Combate")]
     public SkillSO blockSkill;
 
-
+    // Estados Privados
     private bool attackBuffered = false;
     private bool isInventoryOpen = false;
-    private SkillSO activeJumpSkill;
-    private SkillSO activeDashSkill;
     private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
     private bool isInAimMode = false;
-    private PlayerStats playerStats;
     public bool inventoryLocked = false;
-    private PlayerAnimState previousBodyState;
     private bool isActionInterruptingAim = false;
     private bool _isAttacking;
+
+    // Referências Privadas e Auxiliares
+    private SkillSO activeJumpSkill;
+    private SkillSO activeDashSkill;
+    private PlayerStats playerStats;
+    private PlayerAnimState previousBodyState;
     private ObjetoInterativo interagivelProximo;
     private PlayerSounds playerSounds;
-    public void PlayFootstepSound()
-    {
-        // Se as referências não existirem, sai para evitar erros.
-        if (AudioManager.Instance == null || playerSounds == null) return;
+    private Coroutine lungeCoroutine;
+    #endregion
 
-        // Pega um som de passo aleatório da nossa "mochila de sons".
-        AudioClip footstepClip = playerSounds.GetRandomFootstep();
-
-        // Se encontrou um clipe, toca ele.
-        if (footstepClip != null)
-        {
-            // Toca o som audível para o jogador.
-            AudioManager.Instance.PlaySoundEffect(footstepClip, transform.position);
-        }
-
-        // A lógica para o SoundEmitter para a IA ainda não foi adicionada,
-        // mas quando formos fazer, será aqui.
-    }
-
+    #region 2. Propriedades e Getters/Setters Públicos
     public bool IsAttacking
-
     {
         get { return _isAttacking; }
         set
         {
             _isAttacking = value;
             // Quando IsAttacking é setado para TRUE, desabilita a física do movimento.
-            // Quando é setado para FALSE, habilita a física novamente.
             if (value)
             {
                 movementScript.DisablePhysicsControl();
@@ -92,13 +76,39 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
+
+    public void SetAimingState(bool isNowAiming)
+    {
+        if (isInAimMode == isNowAiming) return;
+
+        isInAimMode = isNowAiming;
+
+        movementScript.allowMovementFlip = !isNowAiming;
+        animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
+        weaponHandler.UpdateAimVisuals(isNowAiming);
+    }
+
+    public void SetAimingStateVisuals(bool isNowAiming)
+    {
+        movementScript.allowMovementFlip = !isNowAiming;
+        animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
+    }
+
+    public SkillSO GetActiveJumpSkill()
+    {
+        return activeJumpSkill;
+    }
+    #endregion
+
+    #region 3. Ciclo de Vida (Unity)
     void Awake()
     {
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
         skillRelease = GetComponent<SkillRelease>();
         defenseHandler = GetComponent<DefenseHandler>();
         playerStats = GetComponent<PlayerStats>();
-        playerSounds = GetComponent<PlayerSounds>(); // <-- ADICIONE ESTA LINHA
+        playerSounds = GetComponent<PlayerSounds>();
+
         if (animatorController == null) animatorController = GetComponent<PlayerAnimatorController>();
         if (cursorManager == null) cursorManager = FindAnyObjectByType<CursorManager>();
         if (weaponHandler == null) weaponHandler = GetComponent<WeaponHandler>();
@@ -113,50 +123,6 @@ public class PlayerController : MonoBehaviour
         if (animatorController != null) animatorController.SetAimLayerWeight(0);
     }
 
-    public void SetAimingState(bool isNowAiming)
-    {
-        // Se já estamos no estado desejado, não faz nada para evitar loops.
-        if (isInAimMode == isNowAiming) return;
-
-        isInAimMode = isNowAiming;
-
-        // Comanda os outros componentes
-        movementScript.allowMovementFlip = !isNowAiming;
-        animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
-        weaponHandler.UpdateAimVisuals(isNowAiming);
-    }
-    public void SetAimingStateVisuals(bool isNowAiming)
-    {
-        movementScript.allowMovementFlip = !isNowAiming;
-        animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
-    }
-    // DENTRO DE PlayerController.cs
-
-    // O parâmetro da função agora é do tipo ObjetoInterativo.
-    public void RegistrarInteragivel(ObjetoInterativo interagivel)
-    {
-        interagivelProximo = interagivel;
-    }
-
-    public void RemoverInteragivel(ObjetoInterativo interagivel)
-    {
-        // Apenas remove se for o mesmo interagível que está registrado (evita bugs).
-        if (interagivelProximo == interagivel)
-        {
-            interagivelProximo = null;
-        }
-    }
-
-
-    private void HandleInteractionInput()
-    {
-        // Se a tecla E for pressionada E existe um interagível próximo...
-        if (Input.GetKeyDown(KeyCode.E) && interagivelProximo != null)
-        {
-            // ...chama a função de interação do objeto.
-            interagivelProximo.Interagir();
-        }
-    }
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
@@ -168,19 +134,16 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // --- ADIÇÃO ---
-        // A lógica de rastejar é tratada primeiro para ter prioridade.
+        // Prioridade 1: Rastejar
         HandleCrawlInput();
-        // --- FIM DA ADIÇÃO ---
 
-        // O resto da lógica de Update só roda se não estiver atacando ou rastejando.
-        // A trava de movimento já está dentro de cada função Handle.
+        // Movimento Horizontal
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
 
+        // Lógica de Pouso (Landing)
         bool isGroundedNow = movementScript.IsGrounded();
         bool justLanded = isGroundedNow && !wasGroundedLastFrame;
 
-        // --- LÓGICA DE POUSO CORRIGIDA E FINAL ---
         if (justLanded)
         {
             Collider2D ground = movementScript.GetGroundCollider();
@@ -194,18 +157,14 @@ public class PlayerController : MonoBehaviour
             if (!landedOnPlatform || !movementScript.IsIgnoringPlatforms())
             {
                 isLanding = true;
-
-                // --- ADIÇÃO DA LÓGICA DE SOM DE POUSO ---
                 if (AudioManager.Instance != null && playerSounds != null && playerSounds.landSound != null)
                 {
                     AudioManager.Instance.PlaySoundEffect(playerSounds.landSound, transform.position);
-
-                    // AINDA NÃO VAMOS CRIAR O EMISSOR DE SOM PARA O POUSO.
-                    // Podemos adicionar isso depois, se necessário.
                 }
             }
         }
 
+        // Handlers de Input
         HandleInteractionInput();
         HandlePowerModeToggle();
         HandleSkillInput();
@@ -218,21 +177,20 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.Space)) movementScript.CutJump();
     }
+    #endregion
+
+    #region 4. Inputs de Controle (Helpers do Update)
     private void HandleCrawlInput()
     {
         // Pressionou para começar a rastejar
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
-            // Condições para poder rastejar: no chão e não estar fazendo outra ação
             if (movementScript.IsGrounded() && !movementScript.IsCrawling() && !movementScript.IsOnCrawlTransition())
             {
-                // --- ADICIONADO: Força a saída do modo de mira ---
                 if (isInAimMode)
                 {
                     SetAimingState(false);
                 }
-                // --- FIM DA ADIÇÃO ---
-
                 movementScript.BeginCrouchTransition();
                 animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.abaixando);
             }
@@ -242,7 +200,6 @@ public class PlayerController : MonoBehaviour
         {
             if (movementScript.IsCrawling())
             {
-                // Garante que a velocidade do animator volte ao normal para a animação de "levantar"
                 animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
                 movementScript.BeginStandUpTransition();
                 animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.levantando);
@@ -250,144 +207,116 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Esta função DEVE ser chamada por um Animation Event no último frame da sua animação "abaixando".
-    /// </summary>
-    public void OnCrouchDownAnimationComplete()
+    private void HandleInteractionInput()
     {
-        movementScript.CompleteCrouch();
-    }
-
-    /// <summary>
-    /// Esta função DEVE ser chamada por um Animation Event no último frame da sua animação "levantando".
-    /// </summary>
-    public void OnStandUpAnimationComplete()
-    {
-        movementScript.CompleteStandUp();
-    }
-
-    // --- FIM DAS NOVAS FUNÇÕES ---
-
-
-
-
-    private Coroutine lungeCoroutine;
-
-    // A função agora aceita DISTÂNCIA e VELOCIDADE.
-    public void PerformLunge(float distance, float speed)
-    {
-        if (lungeCoroutine != null) StopCoroutine(lungeCoroutine);
-        lungeCoroutine = StartCoroutine(LungeCoroutine(distance, speed));
-    }
-
-    public void CancelLunge()
-    {
-        if (lungeCoroutine != null)
+        if (Input.GetKeyDown(KeyCode.E) && interagivelProximo != null)
         {
-            StopCoroutine(lungeCoroutine);
-            // A limpeza agora é feita pelo 'finally', mas garantimos aqui por segurança.
-            movementScript.EnablePhysicsControl();
-            lungeCoroutine = null;
-        }
-    }
-
-    private IEnumerator LungeCoroutine(float distance, float speed)
-    {
-        // Se a velocidade for muito baixa, não faz nada para evitar erros.
-        if (Mathf.Abs(speed) < 0.1f)
-        {
-            yield break;
-        }
-
-        Rigidbody2D rb = movementScript.GetRigidbody();
-
-        try
-        {
-            // --- FASE DE EXECUÇÃO ---
-            movementScript.DisablePhysicsControl();
-
-            // Calcula a duração com base na distância e velocidade.
-            float duration = Mathf.Abs(distance / speed);
-
-            // Determina a direção do lunge (para frente ou para trás).
-            float lungeDirection = Mathf.Sign(distance);
-            float finalDirectionX = movementScript.GetFacingDirection().x * lungeDirection;
-
-            float horizontalVelocity = finalDirectionX * speed;
-
-            // Loop que força a velocidade a cada frame, mas preserva a gravidade.
-            float timeElapsed = 0f;
-            while (timeElapsed < duration)
-            {
-                float currentVerticalSpeed = rb.linearVelocity.y;
-                rb.linearVelocity = new Vector2(horizontalVelocity, currentVerticalSpeed);
-
-                timeElapsed += Time.fixedDeltaTime;
-                yield return new WaitForFixedUpdate();
-            }
-        }
-        finally
-        {
-            // --- FASE DE LIMPEZA (GARANTIDA) ---
-            // Este bloco SEMPRE roda, mesmo se a corrotina for interrompida.
-            movementScript.SetVelocity(0, rb.linearVelocity.y);
-            movementScript.EnablePhysicsControl();
-            lungeCoroutine = null;
-        }
-    }
-
-    private void HandleWeaponSwitching()
-    {
-        // ADICIONE ESTA LINHA NO TOPO DA FUNÇÃO
-        // Impede a troca de armas durante a recarga.
-        if (weaponHandler.IsReloading) return;
-
-        if (isInventoryOpen || weaponHandler == null) return;
-        float scrollInput = Input.GetAxis("Mouse ScrollWheel");
-
-        if (scrollInput > 0f)
-        {
-            weaponHandler.CycleWeapon();
-        }
-        else if (scrollInput < 0f)
-        {
-            weaponHandler.CycleWeapon();
-        }
-    }
-    private void ToggleInventory()
-    {
-        if (inventoryLocked) return;
-
-        isInventoryOpen = !isInventoryOpen;
-        inventoryPanel.SetActive(isInventoryOpen);
-        if (combatHUDPanel != null)
-            combatHUDPanel.SetActive(!isInventoryOpen);
-
-        Time.timeScale = isInventoryOpen ? 0f : 1f;
-
-        if (cursorManager != null)
-        {
-            if (isInventoryOpen)
-                cursorManager.SetInventoryCursor();
-            else
-                cursorManager.SetDefaultCursor();
+            interagivelProximo.Interagir();
         }
     }
 
     private void HandleSkillInput()
     {
-        // --- CORREÇÃO DEFINITIVA: Bloqueia a TENTATIVA de ativar skills ---
         if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition())
         {
             return;
         }
-        // --- FIM DA CORREÇÃO ---
-
-        // A função agora só tenta ativar skills se o bloqueio acima for passado.
         TryActivateMovementSkills();
     }
 
-    // Crie esta nova função auxiliar
+    private void HandleCombatInput()
+    {
+        if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition()) return;
+        if (weaponHandler.IsReloading) return;
+
+        var activeWeapon = weaponHandler.GetActiveWeaponSlot()?.item;
+        if (activeWeapon == null) return;
+
+        if (activeWeapon.weaponType == WeaponType.Meelee)
+        {
+            if (Input.GetButtonDown("Fire1")) attackBuffered = true;
+        }
+        else
+        {
+            if (Input.GetButton("Fire1")) attackBuffered = true;
+        }
+
+        if (Input.GetKeyDown(KeyCode.R)) weaponHandler.HandleReloadInput();
+
+        if (Input.GetKeyDown(KeyCode.F)) defenseHandler.StartBlock(blockSkill);
+        if (Input.GetKeyUp(KeyCode.F)) defenseHandler.EndBlock();
+    }
+
+    private void HandleWeaponSwitching()
+    {
+        if (weaponHandler.IsReloading) return;
+        if (isInventoryOpen || weaponHandler == null) return;
+
+        float scrollInput = Input.GetAxis("Mouse ScrollWheel");
+
+        if (scrollInput > 0f) weaponHandler.CycleWeapon();
+        else if (scrollInput < 0f) weaponHandler.CycleWeapon();
+    }
+
+    private void HandlePowerModeToggle()
+    {
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            SetPowerMode(!isPowerModeActive);
+        }
+    }
+    #endregion
+
+    #region 5. Sistema de Skills (Equipar e Ativar)
+    // Função atualizada para suportar Base vs Upgraded
+    public void EquipSkill(SkillSO newSkill)
+    {
+        if (newSkill == null)
+        {
+            Debug.LogWarning("Tentativa de equipar uma Skill nula.");
+            return;
+        }
+
+        if (newSkill.skillClass == SkillClass.Movimento)
+        {
+            switch (newSkill.actionToPerform)
+            {
+                case MovementSkillType.SuperJump:
+                    if (newSkill.skillTier == SkillTier.Upgraded) upgradedJumpSkill = newSkill;
+                    else baseJumpSkill = newSkill;
+                    break;
+
+                case MovementSkillType.Dash:
+                    if (newSkill.skillTier == SkillTier.Upgraded) upgradedDashSkill = newSkill;
+                    else baseDashSkill = newSkill;
+                    break;
+
+                case MovementSkillType.DashJump: dashJumpSkill = newSkill; break;
+                case MovementSkillType.WallSlide: wallSlideSkill = newSkill; break;
+                case MovementSkillType.WallJump: wallJumpSkill = newSkill; break;
+                case MovementSkillType.WallDash: wallDashSkill = newSkill; break;
+                case MovementSkillType.WallDashJump: wallDashJumpSkill = newSkill; break;
+
+                default:
+                    Debug.LogWarning($"Tipo de Movimento {newSkill.actionToPerform} não tem slot definido no EquipSkill.");
+                    break;
+            }
+        }
+        else if (newSkill.skillClass == SkillClass.Combate)
+        {
+            switch (newSkill.combatActionToPerform)
+            {
+                case CombatSkillType.Block: blockSkill = newSkill; break;
+                default:
+                    Debug.LogWarning($"Tipo de Combate {newSkill.combatActionToPerform} não tem slot definido no EquipSkill.");
+                    break;
+            }
+        }
+
+        SetPowerMode(isPowerModeActive);
+        Debug.Log($"Skill '{newSkill.skillName}' (Tier: {newSkill.skillTier}) equipada com sucesso.");
+    }
+
     private bool TryActivateMovementSkills()
     {
         if (skillRelease.TryActivateSkill(wallDashJumpSkill)) return true;
@@ -400,64 +329,29 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
-
-
-    // DENTRO DE PlayerController.cs
-
-    private void HandleCombatInput()
+    private void SetPowerMode(bool isActive)
     {
-        // --- ADICIONADO: Bloqueia combate ao rastejar ---
-        if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition()) return;
-        // --- FIM DA ADIÇÃO ---
-
-        if (weaponHandler.IsReloading) return;
-
-        var activeWeapon = weaponHandler.GetActiveWeaponSlot()?.item;
-        if (activeWeapon == null) return;
-
-        if (activeWeapon.weaponType == WeaponType.Meelee)
+        isPowerModeActive = isActive;
+        activeJumpSkill = isPowerModeActive ? upgradedJumpSkill : baseJumpSkill;
+        activeDashSkill = isPowerModeActive ? upgradedDashSkill : baseDashSkill;
+        if (powerModeIndicator != null)
         {
-            if (Input.GetButtonDown("Fire1"))
-            {
-                attackBuffered = true;
-            }
+            powerModeIndicator.SetActive(isActive);
         }
-        else
-        {
-            if (Input.GetButton("Fire1"))
-            {
-                attackBuffered = true;
-            }
-        }
-
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            weaponHandler.HandleReloadInput();
-        }
-        if (Input.GetKeyDown(KeyCode.F))
-        {
-            defenseHandler.StartBlock(blockSkill);
-        }
-        if (Input.GetKeyUp(KeyCode.F))
-        {
-            defenseHandler.EndBlock();
-        }
+        Debug.Log("Power Mode Ativo: " + isPowerModeActive);
     }
+    #endregion
 
+    #region 6. Sistema de Combate e Física
     private void ProcessAttackBuffer()
     {
-        // --- ADICIONADO: Bloqueia ataque ao rastejar ---
         if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition())
         {
-            attackBuffered = false; // Limpa o buffer se o jogador tentar rastejar
+            attackBuffered = false;
             return;
         }
-        // --- FIM DA ADIÇÃO ---
 
-        if (!attackBuffered)
-        {
-            return;
-        }
+        if (!attackBuffered) return;
 
         bool canAttackNow = !IsAttacking &&
                             !movementScript.IsDashing() &&
@@ -470,59 +364,67 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    public void PerformLunge(float distance, float speed)
+    {
+        if (lungeCoroutine != null) StopCoroutine(lungeCoroutine);
+        lungeCoroutine = StartCoroutine(LungeCoroutine(distance, speed));
+    }
+
+    public void CancelLunge()
+    {
+        if (lungeCoroutine != null)
+        {
+            StopCoroutine(lungeCoroutine);
+            movementScript.EnablePhysicsControl();
+            lungeCoroutine = null;
+        }
+    }
+
+    private IEnumerator LungeCoroutine(float distance, float speed)
+    {
+        if (Mathf.Abs(speed) < 0.1f) yield break;
+
+        Rigidbody2D rb = movementScript.GetRigidbody();
+        try
+        {
+            movementScript.DisablePhysicsControl();
+            float duration = Mathf.Abs(distance / speed);
+            float lungeDirection = Mathf.Sign(distance);
+            float finalDirectionX = movementScript.GetFacingDirection().x * lungeDirection;
+            float horizontalVelocity = finalDirectionX * speed;
+
+            float timeElapsed = 0f;
+            while (timeElapsed < duration)
+            {
+                float currentVerticalSpeed = rb.linearVelocity.y;
+                rb.linearVelocity = new Vector2(horizontalVelocity, currentVerticalSpeed);
+                timeElapsed += Time.fixedDeltaTime;
+                yield return new WaitForFixedUpdate();
+            }
+        }
+        finally
+        {
+            movementScript.SetVelocity(0, rb.linearVelocity.y);
+            movementScript.EnablePhysicsControl();
+            lungeCoroutine = null;
+        }
+    }
+    #endregion
+
+    #region 7. Sistema de Animação e Áudio
     private void UpdateAnimations()
     {
-        // Trava de ataque meelee
         if (IsAttacking) return;
 
-        // --- LÓGICA DE ANIMAÇÃO DE ESCALADA (COM ANIMAÇÕES SEPARADAS) ---
+        // Animação de Escalada
         if (movementScript.IsClimbing())
         {
             float verticalInput = movementScript.GetVerticalInput();
-
-            // Se o jogador está se movendo na escada
             if (Mathf.Abs(verticalInput) > 0.1f)
             {
-                // Garante que a velocidade da animação seja normal.
                 animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
-
-                // Escolhe a animação correta com base na direção.
-                if (verticalInput > 0)
-                {
-                    animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.subindoEscada);
-                }
-                else
-                {
-                    animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.descendoEscada);
-                }
-            }
-            else // Se o jogador está parado na escada
-            {
-                // Pausa a animação no frame atual.
-                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 0f);
-            }
-
-            return; // Sai da função para não executar as outras lógicas.
-        }
-        else
-        {
-            // Garante que a velocidade do animator volte ao normal quando não estiver escalando.
-            animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
-        }
-
-        // --- LÓGICA DE ANIMAÇÃO DE RASTEJAR (PRIORIDADE 2) ---
-        if (movementScript.IsOnCrawlTransition())
-        {
-            return;
-        }
-
-        if (movementScript.IsCrawling())
-        {
-            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.rastejando);
-
-            if (movementScript.IsMoving())
-            {
-                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+                if (verticalInput > 0) animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.subindoEscada);
+                else animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.descendoEscada);
             }
             else
             {
@@ -530,8 +432,22 @@ public class PlayerController : MonoBehaviour
             }
             return;
         }
+        else
+        {
+            animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+        }
 
-        // --- LÓGICA DE ANIMAÇÃO NORMAL ---
+        // Animação de Rastejar
+        if (movementScript.IsOnCrawlTransition()) return;
+        if (movementScript.IsCrawling())
+        {
+            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.rastejando);
+            if (movementScript.IsMoving()) animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+            else animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 0f);
+            return;
+        }
+
+        // Animação Normal
         PlayerAnimState desiredState;
 
         if (playerStats.IsDead()) { desiredState = PlayerAnimState.morrendo; }
@@ -567,10 +483,7 @@ public class PlayerController : MonoBehaviour
             if (isActionInterruptingAim)
             {
                 isActionInterruptingAim = false;
-                if (weaponHandler.IsAimWeaponEquipped())
-                {
-                    SetAimingState(true);
-                }
+                if (weaponHandler.IsAimWeaponEquipped()) SetAimingState(true);
             }
         }
 
@@ -597,6 +510,7 @@ public class PlayerController : MonoBehaviour
             animatorController.PlayState(AnimatorTarget.PlayerBody, desiredState, 0);
         }
     }
+
     private bool IsActionState(PlayerAnimState state)
     {
         switch (state)
@@ -618,129 +532,72 @@ public class PlayerController : MonoBehaviour
 
     public void OnActionAnimationComplete()
     {
-        // Pergunta para o WeaponHandler se a arma atual AINDA é uma arma de mira.
         if (weaponHandler.IsAimWeaponEquipped())
         {
-            // Se for, REATIVA o modo de mira.
             SetAimingState(true);
         }
     }
-    private void HandlePowerModeToggle()
+
+    public void OnCrouchDownAnimationComplete()
     {
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            SetPowerMode(!isPowerModeActive);
-        }
+        movementScript.CompleteCrouch();
     }
 
-    private void SetPowerMode(bool isActive)
+    public void OnStandUpAnimationComplete()
     {
-        isPowerModeActive = isActive;
-        activeJumpSkill = isPowerModeActive ? upgradedJumpSkill : baseJumpSkill;
-        activeDashSkill = isPowerModeActive ? upgradedDashSkill : baseDashSkill;
-        if (powerModeIndicator != null)
-        {
-            powerModeIndicator.SetActive(isActive);
-        }
-        Debug.Log("Power Mode Ativo: " + isPowerModeActive);
+        movementScript.CompleteStandUp();
     }
 
-    public SkillSO GetActiveJumpSkill()
-    {
-        return activeJumpSkill;
-    }
     public void OnLandingAnimationEnd()
     {
         Debug.Log("Animação de pouso TERMINOU. Liberando o jogador.");
         isLanding = false;
         movementScript.OnLandingComplete();
     }
-    // Função atualizada para suportar Base vs Upgraded
-    public void EquipSkill(SkillSO newSkill)
+
+    public void PlayFootstepSound()
     {
-        if (newSkill == null)
+        if (AudioManager.Instance == null || playerSounds == null) return;
+        AudioClip footstepClip = playerSounds.GetRandomFootstep();
+        if (footstepClip != null)
         {
-            Debug.LogWarning("Tentativa de equipar uma Skill nula.");
-            return;
+            AudioManager.Instance.PlaySoundEffect(footstepClip, transform.position);
         }
-
-        // Verifica a categoria da habilidade
-        if (newSkill.skillClass == SkillClass.Movimento)
-        {
-            // Verifica qual a AÇÃO específica para decidir o slot
-            switch (newSkill.actionToPerform)
-            {
-                case MovementSkillType.SuperJump:
-                    // Verifica o Nível (Tier) da habilidade no SO
-                    if (newSkill.skillTier == SkillTier.Upgraded)
-                    {
-                        upgradedJumpSkill = newSkill;
-                    }
-                    else // Se for Base
-                    {
-                        baseJumpSkill = newSkill;
-                    }
-                    break;
-
-                case MovementSkillType.Dash:
-                    // Verifica o Nível (Tier) da habilidade no SO
-                    if (newSkill.skillTier == SkillTier.Upgraded)
-                    {
-                        upgradedDashSkill = newSkill;
-                    }
-                    else // Se for Base
-                    {
-                        baseDashSkill = newSkill;
-                    }
-                    break;
-
-                // As skills abaixo ainda não possuem slots "Upgraded" definidos nas variáveis,
-                // então elas sempre vão para o slot padrão independentemente do Tier.
-                case MovementSkillType.DashJump:
-                    dashJumpSkill = newSkill;
-                    break;
-
-                case MovementSkillType.WallSlide:
-                    wallSlideSkill = newSkill;
-                    break;
-
-                case MovementSkillType.WallJump:
-                    wallJumpSkill = newSkill;
-                    break;
-
-                case MovementSkillType.WallDash:
-                    wallDashSkill = newSkill;
-                    break;
-
-                case MovementSkillType.WallDashJump:
-                    wallDashJumpSkill = newSkill;
-                    break;
-
-                default:
-                    Debug.LogWarning($"Tipo de Movimento {newSkill.actionToPerform} não tem slot definido no EquipSkill.");
-                    break;
-            }
-        }
-        else if (newSkill.skillClass == SkillClass.Combate)
-        {
-            switch (newSkill.combatActionToPerform)
-            {
-                case CombatSkillType.Block:
-                    blockSkill = newSkill;
-                    break;
-
-                // Futuros tipos de combate viriam aqui...
-
-                default:
-                    Debug.LogWarning($"Tipo de Combate {newSkill.combatActionToPerform} não tem slot definido no EquipSkill.");
-                    break;
-            }
-        }
-
-        // Atualiza as referências ativas (activeJumpSkill e activeDashSkill)
-        // Isso garante que a mudança tenha efeito imediato no gameplay.
-        SetPowerMode(isPowerModeActive);
-
-        Debug.Log($"Skill '{newSkill.skillName}' (Tier: {newSkill.skillTier}) equipada com sucesso.");
     }
+    #endregion
+
+    #region 8. Sistema de Interação e UI
+    public void RegistrarInteragivel(ObjetoInterativo interagivel)
+    {
+        interagivelProximo = interagivel;
+    }
+
+    public void RemoverInteragivel(ObjetoInterativo interagivel)
+    {
+        if (interagivelProximo == interagivel)
+        {
+            interagivelProximo = null;
+        }
+    }
+
+    private void ToggleInventory()
+    {
+        if (inventoryLocked) return;
+
+        isInventoryOpen = !isInventoryOpen;
+        inventoryPanel.SetActive(isInventoryOpen);
+        if (combatHUDPanel != null)
+            combatHUDPanel.SetActive(!isInventoryOpen);
+
+        Time.timeScale = isInventoryOpen ? 0f : 1f;
+
+        if (cursorManager != null)
+        {
+            if (isInventoryOpen)
+                cursorManager.SetInventoryCursor();
+            else
+                cursorManager.SetDefaultCursor();
+        }
+    }
+    #endregion
 }
