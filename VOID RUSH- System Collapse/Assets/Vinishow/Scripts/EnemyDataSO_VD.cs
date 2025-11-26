@@ -8,7 +8,8 @@ public enum AIState
     MeleeAttacking,
     RangedAttacking,
     Stunned,
-    Dead
+    Dead,
+    Idle
 }
 
 [CreateAssetMenu(fileName = "NovoInimigoData", menuName = "IA_VD/Configuração de Inimigo")]

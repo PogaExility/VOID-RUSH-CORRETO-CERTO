@@ -18,6 +18,13 @@ public class AIControllerVD : MonoBehaviour
     [SerializeField] private Transform attackPoint;
     [SerializeField] private float environmentCheckDistance = 0.2f;
 
+    // --- NOVO: Configuração da Patrulha Aleatória ---
+    [Header("Configuração da Patrulha Aleatória")]
+    [SerializeField] private float minPatrolTime = 2f;
+    [SerializeField] private float maxPatrolTime = 5f;
+    [SerializeField] private float minIdleTime = 1f;
+    [SerializeField] private float maxIdleTime = 3f;
+
     // --- Referências de Componentes ---
     private EnemyStatsVD enemyStats;
     private Rigidbody2D rb;
@@ -28,6 +35,9 @@ public class AIControllerVD : MonoBehaviour
     private int facingDirection = 1;
     private float lastMeleeAttackTime = -999f;
     private float lastRangedAttackTime = -999f;
+
+    // --- NOVOS Timers para a patrulha ---
+    private float stateTimer;
 
     void Awake()
     {
@@ -40,6 +50,9 @@ public class AIControllerVD : MonoBehaviour
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null) playerTransform = player.transform;
         else Debug.LogError("IA não encontrou o jogador! Verifique se o jogador tem a tag 'Player'.");
+
+        // --- MODIFICADO: Sorteia uma direção inicial aleatória ---
+        if (Random.value > 0.5f) Flip();
 
         enemyStats.OnEnemyDied += HandleDeath;
         enemyStats.OnDamageTaken += HandleDamageTaken;
@@ -57,8 +70,13 @@ public class AIControllerVD : MonoBehaviour
     {
         if (playerTransform == null || currentState == AIState.Dead || currentState == AIState.Stunned) return;
 
+        // O timer de estado é decrementado a cada frame.
+        stateTimer -= Time.deltaTime;
+
         switch (currentState)
         {
+            // --- NOVO ESTADO ADICIONADO ---
+            case AIState.Idle: UpdateIdleState(); break;
             case AIState.Patrolling: UpdatePatrolState(); break;
             case AIState.Chasing: UpdateChaseState(); break;
             case AIState.MeleeAttacking: UpdateMeleeAttackState(); break;
@@ -66,24 +84,77 @@ public class AIControllerVD : MonoBehaviour
         }
     }
 
+    // --- MODIFICADO: Agora também prepara os timers para os novos estados ---
     private void ChangeState(AIState newState)
     {
         if (currentState == newState) return;
-
-        // --- DEBUG ADICIONADO ---
-        Debug.Log(gameObject.name + " mudando de estado: " + currentState + " -> " + newState);
-
         currentState = newState;
+
+        // Configura o novo estado
+        switch (newState)
+        {
+            case AIState.Idle:
+                stateTimer = Random.Range(minIdleTime, maxIdleTime);
+                rb.linearVelocity = new Vector2(0, rb.linearVelocity.y); // Para o inimigo
+                break;
+
+            case AIState.Patrolling:
+                stateTimer = Random.Range(minPatrolTime, maxPatrolTime);
+                break;
+
+            // Outros estados não precisam de timer, então não fazemos nada.
+            case AIState.Chasing:
+            case AIState.MeleeAttacking:
+            case AIState.RangedAttacking:
+            case AIState.Dead:
+            case AIState.Stunned:
+                break;
+        }
     }
 
     // --- LÓGICA DOS ESTADOS ---
 
+    // --- NOVA FUNÇÃO PARA O ESTADO OCIOSO ---
+    private void UpdateIdleState()
+    {
+        // Se o tempo de ociosidade acabou, volta a patrulhar.
+        if (stateTimer <= 0)
+        {
+            ChangeState(AIState.Patrolling);
+        }
+
+        // Mesmo parado, o inimigo ainda pode ver o jogador.
+        if (CanSeePlayer())
+        {
+            ChangeState(AIState.Chasing);
+        }
+    }
+
+    // --- MODIFICADO: Agora usa o timer e transita para Idle ---
     private void UpdatePatrolState()
     {
+        // Se bateu na parede, ou não tem chão, vira.
+        if (IsNearWall() || !IsGroundAhead())
+        {
+            Flip();
+        }
+
+        // Move-se na direção atual.
         rb.linearVelocity = new Vector2(enemyStats.EnemyData.patrolSpeed * facingDirection, rb.linearVelocity.y);
-        if (IsNearWall() || !IsGroundAhead()) Flip();
-        if (CanSeePlayer()) ChangeState(AIState.Chasing);
+
+        // Se o tempo de patrulha acabou, fica ocioso.
+        if (stateTimer <= 0)
+        {
+            ChangeState(AIState.Idle);
+        }
+
+        // Se vir o jogador, começa a perseguição.
+        if (CanSeePlayer())
+        {
+            ChangeState(AIState.Chasing);
+        }
     }
+
 
     private void UpdateChaseState()
     {
@@ -152,7 +223,7 @@ public class AIControllerVD : MonoBehaviour
         }
     }
 
-    // --- FUNÇÕES DE ATAQUE ---
+    // --- FUNÇÕES DE ATAQUE (não modificadas) ---
 
     private void PerformMeleeAttack()
     {
@@ -175,7 +246,7 @@ public class AIControllerVD : MonoBehaviour
         }
     }
 
-    // --- FUNÇÕES DE DETECÇÃO E REAÇÃO ---
+    // --- FUNÇÕES DE DETECÇÃO E REAÇÃO (não modificadas) ---
 
     private bool IsNearWall() => Physics2D.Raycast(wallCheckPoint.position, Vector2.right * facingDirection, environmentCheckDistance, groundLayer);
     private bool IsGroundAhead() => Physics2D.Raycast(ledgeCheckPoint.position, Vector2.down, environmentCheckDistance, groundLayer);
@@ -294,3 +365,7 @@ public class AIControllerVD : MonoBehaviour
     }
 #endif
 }
+
+// Lembre-se de adicionar o estado "Idle" ao seu enum AIState, caso ele esteja em outro arquivo.
+// Exemplo:
+// public enum AIState { Idle, Patrolling, Chasing, MeleeAttacking, RangedAttacking, Stunned, Dead }
