@@ -50,7 +50,8 @@ public class PlayerAnimatorController : MonoBehaviour
     [SerializeField] public float reloadAnimationBaseDuration = 1f;
 
     // MUDANÇA CRÍTICA: O novo "CÉREBRO". Um dicionário para guardar o estado atual de CADA animator.
-    private Dictionary<AnimatorTarget, PlayerAnimState> currentStateByTarget;
+    // Inicializa aqui para garantir que nunca seja nulo
+    private Dictionary<AnimatorTarget, PlayerAnimState> currentStateByTarget = new Dictionary<AnimatorTarget, PlayerAnimState>();
     private int cotocoLayerIndex;
 
     #region State Hashes
