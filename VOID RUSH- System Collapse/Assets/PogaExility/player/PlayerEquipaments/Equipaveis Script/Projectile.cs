@@ -1,4 +1,3 @@
-// Projectile.cs - VERSÃO COMPLETA E CORRIGIDA COM PERFURAÇÃO E GIZMO
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -9,7 +8,7 @@ public class Projectile : MonoBehaviour
     private int pierceCount;
     private float damageFalloff;
     private float knockbackPower;
-    private RangedKnockbackDirection knockbackDirection; // <-- VARIÁVEL ADICIONADA
+    private RangedKnockbackDirection knockbackDirection;
 
     private Rigidbody2D rb;
 
@@ -19,7 +18,7 @@ public class Projectile : MonoBehaviour
     private int groundLayer;
 
     [Header("Debug")]
-    [SerializeField] private float gizmoLength = 1f; // <-- VARIÁVEL ADICIONADA PARA O GIZMO
+    [SerializeField] private float gizmoLength = 1f;
 
     void Awake()
     {
@@ -36,14 +35,10 @@ public class Projectile : MonoBehaviour
         this.pierceCount = pierceCount;
         this.damageFalloff = damageFalloff;
         this.knockbackPower = knockback;
-        this.knockbackDirection = knockbackDir; // <-- ARMAZENA A DIREÇÃO RECEBIDA
+        this.knockbackDirection = knockbackDir;
         rb.linearVelocity = transform.right * speed;
         Destroy(gameObject, lifetime);
     }
-
-    // DENTRO DO SCRIPT: Projectile.cs
-
-    // DENTRO DO SCRIPT: Projectile.cs
 
     void OnTriggerEnter2D(Collider2D other)
     {
@@ -60,15 +55,13 @@ public class Projectile : MonoBehaviour
         var objetoInterativo = other.GetComponent<ObjetoInterativo>();
         if (objetoInterativo != null)
         {
-            // --- INÍCIO DA MUDANÇA ---
-            // Chamamos a nova função 'ReceberHit' e passamos o tipo de ataque do projétil.
             objetoInterativo.ReceberHit(TipoDeAtaqueAceito.ApenasRanged);
-            // --- FIM DA MUDANÇA ---
             hitValidTarget = true;
         }
-        // 2. Se não era um objeto interativo, a lógica para inimigos continua.
-        else if (other.TryGetComponent<AIController_Basic>(out var enemyAI))
+        // 2. CORREÇÃO AQUI: Se não era um objeto interativo, procura pelo EnemyHealth (novo script do seu colega)
+        else if (other.TryGetComponent<EnemyHealth>(out var enemyHealth))
         {
+            // Mantivemos a sua lógica de direção de ataque, que estava melhor que a dele
             Vector2 attackDirection;
             switch (knockbackDirection)
             {
@@ -80,7 +73,8 @@ public class Projectile : MonoBehaviour
                     break;
             }
 
-            enemyAI.TakeDamage(this.damage, attackDirection, this.knockbackPower);
+            // Aplica o dano no script novo
+            enemyHealth.TakeDamage(this.damage, attackDirection, this.knockbackPower);
             hitValidTarget = true;
         }
 

@@ -8,7 +8,7 @@ public class GunpowderExplosion : MonoBehaviour
     private float radius;
     private float knockbackPower;
     private RangedKnockbackDirection knockbackDirection;
-    private Vector2 shotDirection; // <-- VARIÁVEL ADICIONADA PARA GUARDAR A DIREÇÃO DO TIRO
+    private Vector2 shotDirection;
 
     [SerializeField] private LayerMask enemyLayer;
 
@@ -27,7 +27,7 @@ public class GunpowderExplosion : MonoBehaviour
         this.radius = explosionRadius;
         this.knockbackPower = knockbackForce;
         this.knockbackDirection = knockbackDir;
-        this.shotDirection = fireDirection; // <-- ARMAZENA A DIREÇÃO RECEBIDA
+        this.shotDirection = fireDirection;
     }
 
     /// <summary>
@@ -38,14 +38,16 @@ public class GunpowderExplosion : MonoBehaviour
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, radius, enemyLayer);
         foreach (var hit in hits)
         {
-            if (hit.TryGetComponent<AIController_Basic>(out AIController_Basic enemy))
+            // --- CORREÇÃO AQUI ---
+            // Substituído AIController_Basic por EnemyHealth para corrigir o erro.
+            if (hit.TryGetComponent<EnemyHealth>(out EnemyHealth enemy))
             {
                 Vector2 finalKnockbackDirection;
 
                 switch (knockbackDirection)
                 {
                     case RangedKnockbackDirection.Frente:
-                        // LÓGICA CORRIGIDA: Usa a direção do cano da arma que foi guardada.
+                        // LÓGICA MANTIDA: Usa a direção do cano da arma que foi guardada.
                         finalKnockbackDirection = this.shotDirection;
                         break;
 
@@ -55,6 +57,7 @@ public class GunpowderExplosion : MonoBehaviour
                         break;
                 }
 
+                // Aplica o dano no novo sistema de vida
                 enemy.TakeDamage(this.damage, finalKnockbackDirection, this.knockbackPower);
             }
         }

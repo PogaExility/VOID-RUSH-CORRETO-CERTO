@@ -1,4 +1,4 @@
-// NOME DO ARQUIVO: SlashEffect.cs - VERSÃO COMPLETA E FINAL
+// NOME DO ARQUIVO: SlashEffect.cs - VERSÃO CORRIGIDA
 
 using UnityEngine;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ public class SlashEffect : MonoBehaviour
     // --- Dados do Ataque (recebidos da MeeleeWeapon) ---
     private float damage;
     private float knockbackPower;
-    private Vector2 precalculatedKnockbackDirection; // <-- NOVA VARIÁVEL para guardar a direção
+    private Vector2 precalculatedKnockbackDirection;
 
     // --- Componentes & Referências ---
     private ProjectileAnimatorController projectileAnimator;
@@ -43,7 +43,7 @@ public class SlashEffect : MonoBehaviour
     {
         this.damage = damageAmount;
         this.knockbackPower = knockbackForce;
-        this.precalculatedKnockbackDirection = knockbackDir; // <-- ARMAZENA A DIREÇÃO RECEBIDA
+        this.precalculatedKnockbackDirection = knockbackDir;
 
         if (projectileAnimator != null)
         {
@@ -63,9 +63,6 @@ public class SlashEffect : MonoBehaviour
         }
     }
 
-
-    // DENTRO DO SCRIPT: SlashEffect.cs
-
     void OnTriggerEnter2D(Collider2D other)
     {
         // A verificação para não atingir o mesmo alvo múltiplas vezes permanece a mesma.
@@ -78,10 +75,7 @@ public class SlashEffect : MonoBehaviour
         var objetoInterativo = other.GetComponent<ObjetoInterativo>();
         if (objetoInterativo != null)
         {
-            // --- INÍCIO DA MUDANÇA ---
-            // Agora chamamos a nova função 'ReceberHit', que é o ponto de entrada para todos os ataques.
             objetoInterativo.ReceberHit(TipoDeAtaqueAceito.ApenasMelee);
-            // --- FIM DA MUDANÇA ---
 
             // Adiciona à lista de alvos atingidos para não interagir novamente com o mesmo golpe.
             targetsHit.Add(other);
@@ -90,12 +84,14 @@ public class SlashEffect : MonoBehaviour
             return;
         }
 
-        // Se não era um objeto interativo, a lógica para inimigos continua exatamente como antes.
-        var enemyAI = other.GetComponent<AIController_Basic>();
-        if (enemyAI != null)
+        // --- CORREÇÃO AQUI ---
+        // Substituído AIController_Basic por EnemyHealth para corrigir o erro CS0246.
+        var enemyHealth = other.GetComponent<EnemyHealth>();
+        if (enemyHealth != null)
         {
             targetsHit.Add(other);
-            enemyAI.TakeDamage(damage, precalculatedKnockbackDirection, knockbackPower);
+            // Mantém sua lógica de direção pré-calculada
+            enemyHealth.TakeDamage(damage, precalculatedKnockbackDirection, knockbackPower);
         }
     }
 
