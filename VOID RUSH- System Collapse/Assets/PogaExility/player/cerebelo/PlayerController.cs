@@ -14,7 +14,7 @@ public class PlayerController : MonoBehaviour
     public GameObject inventoryPanel;
     public GameObject combatHUDPanel;
     public EnergyBarController energyBar;
-    public GameObject powerModeIndicator;
+ 
 
     [Header("Referências de Movimento e Combate")]
     public SkillRelease skillRelease;
@@ -27,8 +27,6 @@ public class PlayerController : MonoBehaviour
     public SkillSO baseJumpSkill;
     public SkillSO baseDashSkill;
     public SkillSO dashJumpSkill;
-    public SkillSO upgradedJumpSkill;
-    public SkillSO upgradedDashSkill;
     public SkillSO wallSlideSkill;
     public SkillSO wallJumpSkill;
     public SkillSO wallDashSkill;
@@ -40,7 +38,6 @@ public class PlayerController : MonoBehaviour
     // Estados Privados
     private bool attackBuffered = false;
     private bool isInventoryOpen = false;
-    private bool isPowerModeActive = false;
     private bool wasGroundedLastFrame = true;
     private bool isLanding = false;
     private bool isInAimMode = false;
@@ -117,7 +114,7 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         if (energyBar != null) energyBar.SetMaxEnergy(100f);
-        SetPowerMode(false);
+        // SetPowerMode(false); <- REMOVIDO
         if (inventoryPanel != null) { inventoryPanel.SetActive(false); isInventoryOpen = false; }
         if (cursorManager != null) cursorManager.SetDefaultCursor();
         if (animatorController != null) animatorController.SetAimLayerWeight(0);
@@ -134,13 +131,9 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Prioridade 1: Rastejar
         HandleCrawlInput();
-
-        // Movimento Horizontal
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
 
-        // Lógica de Pouso (Landing)
         bool isGroundedNow = movementScript.IsGrounded();
         bool justLanded = isGroundedNow && !wasGroundedLastFrame;
 
@@ -164,9 +157,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // Handlers de Input
         HandleInteractionInput();
-        HandlePowerModeToggle();
         HandleSkillInput();
         HandleCombatInput();
         ProcessAttackBuffer();
@@ -257,14 +248,6 @@ public class PlayerController : MonoBehaviour
         if (scrollInput > 0f) weaponHandler.CycleWeapon();
         else if (scrollInput < 0f) weaponHandler.CycleWeapon();
     }
-
-    private void HandlePowerModeToggle()
-    {
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            SetPowerMode(!isPowerModeActive);
-        }
-    }
     #endregion
 
     #region 5. Sistema de Skills (Equipar e Ativar)
@@ -282,13 +265,11 @@ public class PlayerController : MonoBehaviour
             switch (newSkill.actionToPerform)
             {
                 case MovementSkillType.SuperJump:
-                    if (newSkill.skillTier == SkillTier.Upgraded) upgradedJumpSkill = newSkill;
-                    else baseJumpSkill = newSkill;
+                    baseJumpSkill = newSkill; // Sempre vai para o base
                     break;
 
                 case MovementSkillType.Dash:
-                    if (newSkill.skillTier == SkillTier.Upgraded) upgradedDashSkill = newSkill;
-                    else baseDashSkill = newSkill;
+                    baseDashSkill = newSkill; // Sempre vai para o base
                     break;
 
                 case MovementSkillType.DashJump: dashJumpSkill = newSkill; break;
@@ -313,8 +294,7 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        SetPowerMode(isPowerModeActive);
-        Debug.Log($"Skill '{newSkill.skillName}' (Tier: {newSkill.skillTier}) equipada com sucesso.");
+        Debug.Log($"Skill '{newSkill.skillName}' equipada com sucesso.");
     }
 
     private bool TryActivateMovementSkills()
@@ -324,21 +304,12 @@ public class PlayerController : MonoBehaviour
         if (skillRelease.TryActivateSkill(wallJumpSkill)) return true;
         if (skillRelease.TryActivateSkill(wallDashSkill)) return true;
         if (skillRelease.TryActivateSkill(wallSlideSkill)) return true;
-        if (skillRelease.TryActivateSkill(activeJumpSkill)) return true;
-        if (skillRelease.TryActivateSkill(activeDashSkill)) return true;
-        return false;
-    }
 
-    private void SetPowerMode(bool isActive)
-    {
-        isPowerModeActive = isActive;
-        activeJumpSkill = isPowerModeActive ? upgradedJumpSkill : baseJumpSkill;
-        activeDashSkill = isPowerModeActive ? upgradedDashSkill : baseDashSkill;
-        if (powerModeIndicator != null)
-        {
-            powerModeIndicator.SetActive(isActive);
-        }
-        Debug.Log("Power Mode Ativo: " + isPowerModeActive);
+        // Agora verifica diretamente as skills base, sem intermediários
+        if (skillRelease.TryActivateSkill(baseJumpSkill)) return true;
+        if (skillRelease.TryActivateSkill(baseDashSkill)) return true;
+
+        return false;
     }
     #endregion
 
