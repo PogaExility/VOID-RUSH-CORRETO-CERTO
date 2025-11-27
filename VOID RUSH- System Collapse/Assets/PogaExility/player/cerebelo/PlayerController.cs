@@ -35,6 +35,11 @@ public class PlayerController : MonoBehaviour
     [Header("Skills de Combate")]
     public SkillSO blockSkill;
 
+    [Header("Configuração de Áudio")]
+    [Tooltip("Tempo em segundos entre cada som de passo (ex: 0.35 para caminhada).")]
+    public float footstepInterval = 0.35f;
+    private float footstepTimer = 0f;
+
     // Estados Privados
     private bool attackBuffered = false;
     private bool isInventoryOpen = false;
@@ -161,6 +166,7 @@ public class PlayerController : MonoBehaviour
         HandleSkillInput();
         HandleCombatInput();
         ProcessAttackBuffer();
+        HandleFootstepAudio();
         HandleWeaponSwitching();
         UpdateAnimations();
 
@@ -533,6 +539,27 @@ public class PlayerController : MonoBehaviour
         if (footstepClip != null)
         {
             AudioManager.Instance.PlaySoundEffect(footstepClip, transform.position);
+        }
+    }
+
+    private void HandleFootstepAudio()
+    {
+        // Se não estiver no chão, ou não estiver se movendo, ou estiver rastejando (opcional), não toca som de passo normal.
+        if (!movementScript.IsGrounded() || !movementScript.IsMoving() || movementScript.IsCrawling())
+        {
+            // Reseta o timer para que o som toque quase imediatamente ao começar a andar de novo
+            footstepTimer = 0f;
+            return;
+        }
+
+        // Diminui o temporizador
+        footstepTimer -= Time.deltaTime;
+
+        // Se o tempo acabou, toca o som e reinicia o timer
+        if (footstepTimer <= 0f)
+        {
+            PlayFootstepSound(); // Chama a função que já existia no seu script
+            footstepTimer = footstepInterval;
         }
     }
     #endregion

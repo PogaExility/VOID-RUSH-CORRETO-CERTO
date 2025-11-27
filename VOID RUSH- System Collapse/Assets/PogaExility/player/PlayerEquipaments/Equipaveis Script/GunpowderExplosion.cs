@@ -12,9 +12,20 @@ public class GunpowderExplosion : MonoBehaviour
 
     [SerializeField] private LayerMask enemyLayer;
 
+    // --- ADIÇÃO: Variável de Áudio ---
+    [Header("Áudio")]
+    [SerializeField] private AudioClip explosionSound;
+
     void Start()
     {
+        // Toca a animação visual
         GetComponent<ProjectileAnimatorController>().PlayAnimation(ProjectileAnimState.polvora);
+
+        // --- ADIÇÃO: Toca o som da explosão ---
+        if (AudioManager.Instance != null && explosionSound != null)
+        {
+            AudioManager.Instance.PlaySoundEffect(explosionSound, transform.position);
+        }
     }
 
     /// <summary>
@@ -38,8 +49,7 @@ public class GunpowderExplosion : MonoBehaviour
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, radius, enemyLayer);
         foreach (var hit in hits)
         {
-            // --- CORREÇÃO AQUI ---
-            // Substituído AIController_Basic por EnemyHealth para corrigir o erro.
+            // Lógica corrigida usando EnemyHealth
             if (hit.TryGetComponent<EnemyHealth>(out EnemyHealth enemy))
             {
                 Vector2 finalKnockbackDirection;
