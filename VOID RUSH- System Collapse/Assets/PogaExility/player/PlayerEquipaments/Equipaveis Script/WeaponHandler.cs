@@ -21,6 +21,8 @@ public class WeaponHandler : MonoBehaviour
     [SerializeField] private GameObject armPivot; // A referência para o objeto do braço
     [SerializeField] private PlayerAnimatorController animatorController;
 
+    public AudioSource PlayerAudioSource { get; private set; }
+
     private WeaponBase activeWeaponInstance;
     public int currentWeaponIndex { get; private set; } = 0;
     private bool isInAimMode = false;
@@ -38,6 +40,12 @@ public class WeaponHandler : MonoBehaviour
 
         if (playerController == null) playerController = GetComponent<PlayerController>();
         if (animatorController == null) animatorController = GetComponentInParent<PlayerAnimatorController>();
+
+        PlayerAudioSource = GetComponent<AudioSource>();
+        if (PlayerAudioSource == null)
+        { // <-- CHAVES FALTANDO ADICIONADAS
+            Debug.LogWarning("WeaponHandler não encontrou um AudioSource no jogador. Adicione um para tocar os sons das armas.", this);
+        }
 
         // Inicializa os slots de arma e munição para evitar erros
         for (int i = 0; i < weaponSlots.Length; i++) { if (weaponSlots[i] == null) weaponSlots[i] = new InventorySlot(); }

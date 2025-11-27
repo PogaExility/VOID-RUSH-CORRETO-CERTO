@@ -24,6 +24,17 @@ public class RangedWeapon : WeaponBase
         
         lastAttackTime = Time.time;
 
+        // --- ADIÇÃO: LÓGICA PARA TOCAR O SOM DO TIRO ---
+        // Pega a referência do AudioSource do jogador através do WeaponHandler.
+        var audioSource = WeaponHandler.Instance.PlayerAudioSource;
+        // Se a arma tem um som de tiro definido e o AudioSource foi encontrado...
+        if (weaponData.shotSound != null && audioSource != null)
+        {
+            // ...toca o som.
+            audioSource.PlayOneShot(weaponData.shotSound);
+        }
+        // --- FIM DA ADIÇÃO ---
+
         // --- Recoil acontece em todos os tiros ---
         if (recoilCoroutine != null) StopCoroutine(recoilCoroutine);
         recoilCoroutine = StartCoroutine(RecoilCoroutine());

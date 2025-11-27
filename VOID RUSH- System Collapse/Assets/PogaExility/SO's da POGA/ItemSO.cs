@@ -82,4 +82,7 @@ public class ItemSO : ScriptableObject
 
     [Header("Configurações de Consumível")]
     public float healthToRestore;
+
+    [Header("Efeitos Sonoros (Arma)")]
+    public AudioClip shotSound;
 }

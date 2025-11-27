@@ -1,14 +1,16 @@
 using System.Collections;
 using UnityEngine;
 
-// O Animator não é mais requerido
 [RequireComponent(typeof(Rigidbody2D))]
 public class ExplosiveEnemyController_VD : MonoBehaviour
 {
     [Header("Configuração")]
     [SerializeField] private ExplosiveEnemyDataSO_VD enemyData;
 
-    [Header("Pontos de Referência")]
+    [Header("Referências Visuais")]
+    [SerializeField] private CustomSpriteAnimatorVD spriteAnimator;
+
+    [Header("Pontos de Referência (Física)")]
     [SerializeField] private Transform wallCheckPoint;
     [SerializeField] private Transform ledgeCheckPoint;
     [SerializeField] private float environmentCheckDistance = 0.2f;
@@ -25,12 +27,27 @@ public class ExplosiveEnemyController_VD : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        if (spriteAnimator == null)
+        {
+            spriteAnimator = GetComponentInChildren<CustomSpriteAnimatorVD>();
+        }
     }
 
     void Start()
     {
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null) playerTransform = player.transform;
+
+        if (spriteAnimator == null)
+        {
+            // O teste da cor vermelha permanece, pois é útil
+            Debug.LogError("Referência para o CustomSpriteAnimatorVD está faltando!", this);
+            var renderer = GetComponentInChildren<SpriteRenderer>();
+            if (renderer != null) renderer.color = Color.red;
+            enabled = false;
+            return;
+        }
+
         ChangeState(State.Patrolling);
     }
 
@@ -38,41 +55,45 @@ public class ExplosiveEnemyController_VD : MonoBehaviour
     {
         if (playerTransform == null || currentState == State.Exploding) return;
 
+        // A lógica de decisão de estado acontece primeiro
+        DecideState();
+
+        // A lógica de ação (movimento e animação) acontece com base no estado decidido
+        ActOnState();
+    }
+
+    private void DecideState()
+    {
         float distanceToPlayer = Vector2.Distance(transform.position, playerTransform.position);
 
         switch (currentState)
         {
             case State.Patrolling:
-                if (distanceToPlayer <= enemyData.alertRadius)
-                    ChangeState(State.Alert);
+                if (distanceToPlayer <= enemyData.alertRadius) ChangeState(State.Alert);
                 break;
             case State.Alert:
-                FacePlayer();
-                if (distanceToPlayer <= enemyData.explosionRadius)
-                    ChangeState(State.Priming);
-                else if (distanceToPlayer > enemyData.alertRadius)
-                    ChangeState(State.Patrolling);
-                break;
-            case State.Priming:
-                FacePlayer();
+                if (distanceToPlayer <= enemyData.explosionRadius) ChangeState(State.Priming);
+                else if (distanceToPlayer > enemyData.alertRadius) ChangeState(State.Patrolling);
                 break;
         }
     }
 
-    void FixedUpdate()
+    private void ActOnState()
     {
-        if (currentState == State.Patrolling)
+        switch (currentState)
         {
-            rb.linearVelocity = new Vector2(enemyData.patrolSpeed * facingDirection, rb.linearVelocity.y);
-            if (IsNearWall() || !IsGroundAhead())
-            {
-                Flip();
-            }
-        }
-        else
-        {
-            // Para o movimento horizontal nos outros estados
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            case State.Patrolling:
+                rb.linearVelocity = new Vector2(enemyData.patrolSpeed * facingDirection, rb.linearVelocity.y);
+                if (IsNearWall() || !IsGroundAhead())
+                {
+                    Flip();
+                }
+                break;
+            case State.Alert:
+            case State.Priming:
+                rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+                FacePlayer();
+                break;
         }
     }
 
@@ -81,17 +102,27 @@ public class ExplosiveEnemyController_VD : MonoBehaviour
         if (currentState == newState) return;
         currentState = newState;
 
-        // Se o estado for Priming, inicia a contagem regressiva
-        if (currentState == State.Priming)
+        if (spriteAnimator == null) return;
+
+        switch (currentState)
         {
-            StartCoroutine(FuseCoroutine());
+            case State.Patrolling:
+                spriteAnimator.Play(enemyData.patrolStateName);
+                break;
+            case State.Alert:
+                spriteAnimator.Play(enemyData.alertStateName);
+                break;
+            case State.Priming:
+                // O FuseCoroutine agora só se preocupa com a animação e o tempo
+                StartCoroutine(FuseCoroutine());
+                break;
         }
     }
 
     private IEnumerator FuseCoroutine()
     {
+        spriteAnimator.Play(enemyData.alertStateName);
         yield return new WaitForSeconds(enemyData.fuseTime);
-        // Checagem de segurança para garantir que o estado não mudou enquanto esperava
         if (currentState == State.Priming)
         {
             Explode();
@@ -100,22 +131,34 @@ public class ExplosiveEnemyController_VD : MonoBehaviour
 
     private void Explode()
     {
-        // Garante que o estado seja 'Exploding' para parar todos os Updates
+        // Esta função agora só se preocupa em iniciar a sequência de explosão
         currentState = State.Exploding;
-
         rb.linearVelocity = Vector2.zero;
         if (GetComponent<Collider2D>() != null) GetComponent<Collider2D>().enabled = false;
+        StartCoroutine(ExplosionSequenceCoroutine());
+    }
 
-        // --- A LÓGICA DA EXPLOSÃO ACONTECE AQUI IMEDIATAMENTE ---
+    private IEnumerator ExplosionSequenceCoroutine()
+    {
+        spriteAnimator.Play(enemyData.explodeStateName);
 
+        SpriteAnimationVD explodeAnim = spriteAnimator.GetAnimationByName(enemyData.explodeStateName);
+        float animationDuration = 0f;
+        if (explodeAnim != null && explodeAnim.framesPerSecond > 0)
+        {
+            animationDuration = (float)explodeAnim.frames.Count / explodeAnim.framesPerSecond;
+        }
+        yield return new WaitForSeconds(animationDuration);
+
+        // O dano e a destruição acontecem depois da animação
         if (enemyData.explosionPrefab != null)
         {
             GameObject explosion = Instantiate(enemyData.explosionPrefab, transform.position, Quaternion.identity);
             if (explosion.TryGetComponent<ExplosionEffect_VD>(out var effect))
+            {
                 effect.Initialize(enemyData.explosionDamage, enemyData.explosionRadius, enemyData.explosionKnockback);
+            }
         }
-
-        // Destrói o inimigo
         Destroy(gameObject);
     }
 
@@ -149,12 +192,10 @@ public class ExplosiveEnemyController_VD : MonoBehaviour
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
-        // Gizmos de Detecção de Ambiente
         Gizmos.color = Color.blue;
         if (wallCheckPoint != null) Gizmos.DrawRay(wallCheckPoint.position, (transform.right * facingDirection) * environmentCheckDistance);
         if (ledgeCheckPoint != null) Gizmos.DrawRay(ledgeCheckPoint.position, Vector2.down * environmentCheckDistance);
 
-        // Gizmos de Alcance
         if (enemyData != null)
         {
             Gizmos.color = Color.yellow;

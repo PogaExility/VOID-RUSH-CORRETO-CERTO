@@ -4,9 +4,17 @@ using UnityEngine;
 using System.Collections.Generic;
 
 // Garante que o GameObject sempre terá os componentes necessários para funcionar.
-[RequireComponent(typeof(Collider2D), typeof(ProjectileAnimatorController), typeof(Animator))]
+[RequireComponent(typeof(Collider2D))]
+[RequireComponent(typeof(ProjectileAnimatorController))]
+[RequireComponent(typeof(Animator))]
+[RequireComponent(typeof(AudioSource))]
 public class SlashEffect : MonoBehaviour
 {
+
+    [Header("Efeitos Sonoros")]
+    [Tooltip("Som que toca quando este efeito de corte atinge um inimigo ou objeto.")]
+    [SerializeField] private AudioClip hitSound;
+
     // --- Dados do Ataque (recebidos da MeeleeWeapon) ---
     private float damage;
     private float knockbackPower;
@@ -16,6 +24,7 @@ public class SlashEffect : MonoBehaviour
     private ProjectileAnimatorController projectileAnimator;
     private Collider2D attackCollider;
     private Animator animator;
+    private AudioSource audioSource;
 
     // --- Controle de Lógica ---
     // Lista para garantir que cada inimigo só seja atingido uma vez por um único golpe.
@@ -27,6 +36,7 @@ public class SlashEffect : MonoBehaviour
         projectileAnimator = GetComponent<ProjectileAnimatorController>();
         attackCollider = GetComponent<Collider2D>();
         animator = GetComponent<Animator>();
+        audioSource = GetComponent<AudioSource>();
 
         // Garante que o collider seja um trigger para não causar colisões físicas indesejadas.
         attackCollider.isTrigger = true;
@@ -71,6 +81,8 @@ public class SlashEffect : MonoBehaviour
             return;
         }
 
+        bool targetWasHit = false;
+
         // Tenta encontrar o nosso novo componente unificado.
         var objetoInterativo = other.GetComponent<ObjetoInterativo>();
         if (objetoInterativo != null)
@@ -79,6 +91,7 @@ public class SlashEffect : MonoBehaviour
 
             // Adiciona à lista de alvos atingidos para não interagir novamente com o mesmo golpe.
             targetsHit.Add(other);
+            targetWasHit = true;
 
             // Retorna para não tentar, no mesmo objeto, procurar por um inimigo.
             return;
@@ -92,6 +105,12 @@ public class SlashEffect : MonoBehaviour
             targetsHit.Add(other);
             // Mantém sua lógica de direção pré-calculada
             enemyHealth.TakeDamage(damage, precalculatedKnockbackDirection, knockbackPower);
+            targetWasHit = true;
+        }
+
+        if (targetWasHit && hitSound != null)
+        {
+            audioSource.PlayOneShot(hitSound);
         }
     }
 

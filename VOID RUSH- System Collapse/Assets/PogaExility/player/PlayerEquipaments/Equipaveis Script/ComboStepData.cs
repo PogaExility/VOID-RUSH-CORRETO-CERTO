@@ -1,3 +1,4 @@
+using UnityEngine;
 
 public enum MeeleeKnockbackDirection
 {
@@ -26,4 +27,7 @@ public class ComboStepData
     public float lungeSpeed;
     public float comboWindow = 0.5f;
     public float comboSpeed = 1f;
+
+    [Header("Efeitos Sonoros")]
+    public AudioClip slashSound;
 }

@@ -7,6 +7,7 @@ public class MeeleeWeapon : WeaponBase
 {
     private PlayerController playerController;
     private PlayerAnimatorController animatorController;
+    private AudioSource playerAudioSource;
 
     private int comboCounter = 0;
     private float timeSinceLastAttack = float.MaxValue;
@@ -68,6 +69,14 @@ public class MeeleeWeapon : WeaponBase
         timeSinceLastAttack = 0f;
         attackBuffered = false;
 
+        playerAudioSource = playerController.GetComponent<AudioSource>();
+        // Se um som foi definido para este golpe e o AudioSource existe...
+        if (currentStep.slashSound != null && playerAudioSource != null)
+        {
+            // ...toca o som.
+            playerAudioSource.PlayOneShot(currentStep.slashSound);
+        }
+
         playerController.movementScript.SetVelocity(0, playerController.movementScript.GetRigidbody().linearVelocity.y);
 
         float speedMultiplier = Mathf.Max(0.1f, currentStep.comboSpeed);
@@ -96,6 +105,12 @@ public class MeeleeWeapon : WeaponBase
                 // (Isto causará um erro até atualizarmos o SlashEffect.cs)
                 slashScript.Initialize(currentStep.damage, currentStep.knockbackPower, knockbackDirection, currentStep.slashAnimationState);
                 slashScript.SetSpeed(speedMultiplier);
+            }
+
+            AudioSource playerAudioSource = playerController.GetComponent<AudioSource>();
+            if (currentStep.slashSound != null && playerAudioSource != null)
+            {
+                playerAudioSource.PlayOneShot(currentStep.slashSound);
             }
         }
         // --- FIM DA LÓGICA DE CORTE ---

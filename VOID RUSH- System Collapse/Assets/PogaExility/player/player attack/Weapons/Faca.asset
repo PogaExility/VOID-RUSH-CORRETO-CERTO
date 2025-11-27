@@ -59,6 +59,7 @@ MonoBehaviour:
     lungeSpeed: 0
     comboWindow: 0.4
     comboSpeed: 2
+    slashSound: {fileID: 8300000, guid: c8c1ad5726ef94f49a2024ac03f622f3, type: 3}
   - playerAnimationState: 20
     slashAnimationState: 3
     playerAnimationClip: {fileID: 7400000, guid: 412c1ca60930e824d86bd7e05ff40327, type: 2}
@@ -70,6 +71,7 @@ MonoBehaviour:
     lungeSpeed: 0
     comboWindow: 0.4
     comboSpeed: 2
+    slashSound: {fileID: 8300000, guid: c8c1ad5726ef94f49a2024ac03f622f3, type: 3}
   - playerAnimationState: 21
     slashAnimationState: 4
     playerAnimationClip: {fileID: 7400000, guid: 24bbab3eaa3cef348b1b824eff39f905, type: 2}
@@ -81,6 +83,7 @@ MonoBehaviour:
     lungeSpeed: 20
     comboWindow: 0
     comboSpeed: 1
+    slashSound: {fileID: 8300000, guid: c8c1ad5726ef94f49a2024ac03f622f3, type: 3}
   chargeTime: 0
   energyCostPerChargeSecond: 0
   baseEnergyCost: 0
