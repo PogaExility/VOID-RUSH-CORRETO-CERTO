@@ -3,34 +3,46 @@ using UnityEngine;
 [RequireComponent(typeof(Animator), typeof(ProjectileAnimatorController))]
 public class GunpowderExplosion : MonoBehaviour
 {
-    // --- Dados da Explosão (recebidos da RangedWeapon) ---
+    #region 1. Variáveis e Configurações
+    [Header("Configuração de Dano")]
     private float damage;
     private float radius;
     private float knockbackPower;
     private RangedKnockbackDirection knockbackDirection;
     private Vector2 shotDirection;
 
+    [Header("Configuração de Alvos")]
     [SerializeField] private LayerMask enemyLayer;
 
-    // --- ADIÇÃO: Variável de Áudio ---
-    [Header("Áudio")]
+    [Header("Configuração de Áudio")]
+    [Tooltip("O som da explosão.")]
     [SerializeField] private AudioClip explosionSound;
 
+    [Tooltip("Multiplicador de volume específico para ESTA explosão (1 = normal).")]
+    [Range(0f, 2f)]
+    [SerializeField] private float explosionVolume = 1f;
+    #endregion
+
+    #region 2. Ciclo de Vida
     void Start()
     {
-        // Toca a animação visual
+        // 1. Toca a animação visual
         GetComponent<ProjectileAnimatorController>().PlayAnimation(ProjectileAnimState.polvora);
 
-        // --- ADIÇÃO: Toca o som da explosão ---
+        // 2. Toca o som usando o Gerente Global
+        // Usamos o AudioManager porque ele cria um objeto temporário para o som.
+        // Assim, mesmo que a explosão visual suma, o som termina de tocar.
         if (AudioManager.Instance != null && explosionSound != null)
         {
-            AudioManager.Instance.PlaySoundEffect(explosionSound, transform.position);
+            // Passamos o explosionVolume como 3º parâmetro para ter controle individual
+            AudioManager.Instance.PlaySoundEffect(explosionSound, transform.position, explosionVolume);
         }
     }
+    #endregion
 
+    #region 3. Inicialização e Lógica
     /// <summary>
-    /// Função de inicialização final, chamada pela RangedWeapon.
-    /// Configura todos os parâmetros da explosão, incluindo a direção do cano da arma.
+    /// Função chamada pela arma para configurar a explosão antes dela aparecer.
     /// </summary>
     public void Initialize(float damageAmount, float explosionRadius, float knockbackForce, RangedKnockbackDirection knockbackDir, Vector2 fireDirection)
     {
@@ -42,14 +54,14 @@ public class GunpowderExplosion : MonoBehaviour
     }
 
     /// <summary>
-    /// Esta função é chamada por um Animation Event no frame da animação onde o dano deve ocorrer.
+    /// Chamado via Animation Event (no momento exato da explosão visual).
     /// </summary>
     public void TriggerDamage()
     {
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, radius, enemyLayer);
+
         foreach (var hit in hits)
         {
-            // Lógica corrigida usando EnemyHealth
             if (hit.TryGetComponent<EnemyHealth>(out EnemyHealth enemy))
             {
                 Vector2 finalKnockbackDirection;
@@ -57,27 +69,27 @@ public class GunpowderExplosion : MonoBehaviour
                 switch (knockbackDirection)
                 {
                     case RangedKnockbackDirection.Frente:
-                        // LÓGICA MANTIDA: Usa a direção do cano da arma que foi guardada.
+                        // Empurra na direção do tiro
                         finalKnockbackDirection = this.shotDirection;
                         break;
 
                     default:
-                        // Comportamento padrão: empurra do centro para fora.
+                        // Empurra do centro da explosão para fora
                         finalKnockbackDirection = (hit.transform.position - transform.position).normalized;
                         break;
                 }
 
-                // Aplica o dano no novo sistema de vida
                 enemy.TakeDamage(this.damage, finalKnockbackDirection, this.knockbackPower);
             }
         }
     }
 
     /// <summary>
-    /// Esta função é chamada por um Animation Event no final da animação para destruir o objeto.
+    /// Chamado via Animation Event (no fim da animação).
     /// </summary>
     public void DestroySelf()
     {
         Destroy(gameObject);
     }
+    #endregion
 }

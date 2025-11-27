@@ -121,4 +121,8 @@ public class AudioManager : MonoBehaviour
         UpdateMusicVolume(); // Atualiza o volume da música que está tocando
         // SFX em reprodução não são afetados dinamicamente aqui, mas novos SFX usarão o novo masterVolume.
     }
+    public float GetFinalSFXVolume()
+    {
+        return sfxVolume * masterVolume;
+    }
 }
