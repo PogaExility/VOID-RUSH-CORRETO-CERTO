@@ -16,6 +16,7 @@ MonoBehaviour:
   cooldownDuration: 0
   energyCost: 0
   skillClass: 0
+  skillTier: 0
   requiredKeys: 
   triggerKeys: 20000000
   cancelIfKeysHeld: 71000000
@@ -27,7 +28,7 @@ MonoBehaviour:
   forbiddenStates: 0500000007000000
   jumpForce: 1
   airJumps: 0
-  gravityScaleOnFall: 10
+  gravityScaleOnFall: 12
   coyoteTime: 0
   wallJumpForce: {x: 10, y: 12}
   wallSlideSpeed: 2

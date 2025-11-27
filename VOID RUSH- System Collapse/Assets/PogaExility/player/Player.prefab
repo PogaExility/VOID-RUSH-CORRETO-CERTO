@@ -1415,7 +1415,7 @@ MonoBehaviour:
   platformLayer:
     serializedVersion: 2
     m_Bits: 32768
-  moveSpeed: 8
+  moveSpeed: 6
   acceleration: 50
   deceleration: 60
   jumpForce: 12
