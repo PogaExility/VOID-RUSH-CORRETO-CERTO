@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e54089c673fa3b449bde31f49183f3d, type: 3}
+  m_Name: Kamikaze
+  m_EditorClassIdentifier: 
+  enemyName: Inimigo
+  maxHealth: 100
+  patrolSpeed: 2
+  chaseSpeed: 4
+  canWander: 1
+  patrolWaitTime: 2
+  stopDistancePadding: 0.5
+  patrolScanAngle: 45
+  patrolScanSpeed: 2
+  visionRange: 10
+  visionAngle: 110
+  hearingRange: 15
+  memoryDuration: 5
+  targetLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  isRanged: 0
+  attackRange: 1.5
+  attackCooldown: 1.5
+  damage: 10
+  knockbackPower: 10
+  canMoveWhileAttacking: 0
+  isExploder: 1
+  explosionRadius: 3
+  explosionFuseTime: 1.5
+  explosionVFX: {fileID: 0}
+  hitboxSize: {x: 1, y: 1}
+  hitboxOffset: {x: 0.5, y: 0}
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 12
