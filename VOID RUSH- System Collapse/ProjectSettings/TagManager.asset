@@ -19,11 +19,11 @@ TagManager:
   - Player
   - Water
   - UI
+  - Enemy
   - Chao
   - Item
   - EnemyBodyPart
   - Fundo
-  - Enemy
   - Post
   - VirtualCamera
   - MainCamera
