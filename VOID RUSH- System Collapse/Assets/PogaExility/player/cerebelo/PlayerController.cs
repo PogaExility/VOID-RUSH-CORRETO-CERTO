@@ -128,17 +128,34 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
-        if (isInventoryOpen) { movementScript.SetMoveInput(0); return; }
+
+        if (isInventoryOpen)
+        {
+            movementScript.SetMoveInput(0);
+
+            // --- CORREÇÃO ---
+            // Se o inventário estiver aberto, forçamos o som a parar IMEDIATAMENTE
+            // antes de sair da função com o 'return'.
+            if (playerSounds != null) playerSounds.UpdateWalkingSound(false);
+
+            return;
+        }
 
         if (IsAttacking)
         {
             movementScript.SetMoveInput(0);
+            // Também paramos o som se estiver atacando parado
+            if (playerSounds != null) playerSounds.UpdateWalkingSound(false);
             return;
         }
 
+        // Prioridade 1: Rastejar
         HandleCrawlInput();
+
+        // Movimento Horizontal
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
 
+        // Lógica de Pouso (Landing)
         bool isGroundedNow = movementScript.IsGrounded();
         bool justLanded = isGroundedNow && !wasGroundedLastFrame;
 
@@ -166,7 +183,7 @@ public class PlayerController : MonoBehaviour
         HandleSkillInput();
         HandleCombatInput();
         ProcessAttackBuffer();
-        HandleFootstepAudio();
+        HandleFootstepAudio(); 
         HandleWeaponSwitching();
         UpdateAnimations();
 

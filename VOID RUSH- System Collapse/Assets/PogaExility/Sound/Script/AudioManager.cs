@@ -82,7 +82,7 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    public void PlaySoundEffect(AudioClip sfxClip, Vector3? position = null, float volumeMultiplier = 1f)
+    public void PlaySoundEffect(AudioClip sfxClip, Vector3? position = null, float volumeMultiplier = 1f, float pitch = 1f, float duration = 0f)
     {
         if (sfxSourcePrefab == null || sfxClip == null || activeSfxSources.Count >= MAX_SFX_SOURCES)
         {
@@ -104,9 +104,18 @@ public class AudioManager : MonoBehaviour
 
         sourceInstance.clip = sfxClip;
         sourceInstance.volume = sfxVolume * masterVolume * volumeMultiplier;
+        sourceInstance.pitch = pitch;
+
         sourceInstance.Play();
         activeSfxSources.Add(sourceInstance);
-        // O Update limpará esta instância quando terminar
+
+        // --- LÓGICA DE CORTE DO SOM ---
+        // Se 'duration' for maior que 0, destrói o som depois desse tempo.
+        // Se for 0, usa o tamanho do clip original.
+        float lifeTime = (duration > 0f) ? duration : sfxClip.length;
+
+        // Destrói o objeto de áudio após o tempo definido
+        Destroy(sourceInstance.gameObject, lifeTime);
     }
 
     public void SetSFXVolume(float volume)

@@ -107,8 +107,10 @@ MonoBehaviour:
   enemyLayer:
     serializedVersion: 2
     m_Bits: 1024
-  explosionSound: {fileID: 8300000, guid: c69f37be06925824ca30ed84e8424000, type: 3}
-  explosionVolume: 0.944
+  explosionSound: {fileID: 8300000, guid: fab1a00c6a5d97c40a927c33c7c87da2, type: 3}
+  explosionVolume: 2
+  explosionPitch: 3
+  audioDuration: 0.5
 --- !u!50 &5145418756730281166
 Rigidbody2D:
   serializedVersion: 5
