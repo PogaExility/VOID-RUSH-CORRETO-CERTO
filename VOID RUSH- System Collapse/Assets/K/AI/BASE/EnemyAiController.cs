@@ -102,41 +102,45 @@ public class EnemyAIController : MonoBehaviour
 
     void HandlePatrol()
     {
-        // 1. Lógica para quando NÃO TEM pontos de patrulha (Wander Aleatório)
-        if (patrolPoints.Count == 0)
+        // 1. Sem pontos? Vagar aleatoriamente (como fizemos antes)
+        if (patrolPoints == null || patrolPoints.Count == 0)
         {
-            if (_brain.stats.canWander)
-            {
-                HandleRandomWander();
-            }
-            else
-            {
-                // Se não tem pontos e não pode vagar, fica parado analisando
-                if (_scanCoroutine == null) _scanCoroutine = StartCoroutine(AnalyzeSurroundingsRoutine());
-            }
+            if (_brain.stats.canWander) HandleRandomWander();
+            else if (_scanCoroutine == null) _scanCoroutine = StartCoroutine(AnalyzeSurroundingsRoutine());
             return;
         }
 
-        // 2. Lógica para quando TEM pontos de patrulha (Sistema de Waypoints)
         EnemyPatrolPoint targetPoint = patrolPoints[_currentPatrolIndex];
 
-        if (Vector2.Distance(transform.position, targetPoint.transform.position) < 0.2f)
+        // Converte para Vector2 para ignorar altura (Z) se for 2D puro, ou usa Vector3 se for top-down
+        float distance = Vector2.Distance(transform.position, targetPoint.transform.position);
+
+        // Aumentei a tolerância para 0.5f para evitar que ele fique tentando chegar no milímetro exato
+        if (distance < 0.5f)
         {
             if (!_isWaitingAtPoint)
             {
+                // Chegou! Configura a espera
                 _isWaitingAtPoint = true;
                 _waitTimer = targetPoint.waitTime;
+
                 _brain.motor.Stop();
-                // Olha para o lado que o ponto manda
+
+                // Força a posição exata (opcional, ajuda a não escorregar)
+                transform.position = new Vector3(targetPoint.transform.position.x, transform.position.y, transform.position.z);
+
+                // Vira para o lado configurado no Waypoint
                 Vector3 faceDir = targetPoint.transform.position + (targetPoint.faceRight ? Vector3.right : Vector3.left);
                 _brain.motor.FacePoint(faceDir);
             }
 
+            // Contagem regressiva
             if (_isWaitingAtPoint)
             {
                 _waitTimer -= Time.deltaTime;
                 if (_waitTimer <= 0)
                 {
+                    // Tempo acabou, vamos para o próximo
                     _isWaitingAtPoint = false;
                     _currentPatrolIndex = (_currentPatrolIndex + 1) % patrolPoints.Count;
                 }
@@ -144,7 +148,11 @@ public class EnemyAIController : MonoBehaviour
         }
         else
         {
+            // Ainda não chegou, continua andando
             _brain.motor.MoveTo(targetPoint.transform.position, false);
+
+            // Segurança: Se ele ficar preso numa parede tentando chegar no ponto, reseta o timer
+            _isWaitingAtPoint = false;
         }
     }
 
