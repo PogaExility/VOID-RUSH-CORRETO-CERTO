@@ -438,6 +438,32 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
@@ -2984,7 +3010,122 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_0: -4870357556833830514
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_1: 7187028104745743006
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_10: 3614916751432569308
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_100: -2517203852701458900
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_101: -1329099428437668299
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_102: -7335037480158486583
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_103: 400259942299842468
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_104: -604931835960355329
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_105: -4902246132153801042
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_106: -2799117623578919837
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_107: 2594869604061923239
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_108: 7662363609382605820
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_109: 1487762264753862480
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_11: 926093457457532321
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_110: -465831076225771872
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_111: 2491982104999223857
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_112: -4561893947788000621
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_113: 1467219890610453665
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_114: 7690701970255360318
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_12: 3915464140818604760
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_13: -3034027519357049671
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_14: -4216818791145274180
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_15: -6358671593073105022
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_16: 5311571068173584440
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_17: -2096137295912000195
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_18: -6929730078533501581
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_19: 3330996072785477603
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_2: 8206639167710521768
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_20: 6905574523311931237
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_21: 2714511399303323285
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_22: 5291220592697065378
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_23: -7651716384808457326
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_24: -2251993242695342186
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_25: -7457381063182346620
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_26: -7333377531974362201
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_27: 5234467802976098663
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_28: 3517776659918082241
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_29: 7710459785084733565
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_3: -1394894457616269375
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_30: 7904841259956342071
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_31: -6711200740974301687
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_32: -2712391996483620901
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_33: 7809302791205601754
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_34: 6664295490171537365
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_35: 392492338041504761
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_36: 7091400003574870870
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_37: -1626847380032370204
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_38: -8751607279954119444
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_39: 376689128897767302
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_4: 7295574268260861826
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_40: -3916602818756056919
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_41: 4339340378052719655
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_42: 8620508175932155880
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_43: 173154125616073409
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_44: 3839016660432021138
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_45: -768027889339329947
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_46: -8714643897982466938
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_47: 4619286805268852397
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_48: -7296115119505779445
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_49: -4140164452540753800
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_5: -8808439550773584160
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_50: 5433361473778762383
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_51: 4850920690873981808
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_52: 4344488425568926892
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_53: 7810220556043753697
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_54: -7707667370340892925
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_55: -7948994956069950874
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_56: 7120073358059281991
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_57: -4136366636536570141
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_58: -3545097213487711842
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_59: -34250758516434525
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_6: 1030785833781952556
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_60: 4570972957185464013
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_61: 8026220218574526846
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_62: 7679037720601432696
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_63: -7194701137261857678
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_64: 7215136136321041281
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_65: -6072676526290143777
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_66: 792947252581871947
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_67: -3051951612935882109
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_68: 8673274019033922616
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_69: -3333374039028784937
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_7: 6653439906545837281
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_70: -7542159776632878300
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_71: 6544935807226477743
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_72: -5950760495310813899
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_73: 2808493023781082372
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_74: -6227208339068650
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_75: 831573533923124296
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_76: -3590754429731823821
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_77: 4672388220915917785
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_78: 93445101578853861
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_79: 4873570851677832022
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_8: -8324329540246645037
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_80: 1130024859910265516
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_81: 8132518794298397663
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_82: 2966926762621532639
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_83: 320965554147663488
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_84: 1212956159520210723
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_85: 3310508351951714660
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_86: 2220154448893436417
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_87: 6832117247497207205
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_88: -1480961599252813333
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_89: 2279390134592782501
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_9: -7726233553390752519
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_90: -591013689483315517
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_91: 4022679283781247390
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_92: -4722568727395816468
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_93: 3020885679080954613
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_94: -7178884386811011641
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_95: -3381078694354450249
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_96: 6778758548241728076
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_97: 8646973265059511273
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_98: -5618884837448512856
+      a0261a72251486e2168dfdbde1f1cc27-ezgif.com-gif-to-sprite-converter_99: -8490370968639532815
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

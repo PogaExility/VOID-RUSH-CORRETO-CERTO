@@ -22,7 +22,7 @@ MonoBehaviour:
   maxStack: 1
   isLostOnDeathDuringQuest: 0
   weaponType: 1
-  magazineSize: 200
+  magazineSize: 400
   reloadTime: 2
   attackRate: 0.2
   useAimMode: 1
