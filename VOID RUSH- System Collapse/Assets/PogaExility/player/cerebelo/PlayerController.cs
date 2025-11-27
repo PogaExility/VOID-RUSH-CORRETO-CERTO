@@ -405,13 +405,12 @@ public class PlayerController : MonoBehaviour
     }
     #endregion
 
-    #region 7. Sistema de Animação e Áudio
+
+    #region 7. Animação e Áudio
     private void UpdateAnimations()
     {
         if (IsAttacking) return;
 
-        // --- Lógica de Animação (Mantenha a sua lógica visual aqui) ---
-        // (Resumo para não apagar seu código visual)
         if (movementScript.IsClimbing())
         {
             float vInput = movementScript.GetVerticalInput();
@@ -434,39 +433,46 @@ public class PlayerController : MonoBehaviour
         else if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f) desiredState = PlayerAnimState.andando;
         else desiredState = PlayerAnimState.parado;
 
-        if (!isInAimMode) animatorController.PlayState(AnimatorTarget.PlayerBody, desiredState);
+        // --- Lógica de Animação "Cotoco" (Mira) ---
+        if (isInAimMode)
+        {
+            if (!movementScript.IsGrounded() || movementScript.IsIgnoringPlatforms())
+            {
+                // Ajuste de animação aérea mirando
+                animatorController.PlayState(AnimatorTarget.PlayerBody, movementScript.GetVerticalVelocity() > 0.1f ? PlayerAnimState.pulandoCotoco : PlayerAnimState.fallingCotoco, 1);
+            }
+            else if (movementScript.IsMoving())
+            {
+                animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.andarCotoco, 1);
+            }
+            else
+            {
+                animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.paradoCotoco, 1);
+            }
+        }
+        else
+        {
+            animatorController.PlayState(AnimatorTarget.PlayerBody, desiredState, 0);
+        }
     }
 
-    // --- FUNÇÃO DE ÁUDIO MODIFICADA (LOOP) ---
     private void HandleFootstepAudio()
     {
         if (playerSounds == null) return;
 
-        // Define se o player DEVE estar fazendo barulho de passos
-        // Condições: Estar no chão + Input apertado + NÃO estar rastejando
         bool deveTocarSom = movementScript.IsGrounded() &&
                             Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f &&
                             !movementScript.IsCrawling();
 
-        // Manda o estado (Ligar ou Desligar) para o PlayerSounds
         playerSounds.UpdateWalkingSound(deveTocarSom);
     }
-
-    // As outras funções de som (PlayFootstepSound antiga) podem ser removidas ou ignoradas
-    // pois o controle agora é direto no PlayerSounds.updateWalkingSound
 
     public void OnActionAnimationComplete() { if (weaponHandler.IsAimWeaponEquipped()) SetAimingState(true); }
     public void OnCrouchDownAnimationComplete() { movementScript.CompleteCrouch(); }
     public void OnStandUpAnimationComplete() { movementScript.CompleteStandUp(); }
     public void OnLandingAnimationEnd() { isLanding = false; movementScript.OnLandingComplete(); }
-
-    // Mantemos apenas para compatibilidade se algum outro script chamar, mas não usamos no Update
-    public void PlayFootstepSound()
-    {
-        // Função legada, a lógica agora está no HandleFootstepAudio -> PlayerSounds
-    }
+    public void PlayFootstepSound() { } // Mantido vazio para compatibilidade
     #endregion
-
     #region 8. Sistema de Interação e UI
     public void RegistrarInteragivel(ObjetoInterativo interagivel)
     {

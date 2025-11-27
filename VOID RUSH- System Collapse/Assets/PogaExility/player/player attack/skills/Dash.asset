@@ -13,13 +13,15 @@ MonoBehaviour:
   m_Name: Dash
   m_EditorClassIdentifier: 
   skillName: Dash
-  cooldownDuration: 0.75
+  cooldownDuration: 1
   energyCost: 0
   skillClass: 0
+  skillTier: 0
   requiredKeys: 
   triggerKeys: 71000000
   cancelIfKeysHeld: 20000000
   actionToPerform: 2
+  combatActionToPerform: 0
   conditionGroups:
   - logicType: 0
     states: 01000000
@@ -31,7 +33,7 @@ MonoBehaviour:
   wallJumpForce: {x: 0, y: 0}
   wallSlideSpeed: 2
   dashType: 0
-  dashSpeed: 25
+  dashSpeed: 17
   dashDuration: 0.2
   dashJump_DashSpeed: 25
   dashJump_DashDuration: 0.4
@@ -44,3 +46,7 @@ MonoBehaviour:
   wallDashJump_InputBuffer: 0.15
   wallDashJump_ParabolaDamping: 0.3
   wallDashJump_GravityScaleOnFall: 2.5
+  block_ParryWindow: 0.15
+  block_DamageReduction: 0.75
+  parry_CounterDamageMultiplier: 2
+  parry_StunDuration: 1.5

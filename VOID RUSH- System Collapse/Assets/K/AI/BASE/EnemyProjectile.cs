@@ -11,12 +11,9 @@ public class EnemyProjectile : MonoBehaviour
         _damage = damage;
         _knockback = knockback;
         GetComponent<Rigidbody2D>().linearVelocity = dir * speed;
-
-        // Rotaciona visualmente
         float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(0, 0, angle);
-
-        Destroy(gameObject, 5f); // Autodestruição
+        Destroy(gameObject, 5f);
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -27,7 +24,6 @@ public class EnemyProjectile : MonoBehaviour
             player.TakeDamage(_damage, dir, _knockback);
             Destroy(gameObject);
         }
-        // Destrói se bater no chão/parede (Layer "Chao")
         else if (other.gameObject.layer == LayerMask.NameToLayer("Chao"))
         {
             Destroy(gameObject);

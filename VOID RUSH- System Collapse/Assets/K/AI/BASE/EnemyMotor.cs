@@ -19,6 +19,12 @@ public class EnemyMotor : MonoBehaviour
     {
         _brain = GetComponent<EnemyBrain>();
         _rb = GetComponent<Rigidbody2D>();
+
+        _rb.mass = 1f;
+        _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+
+        LockPosition(true); // Começa travado
         IsFacingRight = transform.localScale.x > 0;
     }
 
@@ -26,10 +32,18 @@ public class EnemyMotor : MonoBehaviour
     {
         if (_isFrozen || _isInKnockback) return;
 
+        float distanceX = Mathf.Abs(target.x - transform.position.x);
+        if (distanceX < 0.1f)
+        {
+            Stop();
+            return;
+        }
+
+        LockPosition(false); // Destrava para andar
+
         float speed = isChasing ? _brain.stats.chaseSpeed : _brain.stats.patrolSpeed;
         float dirX = Mathf.Sign(target.x - transform.position.x);
 
-        // Verifica buraco ou parede antes de andar
         if (!isChasing && (IsObstacleAhead() || !IsGroundAhead()))
         {
             Stop();
@@ -38,16 +52,27 @@ public class EnemyMotor : MonoBehaviour
 
         _rb.linearVelocity = new Vector2(dirX * speed, _rb.linearVelocity.y);
 
-        if (dirX > 0 && !IsFacingRight) Flip();
-        else if (dirX < 0 && IsFacingRight) Flip();
+        if (Mathf.Abs(dirX) > 0.1f)
+        {
+            if (dirX > 0 && !IsFacingRight) Flip();
+            else if (dirX < 0 && IsFacingRight) Flip();
+        }
     }
 
     public void Stop()
     {
-        if (!_isInKnockback) _rb.linearVelocity = new Vector2(0, _rb.linearVelocity.y);
+        if (!_isInKnockback)
+        {
+            _rb.linearVelocity = new Vector2(0, _rb.linearVelocity.y);
+            LockPosition(true); // Trava para não ser empurrado
+        }
     }
 
-    public void Freeze(bool state) => _isFrozen = state;
+    public void Freeze(bool state)
+    {
+        _isFrozen = state;
+        if (state) Stop();
+    }
 
     public void ApplyKnockback(Vector2 dir, float force)
     {
@@ -57,17 +82,27 @@ public class EnemyMotor : MonoBehaviour
     IEnumerator KnockbackRoutine(Vector2 dir, float force)
     {
         _isInKnockback = true;
+        LockPosition(false); // Solta para voar
         _rb.linearVelocity = Vector2.zero;
         _rb.AddForce(dir * force, ForceMode2D.Impulse);
         yield return new WaitForSeconds(0.2f);
         _isInKnockback = false;
     }
 
+    private void LockPosition(bool isLocked)
+    {
+        if (isLocked) _rb.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation;
+        else _rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+    }
+
     public void FacePoint(Vector3 point)
     {
         float dir = Mathf.Sign(point.x - transform.position.x);
-        if (dir > 0 && !IsFacingRight) Flip();
-        else if (dir < 0 && IsFacingRight) Flip();
+        if (Mathf.Abs(point.x - transform.position.x) > 0.2f)
+        {
+            if (dir > 0 && !IsFacingRight) Flip();
+            else if (dir < 0 && IsFacingRight) Flip();
+        }
     }
 
     void Flip()
@@ -78,8 +113,14 @@ public class EnemyMotor : MonoBehaviour
         transform.localScale = s;
     }
 
-    // CORREÇÃO: Renomeei de IsWallAhead para IsObstacleAhead para o Controller encontrar
     public bool IsObstacleAhead() => Physics2D.Raycast(wallCheck.position, transform.right * (IsFacingRight ? 1 : -1), 0.5f, _brain.stats.obstacleLayer);
-
     public bool IsGroundAhead() => Physics2D.Raycast(groundCheck.position, Vector2.down, 1f, _brain.stats.obstacleLayer);
+
+    void OnDrawGizmos()
+    {
+        EnemyBrain brainTemp = GetComponent<EnemyBrain>();
+        if (brainTemp != null && !brainTemp.showGizmos) return;
+        if (wallCheck) { Gizmos.color = Color.red; Gizmos.DrawLine(wallCheck.position, wallCheck.position + transform.right * (transform.localScale.x > 0 ? 1 : -1) * 0.5f); }
+        if (groundCheck) { Gizmos.color = Color.green; Gizmos.DrawLine(groundCheck.position, groundCheck.position + Vector3.down * 1f); }
+    }
 }
