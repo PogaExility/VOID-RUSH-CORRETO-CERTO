@@ -1,9 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
 using TMPro;
-using UnityEditor.PackageManager;
-using UnityEditor.Search;
-
 public class TutorialCutsceneManager : MonoBehaviour
 {
     [Header("Refer�ncias da Cena")]

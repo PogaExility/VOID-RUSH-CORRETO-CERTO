@@ -201,7 +201,7 @@ public class AIPerceptionSystem : MonoBehaviour
             Vector3 endPoint = hit.collider ? (Vector3)hit.point : eyes.position + direction * visionRange;
             Gizmos.DrawLine(eyes.position, endPoint);
         }
-        if (Application.isPlaying && currentAwareness == AwarenessState.ALERT) { Handles.color = new Color(1, 0.5f, 0, 0.05f); Handles.DrawSolidDisc(eyes.position, Vector3.forward, lkpSafeZoneRadius); Gizmos.color = Color.red; Gizmos.DrawWireSphere(LastKnownPlayerPosition, 1f); Gizmos.color = Color.magenta; Gizmos.DrawRay(LastKnownPlayerPosition, _lastKnownPlayerVelocity.normalized * 3f); }
+       // if (Application.isPlaying && currentAwareness == AwarenessState.ALERT) { Handles.color = new Color(1, 0.5f, 0, 0.05f); Handles.DrawSolidDisc(eyes.position, Vector3.forward, lkpSafeZoneRadius); Gizmos.color = Color.red; Gizmos.DrawWireSphere(LastKnownPlayerPosition, 1f); Gizmos.color = Color.magenta; Gizmos.DrawRay(LastKnownPlayerPosition, _lastKnownPlayerVelocity.normalized * 3f); }
     }
     #endregion
 }
