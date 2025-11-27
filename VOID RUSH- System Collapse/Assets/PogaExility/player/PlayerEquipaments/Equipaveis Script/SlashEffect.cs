@@ -1,4 +1,4 @@
-// NOME DO ARQUIVO: SlashEffect.cs - VERSÃO CORRIGIDA
+// NOME DO ARQUIVO: SlashEffect.cs - VERSÃO COM ÁUDIO
 
 using UnityEngine;
 using System.Collections.Generic;
@@ -7,10 +7,27 @@ using System.Collections.Generic;
 [RequireComponent(typeof(Collider2D), typeof(ProjectileAnimatorController), typeof(Animator))]
 public class SlashEffect : MonoBehaviour
 {
+    #region 1. Variáveis e Configurações
     // --- Dados do Ataque (recebidos da MeeleeWeapon) ---
     private float damage;
     private float knockbackPower;
     private Vector2 precalculatedKnockbackDirection;
+
+    // --- Configuração de Áudio (NOVO) ---
+    [Header("Configuração de Áudio")]
+    [Tooltip("O som do corte (swish/slash).")]
+    [SerializeField] private AudioClip slashSound;
+
+    [Tooltip("Volume deste corte (1 = normal).")]
+    [Range(0f, 2f)]
+    [SerializeField] private float slashVolume = 1f;
+
+    [Tooltip("Velocidade/Tom do som. Aumente para deixar mais agudo/rápido.")]
+    [Range(0.5f, 3f)]
+    [SerializeField] private float slashPitch = 1f;
+
+    [Tooltip("Tempo em segundos para cortar o áudio (0 = toca inteiro). Útil para ataques muito rápidos.")]
+    [SerializeField] private float audioDuration = 0f;
 
     // --- Componentes & Referências ---
     private ProjectileAnimatorController projectileAnimator;
@@ -20,7 +37,9 @@ public class SlashEffect : MonoBehaviour
     // --- Controle de Lógica ---
     // Lista para garantir que cada inimigo só seja atingido uma vez por um único golpe.
     private List<Collider2D> targetsHit;
+    #endregion
 
+    #region 2. Ciclo de Vida
     void Awake()
     {
         // Pega as referências de todos os componentes necessários no mesmo GameObject.
@@ -35,6 +54,23 @@ public class SlashEffect : MonoBehaviour
         targetsHit = new List<Collider2D>();
     }
 
+    void Start()
+    {
+        // --- TOCA O SOM DO CORTE ---
+        if (AudioManager.Instance != null && slashSound != null)
+        {
+            AudioManager.Instance.PlaySoundEffect(
+                slashSound,
+                transform.position,
+                slashVolume,
+                slashPitch,
+                audioDuration
+            );
+        }
+    }
+    #endregion
+
+    #region 3. Lógica de Inicialização e Colisão
     /// <summary>
     /// Função de inicialização chamada pela MeeleeWeapon logo após a instanciação.
     /// Configura o dano, o knockback, a direção pré-calculada e a animação a ser tocada.
@@ -84,7 +120,6 @@ public class SlashEffect : MonoBehaviour
             return;
         }
 
-        // --- CORREÇÃO AQUI ---
         // Substituído AIController_Basic por EnemyHealth para corrigir o erro CS0246.
         var enemyHealth = other.GetComponent<EnemyHealth>();
         if (enemyHealth != null)
@@ -102,4 +137,5 @@ public class SlashEffect : MonoBehaviour
     {
         Destroy(gameObject);
     }
+    #endregion
 }

@@ -183,3 +183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b17399bbc87673c409ffc72f2941dfc4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  slashSound: {fileID: 8300000, guid: 9fad4b422bbe0ff4baf0da2838f34e0e, type: 3}
+  slashVolume: 1
+  slashPitch: 1
+  audioDuration: 0.52
