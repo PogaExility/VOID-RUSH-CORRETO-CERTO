@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4872620397045134774}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Ground Check
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -40,7 +40,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5337304949307376391}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Sensors
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -73,7 +73,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9115211222395680316}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Wall Check
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -113,9 +113,9 @@ GameObject:
   - component: {fileID: 4404710578585682745}
   - component: {fileID: 4353797219771655453}
   - component: {fileID: 4354196564300837515}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Inimigo Test 1
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -311,7 +311,7 @@ GameObject:
   - component: {fileID: 6874714066753840474}
   - component: {fileID: 1189352838665380602}
   - component: {fileID: 1578291337555973320}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Visual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -419,7 +419,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7474337688265784371}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Attack Point
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -450,7 +450,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9014337290697690860}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Eyes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -481,7 +481,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1086485379106469681}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Interactions
   m_TagString: Untagged
   m_Icon: {fileID: 0}
