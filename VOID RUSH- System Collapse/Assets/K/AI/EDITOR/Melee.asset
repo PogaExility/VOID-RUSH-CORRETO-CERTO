@@ -14,11 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyName: "Inimigo Padr\xE3o"
   maxHealth: 100
+  hitVFX: {fileID: 0}
+  deathVFX: {fileID: 0}
+  meleeAttackVFX: {fileID: 0}
   patrolSpeed: 3
   chaseSpeed: 5
   canWander: 1
   patrolWaitTime: 2
-  stopDistancePadding: 1
+  stopDistancePadding: 0.3
   patrolScanAngle: 45
   patrolScanSpeed: 2
   visionRange: 15
