@@ -5,12 +5,14 @@ public class EnemyCombat : MonoBehaviour
 {
     private EnemyBrain _brain;
     private EnemyAnimationLink _animLink;
+    private AudioSource _audioSource; // Referência ao AudioSource do Health
     private float _nextAttackTime;
 
     void Start()
     {
         _brain = GetComponent<EnemyBrain>();
         _animLink = GetComponent<EnemyAnimationLink>();
+        _audioSource = GetComponent<AudioSource>();
     }
 
     public void TryAttack(Transform target)
@@ -26,22 +28,26 @@ public class EnemyCombat : MonoBehaviour
     {
         if (!_brain.stats.canMoveWhileAttacking) _brain.motor.Freeze(true);
 
-        // --- LÓGICA DO KAMIKAZE (2 FASES) ---
+        // --- LÓGICA DO KAMIKAZE ---
         if (_brain.stats.isExploder)
         {
-            // FASE 1: AVISO (PREPARE) - Animação Inicial
+            // FASE 1: AVISO + SOM DO PAVIO
             if (_animLink) _animLink.SetKamikazePrepare(true);
 
+            // Toca som do pavio/frequência subindo
+            if (_brain.stats.fuseSound && _audioSource)
+                _audioSource.PlayOneShot(_brain.stats.fuseSound);
+
             float totalTime = _brain.stats.explosionFuseTime;
-            // Divide o tempo: 70% preparando, 30% inflando/vermelho
+
             yield return new WaitForSeconds(totalTime * 0.7f);
 
-            // FASE 2: INFLAR (VERMELHO) - Dispara Trigger
+            // FASE 2: INFLAR
             if (_animLink) _animLink.TriggerFinalPhase();
 
             yield return new WaitForSeconds(totalTime * 0.3f);
 
-            // FASE 3: EXPLOSÃO (DANO + VFX)
+            // FASE 3: EXPLOSÃO
             Collider2D[] explosionHits = Physics2D.OverlapCircleAll(transform.position, _brain.stats.explosionRadius, _brain.stats.targetLayer);
             foreach (var hit in explosionHits)
             {
@@ -51,7 +57,11 @@ public class EnemyCombat : MonoBehaviour
             if (_brain.stats.explosionVFX)
                 Instantiate(_brain.stats.explosionVFX, transform.position, Quaternion.identity);
 
-            Destroy(gameObject); // O inimigo morre
+            // Som da explosão (PlayClipAtPoint pois o objeto será destruído)
+            if (_brain.stats.explosionSound)
+                AudioSource.PlayClipAtPoint(_brain.stats.explosionSound, transform.position, 1f);
+
+            Destroy(gameObject);
             yield break;
         }
 
@@ -60,7 +70,14 @@ public class EnemyCombat : MonoBehaviour
 
         if (_animLink) _animLink.TriggerAttackAnim();
 
-        yield return new WaitForSeconds(0.3f); // Delay para sincronizar o impacto
+        // Som de Ataque (Soco ou Disparo)
+        if (_brain.stats.attackSound && _audioSource)
+        {
+            _audioSource.pitch = Random.Range(0.9f, 1.1f);
+            _audioSource.PlayOneShot(_brain.stats.attackSound);
+        }
+
+        yield return new WaitForSeconds(0.3f); // Delay do impacto
 
         if (_brain.stats.isRanged)
         {
@@ -97,7 +114,6 @@ public class EnemyCombat : MonoBehaviour
 
     void ApplyDamageToTarget(Collider2D hit)
     {
-        // Chama diretamente o script do PlayerStats com 3 argumentos
         if (hit.TryGetComponent<PlayerStats>(out var player))
         {
             Vector2 knockDir = (hit.transform.position - transform.position).normalized;
@@ -107,7 +123,7 @@ public class EnemyCombat : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        if (Application.isPlaying) return; // Esconde no Play
+        if (Application.isPlaying) return;
 
         if (_brain && _brain.stats)
         {
