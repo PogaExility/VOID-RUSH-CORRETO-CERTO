@@ -451,60 +451,70 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     #region 9. Sistema de Rastejar (Crawl)
     public void BeginCrouchTransition()
     {
+        // 1. Define o estado de transição (Bloqueia o input de andar no HandleMovement)
         isCrouchingDown = true;
-        // Desabilitamos o controle para que a animação toque sem o jogador escorregar
-        physicsControlDisabled = true;
-        // Zeramos a velocidade para garantir que ele pare
+
+        // 2. Zera a velocidade horizontal para ele não "deslizar" enquanto abaixa.
+        // IMPORTANTE: Mantemos a velocidade Y para a gravidade continuar agindo.
         rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+
+        // 3. Força a animação a tocar diretamente aqui para garantir
+        if (animatorController != null)
+        {
+            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.abaixando);
+        }
     }
 
+    /// <summary>
+    /// ATENÇÃO: Esta função DEVE ser chamada por um Animation Event no final da animação "abaixando".
+    /// Se o evento não estiver configurado na Unity, o player vai travar.
+    /// </summary>
     public void CompleteCrouch()
     {
-        isCrouchingDown = false;
-        isCrawling = true;
+        isCrouchingDown = false; // Libera a trava de transição
+        isCrawling = true;       // Ativa o estado de rastejar
 
-        // Reduz o tamanho e ajusta o offset do collider
-        float newHeight = originalColliderSize.y / 2;
+        // Ajusta o Collider para metade do tamanho
+        float newHeight = originalColliderSize.y / 2f;
         capsuleCollider.size = new Vector2(originalColliderSize.x, newHeight);
 
-        // Desloca o centro do collider para baixo para que ele permaneça no chão
-        float newOffsetY = originalColliderOffset.y - (originalColliderSize.y / 4);
+        // Ajusta o Offset para o pé continuar no chão (baixa o centro do collider)
+        // Cálculo: Offset Original - (1/4 da altura original)
+        float newOffsetY = originalColliderOffset.y - (originalColliderSize.y / 4f);
         capsuleCollider.offset = new Vector2(originalColliderOffset.x, newOffsetY);
-
-        // Devolve o controle da física ao jogador
-        physicsControlDisabled = false;
     }
 
     public void BeginStandUpTransition()
     {
-        isStandingUp = true;
-        // Desabilitamos o controle para a animação de levantar
-        physicsControlDisabled = true;
+        isStandingUp = true; // Bloqueia movimento
+
+        // Zera velocidade horizontal, mantém gravidade
         rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+
+        // Força a animação de levantar
+        if (animatorController != null)
+        {
+            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.levantando);
+        }
     }
 
+    /// <summary>
+    /// ATENÇÃO: Esta função DEVE ser chamada por um Animation Event no final da animação "levantando".
+    /// </summary>
     public void CompleteStandUp()
     {
-        isStandingUp = false;
-        isCrawling = false;
+        isStandingUp = false; // Libera movimento
+        isCrawling = false;   // Sai do estado de rastejar
 
-        // Restaura o collider ao seu tamanho e posição originais
+        // Restaura o collider ao tamanho e posição originais
         capsuleCollider.size = originalColliderSize;
         capsuleCollider.offset = originalColliderOffset;
-
-        // Devolve o controle da física
-        physicsControlDisabled = false;
     }
 
-    public bool IsCrawling()
-    {
-        return isCrawling;
-    }
+    public bool IsCrawling() { return isCrawling; }
 
-    public bool IsOnCrawlTransition()
-    {
-        return isCrouchingDown || isStandingUp;
-    }
+    // Esta função é usada pelo UpdateAnimations para não interromper a animação de transição
+    public bool IsOnCrawlTransition() { return isCrouchingDown || isStandingUp; }
     #endregion
 
     #region 10. Sistema de Plataformas
