@@ -9847,7 +9847,7 @@ GameObject:
   - component: {fileID: 269589154}
   - component: {fileID: 269589153}
   - component: {fileID: 269589152}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: Tilemap
   m_TagString: Chao
   m_Icon: {fileID: 0}
@@ -18269,7 +18269,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6754565164538936117, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: collisionLayer.m_Bits
-      value: 32832
+      value: 32896
       objectReference: {fileID: 0}
     - target: {fileID: 7934465750354573849, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchorMax.y

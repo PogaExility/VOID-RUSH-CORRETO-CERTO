@@ -51,7 +51,7 @@ MonoBehaviour:
   - playerAnimationState: 19
     slashAnimationState: 2
     playerAnimationClip: {fileID: 7400000, guid: 9c5cce670f717304e8a5c7bc54cdbd92, type: 2}
-    slashEffectPrefab: {fileID: 7519332796033540798, guid: 872cabe68352dcc4dbee48ff6544bed1, type: 3}
+    slashEffectPrefab: {fileID: 7519332796033540798, guid: a1e4cf0c27730a04db3668d7f43d5c0e, type: 3}
     damage: 10
     knockbackPower: 5
     knockbackDirection: 0
@@ -63,7 +63,7 @@ MonoBehaviour:
   - playerAnimationState: 20
     slashAnimationState: 3
     playerAnimationClip: {fileID: 7400000, guid: 412c1ca60930e824d86bd7e05ff40327, type: 2}
-    slashEffectPrefab: {fileID: 7519332796033540798, guid: 0ad855eb5e4c7c3469a385d1550fe5fb, type: 3}
+    slashEffectPrefab: {fileID: 7519332796033540798, guid: c876ba3407289a84d81e76a4a2315182, type: 3}
     damage: 12
     knockbackPower: 7
     knockbackDirection: 0
@@ -75,7 +75,7 @@ MonoBehaviour:
   - playerAnimationState: 21
     slashAnimationState: 4
     playerAnimationClip: {fileID: 7400000, guid: 24bbab3eaa3cef348b1b824eff39f905, type: 2}
-    slashEffectPrefab: {fileID: 7519332796033540798, guid: 760f9e14a7f667c4e9bcde7c3ed7871f, type: 3}
+    slashEffectPrefab: {fileID: 7519332796033540798, guid: 364a1f89256f83e4c9e56ac9569e7075, type: 3}
     damage: 15
     knockbackPower: 15
     knockbackDirection: 0
@@ -91,3 +91,4 @@ MonoBehaviour:
   busterShotPrefab: {fileID: 0}
   chargedShotPrefab: {fileID: 0}
   healthToRestore: 0
+  shotSound: {fileID: 0}

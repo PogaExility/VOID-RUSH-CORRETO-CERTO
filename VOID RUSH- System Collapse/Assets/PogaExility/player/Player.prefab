@@ -1411,7 +1411,7 @@ MonoBehaviour:
   stateCheckText: {fileID: 0}
   collisionLayer:
     serializedVersion: 2
-    m_Bits: 98368
+    m_Bits: 32896
   platformLayer:
     serializedVersion: 2
     m_Bits: 32768
