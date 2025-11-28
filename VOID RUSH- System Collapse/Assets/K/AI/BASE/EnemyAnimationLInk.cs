@@ -9,15 +9,13 @@ public class EnemyAnimationLink : MonoBehaviour
     void Start()
     {
         _brain = GetComponent<EnemyBrain>();
-        // Tenta achar no filho (Visual) se não estiver assinalado manualmente
         if (animator == null) animator = GetComponentInChildren<Animator>();
     }
 
     void Update()
     {
         if (animator == null || _brain.motor == null) return;
-
-        // Pega a velocidade do RigidBody
+        // Usa a velocidade real para definir Idle/Walk
         float speed = _brain.motor.GetComponent<Rigidbody2D>().linearVelocity.magnitude;
         animator.SetFloat("Speed", speed);
     }
@@ -30,5 +28,10 @@ public class EnemyAnimationLink : MonoBehaviour
     public void SetKamikazePrepare(bool state)
     {
         if (animator) animator.SetBool("PrepareExplosion", state);
+    }
+
+    public void TriggerFinalPhase()
+    {
+        if (animator) animator.SetTrigger("FinalPhase");
     }
 }

@@ -15,7 +15,7 @@ MonoBehaviour:
   enemyName: "Inimigo Padr\xE3o"
   maxHealth: 100
   hitVFX: {fileID: 0}
-  deathVFX: {fileID: 0}
+  deathVFX: {fileID: 346142837613684483, guid: 173d3cd410055bd45bcdb595d73c083f, type: 3}
   meleeAttackVFX: {fileID: 0}
   patrolSpeed: 3
   chaseSpeed: 5
@@ -33,7 +33,7 @@ MonoBehaviour:
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 128
   isRanged: 0
   attackRange: 1.5
   attackCooldown: 1.5

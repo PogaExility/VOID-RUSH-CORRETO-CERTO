@@ -25,6 +25,8 @@ public class EnemyMotor : MonoBehaviour
         _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
         LockPosition(true); // Começa travado
+
+        // Define o lado inicial baseado na escala atual do objeto na cena
         IsFacingRight = transform.localScale.x > 0;
     }
 
@@ -113,11 +115,24 @@ public class EnemyMotor : MonoBehaviour
         transform.localScale = s;
     }
 
+    // --- BOTÃO DE DEBUG PARA O EDITOR ---
+    [ContextMenu("VIRAR INIMIGO AGORA")]
+    public void DebugFlip()
+    {
+        Vector3 s = transform.localScale;
+        s.x *= -1;
+        transform.localScale = s;
+        IsFacingRight = s.x > 0;
+    }
+    // ------------------------------------
+
     public bool IsObstacleAhead() => Physics2D.Raycast(wallCheck.position, transform.right * (IsFacingRight ? 1 : -1), 0.5f, _brain.stats.obstacleLayer);
     public bool IsGroundAhead() => Physics2D.Raycast(groundCheck.position, Vector2.down, 1f, _brain.stats.obstacleLayer);
 
     void OnDrawGizmos()
     {
+        if (Application.isPlaying) return;
+
         EnemyBrain brainTemp = GetComponent<EnemyBrain>();
         if (brainTemp != null && !brainTemp.showGizmos) return;
         if (wallCheck) { Gizmos.color = Color.red; Gizmos.DrawLine(wallCheck.position, wallCheck.position + transform.right * (transform.localScale.x > 0 ? 1 : -1) * 0.5f); }

@@ -120,7 +120,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stats: {fileID: 11400000, guid: c68f115abdf962e43887faf96e208091, type: 2}
-  showGizmos: 1
+  showGizmos: 0
   eyes: {fileID: 7529478570206393532}
   attackPoint: {fileID: 3656835427603682829}
   motor: {fileID: 0}
@@ -189,9 +189,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a6a5b7cbc1a13e46b1c1a58169e6016, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  patrolPoints:
-  - {fileID: 0}
-  - {fileID: 0}
+  patrolPoints: []
 --- !u!114 &5336762572311514516
 MonoBehaviour:
   m_ObjectHideFlags: 0

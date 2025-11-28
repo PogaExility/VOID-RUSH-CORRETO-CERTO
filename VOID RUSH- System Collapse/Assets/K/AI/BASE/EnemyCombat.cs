@@ -26,48 +26,44 @@ public class EnemyCombat : MonoBehaviour
     {
         if (!_brain.stats.canMoveWhileAttacking) _brain.motor.Freeze(true);
 
-        // --- LÓGICA KAMIKAZE ---
+        // --- LÓGICA DO KAMIKAZE (2 FASES) ---
         if (_brain.stats.isExploder)
         {
+            // FASE 1: AVISO (PREPARE) - Animação Inicial
             if (_animLink) _animLink.SetKamikazePrepare(true);
 
-            SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
-            Color originalColor = (sr != null) ? sr.color : Color.white;
+            float totalTime = _brain.stats.explosionFuseTime;
+            // Divide o tempo: 70% preparando, 30% inflando/vermelho
+            yield return new WaitForSeconds(totalTime * 0.7f);
 
-            float timer = 0;
-            while (timer < _brain.stats.explosionFuseTime)
-            {
-                float interval = Mathf.Lerp(0.5f, 0.1f, timer / _brain.stats.explosionFuseTime);
-                timer += interval;
-                if (sr) sr.color = (sr.color == originalColor) ? Color.red : originalColor;
-                yield return new WaitForSeconds(interval);
-            }
+            // FASE 2: INFLAR (VERMELHO) - Dispara Trigger
+            if (_animLink) _animLink.TriggerFinalPhase();
 
-            if (sr) sr.color = originalColor;
+            yield return new WaitForSeconds(totalTime * 0.3f);
 
-            // Explosão em área
+            // FASE 3: EXPLOSÃO (DANO + VFX)
             Collider2D[] explosionHits = Physics2D.OverlapCircleAll(transform.position, _brain.stats.explosionRadius, _brain.stats.targetLayer);
             foreach (var hit in explosionHits)
             {
                 ApplyDamageToTarget(hit);
             }
 
-            if (_brain.stats.explosionVFX) Instantiate(_brain.stats.explosionVFX, transform.position, Quaternion.identity);
+            if (_brain.stats.explosionVFX)
+                Instantiate(_brain.stats.explosionVFX, transform.position, Quaternion.identity);
 
-            Destroy(gameObject);
+            Destroy(gameObject); // O inimigo morre
             yield break;
         }
 
-        // --- ATAQUE MELEE / RANGED ---
+        // --- LÓGICA PADRÃO (MELEE / RANGED) ---
         _brain.motor.FacePoint(target.position);
 
         if (_animLink) _animLink.TriggerAttackAnim();
 
-        yield return new WaitForSeconds(0.3f); // Delay do impacto
+        yield return new WaitForSeconds(0.3f); // Delay para sincronizar o impacto
 
         if (_brain.stats.isRanged)
         {
-            // PROJÉTIL
             if (_brain.stats.projectilePrefab)
             {
                 GameObject p = Instantiate(_brain.stats.projectilePrefab, _brain.attackPoint.position, Quaternion.identity);
@@ -79,13 +75,10 @@ public class EnemyCombat : MonoBehaviour
                 }
             }
         }
-        else
+        else // Melee
         {
-            // MELEE
             if (_brain.stats.meleeAttackVFX != null)
-            {
                 Instantiate(_brain.stats.meleeAttackVFX, _brain.attackPoint.position, _brain.attackPoint.rotation);
-            }
 
             Vector2 center = (Vector2)transform.position + new Vector2(_brain.stats.hitboxOffset.x * transform.localScale.x, _brain.stats.hitboxOffset.y);
             Collider2D[] hits = Physics2D.OverlapBoxAll(center, _brain.stats.hitboxSize, 0, _brain.stats.targetLayer);
@@ -102,22 +95,20 @@ public class EnemyCombat : MonoBehaviour
         if (!_brain.stats.canMoveWhileAttacking) _brain.motor.Freeze(false);
     }
 
-    // --- AQUI ESTÁ A MÁGICA ---
     void ApplyDamageToTarget(Collider2D hit)
     {
-        // Pega o PlayerStats
+        // Chama diretamente o script do PlayerStats com 3 argumentos
         if (hit.TryGetComponent<PlayerStats>(out var player))
         {
-            // Calcula direção do empurrão
             Vector2 knockDir = (hit.transform.position - transform.position).normalized;
-
-            // CHAMA A VERSÃO DE 3 ARGUMENTOS: Dano, Direção, Força
             player.TakeDamage(_brain.stats.damage, knockDir, _brain.stats.knockbackPower);
         }
     }
 
     void OnDrawGizmosSelected()
     {
+        if (Application.isPlaying) return; // Esconde no Play
+
         if (_brain && _brain.stats)
         {
             Gizmos.color = Color.red;

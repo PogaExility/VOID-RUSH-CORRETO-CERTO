@@ -12,8 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e54089c673fa3b449bde31f49183f3d, type: 3}
   m_Name: Kamikaze
   m_EditorClassIdentifier: 
-  enemyName: Inimigo
-  maxHealth: 100
+  enemyName: Kamikaze
+  maxHealth: 40
+  hitVFX: {fileID: 0}
+  deathVFX: {fileID: 4862903873434885442, guid: a8d8215b32fe7934184ada7e5f96bfaa, type: 3}
+  meleeAttackVFX: {fileID: 0}
   patrolSpeed: 2
   chaseSpeed: 4
   canWander: 1
@@ -30,17 +33,18 @@ MonoBehaviour:
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 128
   isRanged: 0
   attackRange: 1.5
   attackCooldown: 1.5
+  postAttackDelay: 0.5
   damage: 10
   knockbackPower: 10
   canMoveWhileAttacking: 0
   isExploder: 1
-  explosionRadius: 3
+  explosionRadius: 4
   explosionFuseTime: 1.5
-  explosionVFX: {fileID: 0}
+  explosionVFX: {fileID: 4862903873434885442, guid: a8d8215b32fe7934184ada7e5f96bfaa, type: 3}
   hitboxSize: {x: 1, y: 1}
   hitboxOffset: {x: 0.5, y: 0}
   projectilePrefab: {fileID: 0}

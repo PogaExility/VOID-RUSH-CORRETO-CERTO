@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e54089c673fa3b449bde31f49183f3d, type: 3}
   m_Name: Ranged
   m_EditorClassIdentifier: 
-  enemyName: Inimigo
+  enemyName: Inimigo ranged
   maxHealth: 50
   hitVFX: {fileID: 0}
   deathVFX: {fileID: 0}
@@ -33,7 +33,7 @@ MonoBehaviour:
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 128
   isRanged: 1
   attackRange: 50
   attackCooldown: 2

@@ -17,13 +17,10 @@ public class EnemySensors : MonoBehaviour
         if (dist > _brain.stats.visionRange) return false;
 
         Vector2 dirToTarget = (target.position - _brain.eyes.position).normalized;
-
-        // Usa a direção do CORPO (Motor) para o cone, não a rotação dos olhos
         Vector2 facingDir = _brain.motor.IsFacingRight ? Vector2.right : Vector2.left;
 
         if (Vector2.Angle(facingDir, dirToTarget) > _brain.stats.visionAngle / 2f) return false;
 
-        // Offset para não bater no próprio corpo
         Vector2 startPos = _brain.eyes.position + (Vector3)(dirToTarget * 0.2f);
         if (Physics2D.Raycast(startPos, dirToTarget, dist, _brain.stats.obstacleLayer)) return false;
 
@@ -32,6 +29,8 @@ public class EnemySensors : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
+        if (Application.isPlaying) return; // Esconde no Play
+
         if (_brain == null || _brain.stats == null || _brain.eyes == null || !_brain.showGizmos) return;
 
         Gizmos.color = new Color(1, 1, 0, 0.2f);

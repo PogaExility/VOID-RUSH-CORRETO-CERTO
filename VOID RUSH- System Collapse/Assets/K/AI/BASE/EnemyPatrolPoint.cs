@@ -9,6 +9,8 @@ public class EnemyPatrolPoint : MonoBehaviour
 
     void OnDrawGizmos()
     {
+        if (Application.isPlaying) return; // Esconde no Play
+
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, 0.3f);
         Vector3 dir = faceRight ? Vector3.right : Vector3.left;
