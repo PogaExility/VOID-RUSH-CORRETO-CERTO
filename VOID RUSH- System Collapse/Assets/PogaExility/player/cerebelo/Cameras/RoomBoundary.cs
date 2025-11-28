@@ -8,23 +8,29 @@ public class RoomBoundary : MonoBehaviour
     [Header("Modo da Sala")]
     [SerializeField] private bool showEntireRoom = false;
 
-    [Header("Configurações de Câmera (Modo Seguir)")]
+    [Header("Configurações de Câmera")]
+    [Tooltip("Zoom padrão ao seguir o player.")]
     [SerializeField] private float targetOrthographicSize = 9f;
-
-    [Header("Configurações de Câmera (Modo Sala Inteira)")]
+    [Tooltip("Margem para o modo Sala Inteira.")]
     [SerializeField] private float roomPadding = 1.1f;
 
-    [Header("Configurações de Transição")]
-    [SerializeField] private float positionTransitionDuration = 0.8f;
+    [Header("Configurações de Transição (Turbo)")]
+    [Tooltip("Duração total. 0.25s é muito rápido.")]
+    [SerializeField] private float transitionDuration = 0.25f; // MUITO RÁPIDO
+
+    [Tooltip("Pico do zoom out. Manter próximo do zoom normal deixa mais ágil.")]
+    [SerializeField] private float maxTransitionZoom = 10.5f; // MOVIMENTO CURTO
+
+    [SerializeField] private float transitionCooldown = 0.05f; // QUASE INSTANTÂNEO
 
     private Collider2D roomCollider;
     private static Coroutine activeTransitionCoroutine;
-    private static Transform _proxyTarget;
+
+    // --- LÓGICA DE TRANSFERÊNCIA ---
     private static RoomBoundary currentActiveRoom = null;
     private static RoomBoundary nextPotentialRoom = null;
 
-
-
+    private static Transform _proxyTarget;
     private static Transform ProxyTarget
     {
         get
@@ -41,26 +47,19 @@ public class RoomBoundary : MonoBehaviour
     void Awake()
     {
         roomCollider = GetComponent<Collider2D>();
-        if (!roomCollider.isTrigger)
-        {
-            Debug.LogWarning($"O Collider2D no objeto '{gameObject.name}' precisa estar marcado como 'Is Trigger'.", gameObject);
-        }
+        if (!roomCollider.isTrigger) Debug.LogWarning("RoomBoundary precisa de um Collider Trigger.", gameObject);
     }
 
-    // --- OnTriggerEnter AGORA É O ÚNICO GATILHO ---
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
         {
-            // Se esta é a primeira sala, ativa-a imediatamente.
             if (currentActiveRoom == null)
             {
                 ActivateRoom(other);
             }
-            // Se o jogador está entrando em uma nova sala, anota-a como o próximo destino.
             else if (this != currentActiveRoom)
             {
-                Debug.Log($"Jogador entrou na área de '{gameObject.name}'. Preparando como próximo destino.");
                 nextPotentialRoom = this;
             }
         }
@@ -70,34 +69,23 @@ public class RoomBoundary : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            // Se o jogador está saindo da sala ATUALMENTE ATIVA...
             if (this == currentActiveRoom)
             {
-                // ...e existe uma sala de destino esperando...
                 if (nextPotentialRoom != null)
                 {
-                    // ...então a transição é autorizada.
-                    Debug.Log($"Jogador saiu completamente de '{gameObject.name}'. Ativando '{nextPotentialRoom.name}'.");
                     nextPotentialRoom.ActivateRoom(other);
                 }
             }
-            // Se o jogador sai de uma sala que era um destino potencial (ou seja, ele recuou)...
             else if (this == nextPotentialRoom)
             {
-                // ...limpa a anotação para cancelar a transição pendente.
-                Debug.Log($"Jogador recuou de '{gameObject.name}'. Transição pendente cancelada.");
                 nextPotentialRoom = null;
             }
         }
     }
 
-
-    // O método de ativação agora é o coração do sistema.
     public void ActivateRoom(Collider2D playerCollider)
     {
-        // Define esta sala como a ativa
         currentActiveRoom = this;
-        // Limpa qualquer destino pendente, pois a transição foi concluída.
         nextPotentialRoom = null;
 
         CinemachineCamera virtualCamera = FindAnyObjectByType<CinemachineCamera>();
@@ -105,18 +93,61 @@ public class RoomBoundary : MonoBehaviour
 
         if (activeTransitionCoroutine != null) StopCoroutine(activeTransitionCoroutine);
 
+        activeTransitionCoroutine = StartCoroutine(StagedTransition(virtualCamera, playerCollider.transform));
+    }
+
+    private IEnumerator StagedTransition(CinemachineCamera cam, Transform playerTransform)
+    {
+        float startSize = cam.Lens.OrthographicSize;
+        float halfDuration = transitionDuration / 2f;
+        float elapsedTime = 0f;
+
+        // FASE 1: PULSO PARA TRÁS (Zoom Out Rápido)
+        while (elapsedTime < halfDuration)
+        {
+            // Usando SmoothStep para um movimento mais orgânico mesmo sendo rápido
+            float progress = Mathf.SmoothStep(0, 1, elapsedTime / halfDuration);
+            cam.Lens.OrthographicSize = Mathf.Lerp(startSize, maxTransitionZoom, progress);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        // --- TROCA INSTANTÂNEA ---
+        UpdateConfiner();
+
+        float finalTargetSize = showEntireRoom ? CalculateOrthographicSize() : targetOrthographicSize;
+        Vector3 proxyStartPos = playerTransform.position;
+
         if (showEntireRoom)
         {
-            virtualCamera.Lens.OrthographicSize = CalculateOrthographicSize();
-            UpdateConfiner();
-            activeTransitionCoroutine = StartCoroutine(TransitionProxyTarget(virtualCamera, playerCollider.transform));
+            cam.Follow = ProxyTarget;
+            ProxyTarget.position = proxyStartPos;
         }
         else
         {
-            virtualCamera.Lens.OrthographicSize = targetOrthographicSize;
-            UpdateConfiner();
-            virtualCamera.Follow = playerCollider.transform;
+            cam.Follow = playerTransform;
         }
+
+        // FASE 2: ENCAIXE RÁPIDO (Zoom In)
+        elapsedTime = 0f;
+        while (elapsedTime < halfDuration)
+        {
+            float progress = Mathf.SmoothStep(0, 1, elapsedTime / halfDuration);
+            cam.Lens.OrthographicSize = Mathf.Lerp(maxTransitionZoom, finalTargetSize, progress);
+
+            if (showEntireRoom)
+            {
+                ProxyTarget.position = Vector3.Lerp(proxyStartPos, roomCollider.bounds.center, progress);
+            }
+
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        cam.Lens.OrthographicSize = finalTargetSize;
+        if (showEntireRoom) ProxyTarget.position = roomCollider.bounds.center;
+
+        activeTransitionCoroutine = null;
     }
 
     private void UpdateConfiner()
@@ -126,41 +157,16 @@ public class RoomBoundary : MonoBehaviour
         {
             confiner.BoundingShape2D = roomCollider;
             confiner.InvalidateBoundingShapeCache();
-            Debug.Log($"Confiner ATUALIZADO para: '{roomCollider.name}'.");
         }
-    }
-
-    private IEnumerator TransitionProxyTarget(CinemachineCamera cam, Transform playerTransform)
-    {
-        cam.Follow = ProxyTarget;
-        Vector3 startPosition = playerTransform.position;
-        Vector3 targetPosition = roomCollider.bounds.center;
-
-        float elapsedTime = 0f;
-        while (elapsedTime < positionTransitionDuration)
-        {
-            float progress = elapsedTime / positionTransitionDuration;
-            ProxyTarget.position = Vector3.Lerp(startPosition, targetPosition, EaseInOut(progress));
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        ProxyTarget.position = targetPosition;
-        activeTransitionCoroutine = null;
     }
 
     private float CalculateOrthographicSize()
     {
         float screenAspect = (float)Screen.width / Screen.height;
         float roomAspect = roomCollider.bounds.size.x / roomCollider.bounds.size.y;
-        float size;
-        if (roomAspect > screenAspect) { size = (roomCollider.bounds.size.x / screenAspect) * 0.5f; }
-        else { size = roomCollider.bounds.size.y * 0.5f; }
+        float size = (roomAspect > screenAspect)
+            ? (roomCollider.bounds.size.x / screenAspect) * 0.5f
+            : roomCollider.bounds.size.y * 0.5f;
         return size * roomPadding;
-    }
-
-    private float EaseInOut(float t)
-    {
-        return t * t * (3f - 2f * t);
     }
 }

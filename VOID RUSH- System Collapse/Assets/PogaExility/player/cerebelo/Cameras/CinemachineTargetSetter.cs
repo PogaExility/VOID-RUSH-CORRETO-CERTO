@@ -1,76 +1,86 @@
 using UnityEngine;
-using Unity.Cinemachine; // Mantendo o namespace correto para a versão nova
+using Unity.Cinemachine;
 
-
-// Garante que os componentes necessários estejam no mesmo GameObject.
-// Atualizado para usar a nova classe 'CinemachineCamera'.
 [RequireComponent(typeof(CinemachineCamera), typeof(CinemachineConfiner2D))]
 public class CinemachineTargetSetter : MonoBehaviour
 {
-    // Define as tags que o script procurará na cena.
-    // Deixar como público permite que você mude as tags pelo Inspector do Unity se precisar.
     [SerializeField] private string playerTag = "Player";
-    [SerializeField] private string cameraBoundaryTag = "CameraBoundary";
+
+    // Intervalo para verificar se o player saiu dos limites (segurança contra bugs de colisão/respawn)
+    [SerializeField] private float checkInterval = 0.5f;
+    private float nextCheckTime = 0f;
+
+    private CinemachineCamera virtualCamera;
+    private CinemachineConfiner2D confiner;
+
+    void Awake()
+    {
+        virtualCamera = GetComponent<CinemachineCamera>();
+        confiner = GetComponent<CinemachineConfiner2D>();
+    }
 
     void Start()
     {
-        // Pega as referências dos componentes que estão neste mesmo GameObject.
-        // Atualizado para usar a nova classe 'CinemachineCamera'.
-        CinemachineCamera virtualCamera = GetComponent<CinemachineCamera>();
-        CinemachineConfiner2D confiner = GetComponent<CinemachineConfiner2D>();
+        FindAndSetupPlayer();
+    }
 
-        // --- Configuração do Alvo (Follow) ---
+    void Update()
+    {
+        // CASO 1: Player morreu/foi destruído (perdeu o Follow)
+        if (virtualCamera.Follow == null)
+        {
+            FindAndSetupPlayer();
+        }
 
-        // Procura pelo GameObject do jogador na cena usando a tag definida.
+        // CASO 2: Verificação periódica. Se o player existe, checa se ele ainda está dentro da sala atual.
+        if (virtualCamera.Follow != null && Time.time >= nextCheckTime)
+        {
+            nextCheckTime = Time.time + checkInterval;
+            EnsurePlayerIsInsideBounds();
+        }
+    }
+
+    private void FindAndSetupPlayer()
+    {
         GameObject playerTarget = GameObject.FindGameObjectWithTag(playerTag);
 
-        // Verifica se o jogador foi encontrado.
         if (playerTarget != null)
         {
-            // Se encontrou, atribui o Transform do jogador ao campo "Follow" da câmera virtual.
-            // Acessando a propriedade pública 'Follow' (sem o 'm_').
             virtualCamera.Follow = playerTarget.transform;
-            Debug.Log($"Cinemachine: Alvo '{playerTarget.name}' definido como Follow.");
+            // Força a busca pela sala onde o player nasceu/renasceu
+            FindRoomForPlayer(playerTarget);
         }
-        else
+    }
+
+    private void EnsurePlayerIsInsideBounds()
+    {
+        // Se o confiner ainda não tem forma, ou se o player saiu da forma atual...
+        if (confiner.BoundingShape2D == null || !confiner.BoundingShape2D.bounds.Contains(virtualCamera.Follow.position))
         {
-            // Se não encontrou, exibe um erro claro no console para facilitar a depuração.
-            Debug.LogError($"Cinemachine ERROR: Não foi possível encontrar um GameObject com a tag '{playerTag}' na cena.");
+            // ...tenta achar a sala correta novamente.
+            FindRoomForPlayer(virtualCamera.Follow.gameObject);
         }
+    }
 
-        // --- Configuração dos Limites (Confiner) ---
+    private void FindRoomForPlayer(GameObject player)
+    {
+        Collider2D playerCollider = player.GetComponent<Collider2D>();
+        if (playerCollider == null) return;
 
-        // Procura pelo GameObject que contém o colisor dos limites da câmera.
-        GameObject cameraBoundary = GameObject.FindGameObjectWithTag(cameraBoundaryTag);
+        // Procura em todas as salas da cena
+        RoomBoundary[] allRooms = FindObjectsByType<RoomBoundary>(FindObjectsSortMode.None);
 
-        // Verifica se o objeto de limites foi encontrado.
-        if (cameraBoundary != null)
+        foreach (var room in allRooms)
         {
-            // Tenta pegar o componente Collider2D (pode ser BoxCollider2D, PolygonCollider2D, etc.).
-            Collider2D boundaryShape = cameraBoundary.GetComponent<Collider2D>();
+            Collider2D roomCol = room.GetComponent<Collider2D>();
 
-            if (boundaryShape != null)
+            // Se o player estiver dentro dos limites desta sala
+            if (roomCol != null && roomCol.bounds.Contains(player.transform.position))
             {
-                // Se encontrou o colisor, atribui ao campo "Bounding Shape 2D" do Confiner.
-                // Acessando a propriedade pública 'BoundingShape2D' (sem o 'm_').
-                confiner.BoundingShape2D = boundaryShape;
-
-                // Força o confiner a recalcular seus limites com base na nova forma.
-                // Usando o nome de método atualizado 'InvalidateBoundingShapeCache'.
-                confiner.InvalidateBoundingShapeCache();
-
-                Debug.Log($"Cinemachine: Limite '{cameraBoundary.name}' definido no Confiner.");
+                Debug.Log($"Cinemachine: Player encontrado em '{room.name}'. Ativando sala.");
+                room.ActivateRoom(playerCollider);
+                return;
             }
-            else
-            {
-                // Se o objeto foi encontrado mas não tem um Collider2D, avisa o erro.
-                Debug.LogError($"Cinemachine ERROR: O GameObject '{cameraBoundary.name}' com a tag '{cameraBoundaryTag}' não possui um componente Collider2D.");
-            }
-        }
-        else
-        {
-            // Se não encontrou o objeto de limites, exibe o erro.
-            Debug.LogError($"Cinemachine ERROR: Não foi possível encontrar um GameObject com a tag '{cameraBoundaryTag}' na cena.");
         }
     }
 }
