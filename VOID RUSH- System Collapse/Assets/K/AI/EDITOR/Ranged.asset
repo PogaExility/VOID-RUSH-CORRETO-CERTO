@@ -13,16 +13,19 @@ MonoBehaviour:
   m_Name: Ranged
   m_EditorClassIdentifier: 
   enemyName: Inimigo
-  maxHealth: 100
+  maxHealth: 50
+  hitVFX: {fileID: 0}
+  deathVFX: {fileID: 0}
+  meleeAttackVFX: {fileID: 0}
   patrolSpeed: 2
   chaseSpeed: 4
   canWander: 1
-  patrolWaitTime: 2
-  stopDistancePadding: 0.5
-  patrolScanAngle: 45
+  patrolWaitTime: 5
+  stopDistancePadding: 3
+  patrolScanAngle: 70
   patrolScanSpeed: 2
-  visionRange: 10
-  visionAngle: 110
+  visionRange: 50
+  visionAngle: 180
   hearingRange: 15
   memoryDuration: 5
   targetLayer:
@@ -32,10 +35,11 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   isRanged: 1
-  attackRange: 1.5
-  attackCooldown: 1.5
+  attackRange: 50
+  attackCooldown: 2
+  postAttackDelay: 0.3
   damage: 10
-  knockbackPower: 10
+  knockbackPower: 0
   canMoveWhileAttacking: 0
   isExploder: 0
   explosionRadius: 3
@@ -43,5 +47,5 @@ MonoBehaviour:
   explosionVFX: {fileID: 0}
   hitboxSize: {x: 1, y: 1}
   hitboxOffset: {x: 0.5, y: 0}
-  projectilePrefab: {fileID: 2861424395413929264, guid: 744c717f510f3dc46bfb6bdef9589ce7, type: 3}
+  projectilePrefab: {fileID: 1172556412149463058, guid: 4312823a7d5003d43a796d4943cd5916, type: 3}
   projectileSpeed: 12
