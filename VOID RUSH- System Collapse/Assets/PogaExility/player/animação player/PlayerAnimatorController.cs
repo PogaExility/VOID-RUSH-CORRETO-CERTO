@@ -77,9 +77,9 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int Combo1Hash = Animator.StringToHash("Combo1");
     private static readonly int Combo2Hash = Animator.StringToHash("Combo2");
     private static readonly int Combo3Hash = Animator.StringToHash("Combo3");
-    private static readonly int AbaixandoHash = Animator.StringToHash("abaixando");
-    private static readonly int RastejandoHash = Animator.StringToHash("rastejando");
-    private static readonly int LevantandoHash = Animator.StringToHash("levantando");
+    private static readonly int AbaixandoHash = Animator.StringToHash("abaixando");   
+    private static readonly int RastejandoHash = Animator.StringToHash("rastejando"); 
+    private static readonly int LevantandoHash = Animator.StringToHash("levantando"); 
     private static readonly int SubindoEscadaHash = Animator.StringToHash("subindoEscada"); 
     private static readonly int DescendoEscadaHash = Animator.StringToHash("descendoEscada");
     #endregion

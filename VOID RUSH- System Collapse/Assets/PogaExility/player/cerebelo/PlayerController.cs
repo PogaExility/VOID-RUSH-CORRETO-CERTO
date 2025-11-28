@@ -196,26 +196,31 @@ public class PlayerController : MonoBehaviour
     #region 4. Inputs de Controle (Helpers do Update)
     private void HandleCrawlInput()
     {
-        // Pressionou para começar a rastejar
+        // 1. Pressionou para Agachar
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
+            // Só pode agachar se estiver no chão e não estiver fazendo outra coisa
             if (movementScript.IsGrounded() && !movementScript.IsCrawling() && !movementScript.IsOnCrawlTransition())
             {
-                if (isInAimMode)
-                {
-                    SetAimingState(false);
-                }
+                if (isInAimMode) SetAimingState(false); // Sai da mira
+
+                // Avisa o script de movimento que estamos descendo (trava movimento)
                 movementScript.BeginCrouchTransition();
+
+                // Toca a animação
                 animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.abaixando);
             }
         }
-        // Soltou a tecla para levantar
+        // 2. Soltou para Levantar
         else if (Input.GetKeyUp(KeyCode.LeftControl))
         {
+            // Só levanta se já estiver rastejando
             if (movementScript.IsCrawling())
             {
-                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
+                // Avisa o script de movimento que estamos subindo (trava movimento)
                 movementScript.BeginStandUpTransition();
+
+                animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
                 animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.levantando);
             }
         }
@@ -405,7 +410,6 @@ public class PlayerController : MonoBehaviour
     }
     #endregion
 
-
     #region 7. Animação e Áudio
     private void UpdateAnimations()
     {
@@ -473,6 +477,7 @@ public class PlayerController : MonoBehaviour
     public void OnLandingAnimationEnd() { isLanding = false; movementScript.OnLandingComplete(); }
     public void PlayFootstepSound() { } // Mantido vazio para compatibilidade
     #endregion
+
     #region 8. Sistema de Interação e UI
     public void RegistrarInteragivel(ObjetoInterativo interagivel)
     {

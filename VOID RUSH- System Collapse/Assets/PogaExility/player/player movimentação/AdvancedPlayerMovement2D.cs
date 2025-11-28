@@ -221,17 +221,21 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     private void HandleMovement()
     {
+        // 1. Bloqueio por Ataque (prioridade máxima)
         if (playerController != null && playerController.IsAttacking)
         {
             return;
         }
 
-        // --- ADICIONADO: Bloqueia movimento durante transições de rastejar e outros estados ---
+        // 2. Bloqueio por Estados de Ação ou Transição
+        // Observe que 'isCrawling' NÃO está nesta lista, pois você pode se mover enquanto rasteja.
+        // Apenas as transições (baixando/levantando) bloqueiam o movimento.
         if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback || isCrouchingDown || isStandingUp)
         {
             return;
         }
 
+        // 3. Lógica de Parábola (Pulos forçados/Launch)
         if (isInParabolaArc)
         {
             if (isIgnoringSteeringInput)
@@ -239,6 +243,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
                 return;
             }
 
+            // Permite virar o personagem no ar durante a parábola
             bool wantsToChangeDirection = (moveInput > 0 && rb.linearVelocity.x < -0.1f) || (moveInput < 0 && rb.linearVelocity.x > 0.1f);
 
             if (wantsToChangeDirection)
@@ -250,15 +255,19 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             return;
         }
 
+        // 4. Bloqueio de empurrar parede no ar (evita ficar grudado)
         bool isPushingAgainstWall = !isGrounded && IsTouchingWall() && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
         if (isPushingAgainstWall) return;
 
-        // --- MODIFICADO: Usa crawlSpeed se estiver rastejando ---
+        // 5. Definição da Velocidade Alvo
+        // Se estiver rastejando, usa a velocidade lenta. Se não, usa a normal.
         float currentSpeed = isCrawling ? crawlSpeed : moveSpeed;
         float targetSpeed = moveInput * currentSpeed;
 
+        // 6. Aplicação da Força Física
         float speedDiff = targetSpeed - rb.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
+
         rb.AddForce(speedDiff * accelRate * Vector2.right);
     }
 
@@ -448,72 +457,88 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     }
     #endregion
 
-    #region 9. Sistema de Rastejar (Crawl)
+    #region 9. Sistema de Rastejar (Crawl) - COM SEGURANÇA
+
+    // Corrotina para garantir que o player não trave se a animação falhar
+    private Coroutine crouchSafetyCoroutine;
+
     public void BeginCrouchTransition()
     {
-        // 1. Define o estado de transição (Bloqueia o input de andar no HandleMovement)
+        // 1. Inicia o bloqueio de movimento
         isCrouchingDown = true;
-
-        // 2. Zera a velocidade horizontal para ele não "deslizar" enquanto abaixa.
-        // IMPORTANTE: Mantemos a velocidade Y para a gravidade continuar agindo.
         rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
 
-        // 3. Força a animação a tocar diretamente aqui para garantir
-        if (animatorController != null)
-        {
-            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.abaixando);
-        }
+        // 2. Inicia o temporizador de segurança (0.4s é um tempo médio de animação)
+        // Se a animação não avisar que acabou em 0.4s, o código força o fim.
+        if (crouchSafetyCoroutine != null) StopCoroutine(crouchSafetyCoroutine);
+        crouchSafetyCoroutine = StartCoroutine(SafetyCrouchTimer(0.4f, true));
     }
 
-    /// <summary>
-    /// ATENÇÃO: Esta função DEVE ser chamada por um Animation Event no final da animação "abaixando".
-    /// Se o evento não estiver configurado na Unity, o player vai travar.
-    /// </summary>
     public void CompleteCrouch()
     {
-        isCrouchingDown = false; // Libera a trava de transição
-        isCrawling = true;       // Ativa o estado de rastejar
+        // Se o evento de animação chamou isso, cancelamos o temporizador de segurança
+        if (crouchSafetyCoroutine != null) StopCoroutine(crouchSafetyCoroutine);
 
-        // Ajusta o Collider para metade do tamanho
-        float newHeight = originalColliderSize.y / 2f;
+        if (!isCrouchingDown) return; // Já completou, ignora
+
+        isCrouchingDown = false; // Destrava
+        isCrawling = true;       // Ativa modo rastejar
+
+        // Ajusta Collider
+        float newHeight = originalColliderSize.y * 0.5f;
         capsuleCollider.size = new Vector2(originalColliderSize.x, newHeight);
 
-        // Ajusta o Offset para o pé continuar no chão (baixa o centro do collider)
-        // Cálculo: Offset Original - (1/4 da altura original)
-        float newOffsetY = originalColliderOffset.y - (originalColliderSize.y / 4f);
+        float heightDifference = originalColliderSize.y - newHeight;
+        float newOffsetY = originalColliderOffset.y - (heightDifference * 0.5f);
         capsuleCollider.offset = new Vector2(originalColliderOffset.x, newOffsetY);
+
+        Debug.Log("Agachamento completado.");
     }
 
     public void BeginStandUpTransition()
     {
-        isStandingUp = true; // Bloqueia movimento
-
-        // Zera velocidade horizontal, mantém gravidade
+        isStandingUp = true;
+        isCrawling = false;
         rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
 
-        // Força a animação de levantar
-        if (animatorController != null)
+        // Temporizador de segurança para levantar
+        if (crouchSafetyCoroutine != null) StopCoroutine(crouchSafetyCoroutine);
+        crouchSafetyCoroutine = StartCoroutine(SafetyCrouchTimer(0.4f, false));
+    }
+
+    public void CompleteStandUp()
+    {
+        if (crouchSafetyCoroutine != null) StopCoroutine(crouchSafetyCoroutine);
+
+        if (!isStandingUp) return;
+
+        isStandingUp = false; // Libera movimento total
+
+        // Restaura Collider
+        capsuleCollider.size = originalColliderSize;
+        capsuleCollider.offset = originalColliderOffset;
+
+        Debug.Log("Levantamento completado.");
+    }
+
+    // Corrotina que força a conclusão se a animação demorar demais
+    private IEnumerator SafetyCrouchTimer(float duration, bool isGoingDown)
+    {
+        yield return new WaitForSeconds(duration);
+
+        if (isGoingDown && isCrouchingDown)
         {
-            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.levantando);
+            Debug.LogWarning("Segurança ativada: Forçando CompleteCrouch (Evento de animação falhou?)");
+            CompleteCrouch();
+        }
+        else if (!isGoingDown && isStandingUp)
+        {
+            Debug.LogWarning("Segurança ativada: Forçando CompleteStandUp (Evento de animação falhou?)");
+            CompleteStandUp();
         }
     }
 
-    /// <summary>
-    /// ATENÇÃO: Esta função DEVE ser chamada por um Animation Event no final da animação "levantando".
-    /// </summary>
-    public void CompleteStandUp()
-    {
-        isStandingUp = false; // Libera movimento
-        isCrawling = false;   // Sai do estado de rastejar
-
-        // Restaura o collider ao tamanho e posição originais
-        capsuleCollider.size = originalColliderSize;
-        capsuleCollider.offset = originalColliderOffset;
-    }
-
     public bool IsCrawling() { return isCrawling; }
-
-    // Esta função é usada pelo UpdateAnimations para não interromper a animação de transição
     public bool IsOnCrawlTransition() { return isCrouchingDown || isStandingUp; }
     #endregion
 
