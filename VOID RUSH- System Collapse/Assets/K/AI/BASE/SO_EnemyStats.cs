@@ -44,7 +44,7 @@ public class SO_EnemyStats : ScriptableObject
     public bool canMoveWhileAttacking = false;
 
     [Header("--- Modo Kamikaze ---")]
-    public bool isExploder = false; // <--- O NOME CORRETO É ESTE
+    public bool isExploder = false;
     public float explosionRadius = 3f;
     public float explosionFuseTime = 1.5f;
     public GameObject explosionVFX; // Explosão GRANDE do Kamikaze
@@ -56,4 +56,13 @@ public class SO_EnemyStats : ScriptableObject
     [Header("--- Ranged ---")]
     public GameObject projectilePrefab;
     public float projectileSpeed = 15f;
+
+    [Header("--- Áudio (SFX) ---")]
+    public AudioClip idleSound;      // Som ambiente/respiração (opcional)
+    public AudioClip[] footstepSounds; // Lista de passos para variar
+    public AudioClip attackSound;    // Som do golpe ou tiro
+    public AudioClip damageSound;    // Som ao receber dano
+    public AudioClip deathSound;     // Som ao morrer
+    public AudioClip explosionSound; // Som específico do Kamikaze
+    public AudioClip fuseSound;      // Som do pavio queimando (Kamikaze)
 }

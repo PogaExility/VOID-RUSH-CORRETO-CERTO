@@ -1,10 +1,12 @@
 using UnityEngine;
 using System.Collections;
 
+[RequireComponent(typeof(AudioSource))] // Garante que tem AudioSource
 public class EnemyHealth : MonoBehaviour
 {
     private EnemyBrain _brain;
     private EnemyAIController _ai;
+    private AudioSource _audioSource; // Nosso alto-falante
     private float _currentHealth;
     private bool _isDead = false;
 
@@ -12,17 +14,29 @@ public class EnemyHealth : MonoBehaviour
     {
         _brain = GetComponent<EnemyBrain>();
         _ai = GetComponent<EnemyAIController>();
+        _audioSource = GetComponent<AudioSource>();
+
+        // Configuração básica do áudio para não ficar 2D (som na cabeça)
+        _audioSource.spatialBlend = 1f; // 1 = 3D (som diminui com a distância)
+        _audioSource.minDistance = 2f;
+        _audioSource.maxDistance = 20f;
 
         if (_brain != null && _brain.stats != null)
             _currentHealth = _brain.stats.maxHealth;
     }
 
-    // CORREÇÃO: Sobrecarga com 3 argumentos para o SlashEffect e Projectile funcionarem
     public void TakeDamage(float damage, Vector2 knockbackDir, float knockbackForce)
     {
         if (_isDead) return;
 
         _currentHealth -= damage;
+
+        // --- SOM DE DANO ---
+        if (_brain.stats.damageSound && _audioSource)
+        {
+            _audioSource.pitch = Random.Range(0.9f, 1.1f); // Variação leve
+            _audioSource.PlayOneShot(_brain.stats.damageSound);
+        }
 
         // 1. Aplica Knockback
         if (_brain.motor != null)
@@ -32,7 +46,7 @@ public class EnemyHealth : MonoBehaviour
         if (_ai != null)
             _ai.OnSuspiciousActivityDetected(transform.position - (Vector3)knockbackDir);
 
-        // 3. VFX de Dano (Sangue/Faísca)
+        // 3. VFX de Dano
         if (_brain.stats.hitVFX != null)
             Instantiate(_brain.stats.hitVFX, transform.position, Quaternion.identity);
 
@@ -41,7 +55,6 @@ public class EnemyHealth : MonoBehaviour
         if (_currentHealth <= 0) Die();
     }
 
-    // Sobrecarga simples caso algum script antigo chame só com dano
     public void TakeDamage(float damage)
     {
         TakeDamage(damage, Vector2.zero, 0);
@@ -55,19 +68,29 @@ public class EnemyHealth : MonoBehaviour
         GetComponent<Collider2D>().enabled = false;
         if (_ai) _ai.enabled = false;
 
-        // LÓGICA DE VFX DE MORTE
-        // Se for Kamikaze (isExploder), usa a explosão grande.
-        // Se for normal, usa o deathVFX (fumaça/esqueleto).
-        if (_brain.stats.isExploder && _brain.stats.explosionVFX != null)
+        // LÓGICA DE SOM E VFX DE MORTE
+        if (_brain.stats.isExploder)
         {
-            Instantiate(_brain.stats.explosionVFX, transform.position, Quaternion.identity);
+            // Se morreu antes de explodir, explode igual (ou mude para deathSound se preferir)
+            if (_brain.stats.explosionVFX)
+                Instantiate(_brain.stats.explosionVFX, transform.position, Quaternion.identity);
+
+            // Som da explosão (PlayClipAtPoint cria um áudio temporário na cena)
+            if (_brain.stats.explosionSound)
+                AudioSource.PlayClipAtPoint(_brain.stats.explosionSound, transform.position, 1f);
         }
-        else if (_brain.stats.deathVFX != null)
+        else
         {
-            Instantiate(_brain.stats.deathVFX, transform.position, Quaternion.identity);
+            // Morte normal
+            if (_brain.stats.deathVFX)
+                Instantiate(_brain.stats.deathVFX, transform.position, Quaternion.identity);
+
+            // Som de morte
+            if (_brain.stats.deathSound)
+                AudioSource.PlayClipAtPoint(_brain.stats.deathSound, transform.position, 1f);
         }
 
-        Destroy(gameObject); // Remove imediatamente ou ajusta tempo se tiver anim
+        Destroy(gameObject);
     }
 
     IEnumerator FlashRed()
