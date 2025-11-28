@@ -33,7 +33,7 @@ MonoBehaviour:
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 192
   isRanged: 0
   attackRange: 1.5
   attackCooldown: 1.5

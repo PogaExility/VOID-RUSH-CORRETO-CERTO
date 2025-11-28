@@ -63282,7 +63282,7 @@ GameObject:
   - component: {fileID: 1505114619}
   - component: {fileID: 1505114618}
   - component: {fileID: 1505114617}
-  m_Layer: 7
+  m_Layer: 6
   m_Name: Tilemap
   m_TagString: Chao
   m_Icon: {fileID: 0}
