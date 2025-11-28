@@ -196,30 +196,29 @@ public class PlayerController : MonoBehaviour
     #region 4. Inputs de Controle (Helpers do Update)
     private void HandleCrawlInput()
     {
-        // 1. Pressionou para Agachar
+        // 1. Pressionou CTRL (Agachar)
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
-            // Só pode agachar se estiver no chão e não estiver fazendo outra coisa
             if (movementScript.IsGrounded() && !movementScript.IsCrawling() && !movementScript.IsOnCrawlTransition())
             {
-                if (isInAimMode) SetAimingState(false); // Sai da mira
+                if (isInAimMode) SetAimingState(false); // Sai da mira se estiver mirando
 
-                // Avisa o script de movimento que estamos descendo (trava movimento)
+                // Inicia a física
                 movementScript.BeginCrouchTransition();
 
-                // Toca a animação
+                // Força a animação
                 animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.abaixando);
             }
         }
-        // 2. Soltou para Levantar
+        // 2. Soltou CTRL (Levantar)
         else if (Input.GetKeyUp(KeyCode.LeftControl))
         {
-            // Só levanta se já estiver rastejando
             if (movementScript.IsCrawling())
             {
-                // Avisa o script de movimento que estamos subindo (trava movimento)
+                // Inicia a física
                 movementScript.BeginStandUpTransition();
 
+                // Força a animação
                 animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, 1f);
                 animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.levantando);
             }
@@ -413,8 +412,13 @@ public class PlayerController : MonoBehaviour
     #region 7. Animação e Áudio
     private void UpdateAnimations()
     {
+        // 1. Prioridade Máxima: Ataque
         if (IsAttacking) return;
 
+        // 2. Transição de Agachar (não interromper)
+        if (movementScript.IsOnCrawlTransition()) return;
+
+        // 3. Escalada
         if (movementScript.IsClimbing())
         {
             float vInput = movementScript.GetVerticalInput();
@@ -423,6 +427,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        // 4. Rastejar
         if (movementScript.IsCrawling())
         {
             animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.rastejando);
@@ -430,19 +435,60 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        // 5. Definição de Estados Normais
         PlayerAnimState desiredState;
-        if (playerStats.IsDead()) desiredState = PlayerAnimState.morrendo;
-        else if (isLanding && !isInAimMode) desiredState = PlayerAnimState.pousando;
-        else if (!movementScript.IsGrounded()) desiredState = PlayerAnimState.pulando;
-        else if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f) desiredState = PlayerAnimState.andando;
-        else desiredState = PlayerAnimState.parado;
 
-        // --- Lógica de Animação "Cotoco" (Mira) ---
+        if (playerStats.IsDead())
+        {
+            desiredState = PlayerAnimState.morrendo;
+        }
+        else if (isLanding && !isInAimMode)
+        {
+            desiredState = PlayerAnimState.pousando;
+        }
+        // --- AQUI ESTAVA FALTANDO O DASH ---
+        else if (movementScript.IsDashing() || movementScript.IsWallDashing())
+        {
+            // Se estiver no chão toca "dash", se estiver no ar toca "dashAereo"
+            desiredState = movementScript.IsGrounded() ? PlayerAnimState.dash : PlayerAnimState.dashAereo;
+        }
+        // -----------------------------------
+        else if (!movementScript.IsGrounded() || movementScript.IsIgnoringPlatforms())
+        {
+            // Lógica Aérea
+            if (movementScript.IsWallSliding()) desiredState = PlayerAnimState.derrapagem;
+            else if (movementScript.GetVerticalVelocity() > 0.1f) desiredState = PlayerAnimState.pulando;
+            else desiredState = PlayerAnimState.falling;
+        }
+        else // No chão
+        {
+            // Lógica Terrestre
+            if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f) desiredState = PlayerAnimState.andando;
+            else desiredState = PlayerAnimState.parado;
+        }
+
+        // 6. Verifica se é uma Ação (Dash, Pouso, Dano) para interromper a mira
+        bool isDesiredStateAnAction = IsActionState(desiredState);
+
+        if (isDesiredStateAnAction)
+        {
+            isActionInterruptingAim = true;
+            SetAimingState(false);
+        }
+        else
+        {
+            if (isActionInterruptingAim)
+            {
+                isActionInterruptingAim = false;
+                if (weaponHandler.IsAimWeaponEquipped()) SetAimingState(true);
+            }
+        }
+
+        // 7. Aplica a animação (Mira ou Normal)
         if (isInAimMode)
         {
             if (!movementScript.IsGrounded() || movementScript.IsIgnoringPlatforms())
             {
-                // Ajuste de animação aérea mirando
                 animatorController.PlayState(AnimatorTarget.PlayerBody, movementScript.GetVerticalVelocity() > 0.1f ? PlayerAnimState.pulandoCotoco : PlayerAnimState.fallingCotoco, 1);
             }
             else if (movementScript.IsMoving())
@@ -457,6 +503,26 @@ public class PlayerController : MonoBehaviour
         else
         {
             animatorController.PlayState(AnimatorTarget.PlayerBody, desiredState, 0);
+        }
+    }
+
+    // Função Auxiliar para saber o que interrompe a mira (Dash interrompe mira!)
+    private bool IsActionState(PlayerAnimState state)
+    {
+        switch (state)
+        {
+            case PlayerAnimState.dash:
+            case PlayerAnimState.dashAereo:
+            case PlayerAnimState.pousando:
+            case PlayerAnimState.derrapagem:
+            case PlayerAnimState.dano:
+            case PlayerAnimState.flip:
+            case PlayerAnimState.block:
+            case PlayerAnimState.parry:
+            case PlayerAnimState.morrendo:
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -475,7 +541,7 @@ public class PlayerController : MonoBehaviour
     public void OnCrouchDownAnimationComplete() { movementScript.CompleteCrouch(); }
     public void OnStandUpAnimationComplete() { movementScript.CompleteStandUp(); }
     public void OnLandingAnimationEnd() { isLanding = false; movementScript.OnLandingComplete(); }
-    public void PlayFootstepSound() { } // Mantido vazio para compatibilidade
+    public void PlayFootstepSound() { }
     #endregion
 
     #region 8. Sistema de Interação e UI

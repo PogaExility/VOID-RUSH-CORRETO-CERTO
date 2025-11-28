@@ -71,16 +71,16 @@ public class PlayerAnimatorController : MonoBehaviour
     private static readonly int PoucaVidaParadoHash = Animator.StringToHash("poucaVidaParado");
     private static readonly int ParadoCotocoHash = Animator.StringToHash("paradoCotoco");
     private static readonly int AndarCotocoHash = Animator.StringToHash("andarCotoco");
-    private static readonly int PulandoCotocoHash = Animator.StringToHash("pulandoCotoco");
+    private static readonly int PulandoCotocoHash = Animator.StringToHash("pularCotoco");
     private static readonly int FallingCotocoHash = Animator.StringToHash("fallingCotoco");
     private static readonly int ReloadingHash = Animator.StringToHash("recarregando");
     private static readonly int Combo1Hash = Animator.StringToHash("Combo1");
     private static readonly int Combo2Hash = Animator.StringToHash("Combo2");
     private static readonly int Combo3Hash = Animator.StringToHash("Combo3");
-    private static readonly int AbaixandoHash = Animator.StringToHash("abaixando");   
-    private static readonly int RastejandoHash = Animator.StringToHash("rastejando"); 
-    private static readonly int LevantandoHash = Animator.StringToHash("levantando"); 
-    private static readonly int SubindoEscadaHash = Animator.StringToHash("subindoEscada"); 
+    private static readonly int AbaixandoHash = Animator.StringToHash("abaixando");
+    private static readonly int RastejandoHash = Animator.StringToHash("rastejando");
+    private static readonly int LevantandoHash = Animator.StringToHash("levantando");
+    private static readonly int SubindoEscadaHash = Animator.StringToHash("subindoEscada");
     private static readonly int DescendoEscadaHash = Animator.StringToHash("descendoEscada");
     #endregion
 
@@ -109,35 +109,30 @@ public class PlayerAnimatorController : MonoBehaviour
 
     public void PlayState(AnimatorTarget target, PlayerAnimState state, int layer = 0)
     {
-        currentStateByTarget.TryGetValue(target, out PlayerAnimState currentState);
-        if (currentState == state) return;
-
         Animator targetAnimator = GetTargetAnimator(target);
+        if (targetAnimator == null) return;
 
-        if (targetAnimator == null)
+        // RESTAURADO: Verifica se o estado já é o atual para não reiniciar a animação
+        if (currentStateByTarget.TryGetValue(target, out PlayerAnimState currentState))
         {
-            Debug.LogError($"Maestro falhou: Animator para o alvo '{target}' é NULO.", this);
-            return;
-        }
-
-        if (target == AnimatorTarget.PlayerHand)
-        {
-            Debug.Log($"Maestro recebeu ordem para a MÃO. O Animator da mão está no objeto: '{targetAnimator.gameObject.name}'");
-            Debug.Log($"O Animator Controller que ele está usando é: '{targetAnimator.runtimeAnimatorController.name}'");
+            if (currentState == state) return;
         }
 
         currentStateByTarget[target] = state;
         int stateHash = GetStateHash(state);
+
+        if (layer >= targetAnimator.layerCount) layer = 0;
+
         targetAnimator.Play(stateHash, layer, 0f);
     }
+
     public void PlayState(AnimatorTarget target, PlayerAnimState state, float normalizedTime)
     {
         Animator targetAnimator = GetTargetAnimator(target);
         if (targetAnimator == null) return;
 
+        currentStateByTarget[target] = state;
         int stateHash = GetStateHash(state);
-
-        // A diferença está aqui: o terceiro parâmetro é o tempo normalizado.
         targetAnimator.Play(stateHash, 0, normalizedTime);
     }
 
