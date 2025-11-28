@@ -162,7 +162,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 6
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &11382601
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -371,7 +373,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 8
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &60092588
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -768,7 +772,7 @@ GameObject:
   - component: {fileID: 135429726}
   - component: {fileID: 135429725}
   - component: {fileID: 135429724}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: PlataformaMovel_Sprite
   m_TagString: Chao
   m_Icon: {fileID: 0}
@@ -969,7 +973,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 6.9
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &144015560
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1514,7 +1520,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 8
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &240957077
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1773,7 +1781,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 5.6
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &283315582
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -2718,6 +2728,100 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2416694940148620338, guid: b019a4de9103e7d4e984f66087e3cbd4, type: 3}
   m_PrefabInstance: {fileID: 885694495}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &440826882
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 440826885}
+  - component: {fileID: 440826884}
+  - component: {fileID: 440826883}
+  m_Layer: 0
+  m_Name: Respawn (5)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &440826883
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 440826882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f92200512ae4cef4a9237e798e004bee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activeSprite: {fileID: 0}
+  inactiveSprite: {fileID: 0}
+  activationParticles: {fileID: 0}
+--- !u!61 &440826884
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 440826882}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0.13845062, y: 1.2065058}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 2.3054047, y: 3.7294712}
+  m_EdgeRadius: 0
+--- !u!4 &440826885
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 440826882}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 138.02, y: -62.54, z: -0.038455475}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &483619740
 GameObject:
   m_ObjectHideFlags: 0
@@ -2871,7 +2975,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &508674058
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -3451,7 +3557,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &574771986
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4005,7 +4113,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &700678594
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4115,7 +4225,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &701322325
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4211,7 +4323,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &729136302
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4402,6 +4516,100 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1995327487}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &760458464
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 760458467}
+  - component: {fileID: 760458466}
+  - component: {fileID: 760458465}
+  m_Layer: 0
+  m_Name: Respawn (4)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &760458465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 760458464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f92200512ae4cef4a9237e798e004bee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activeSprite: {fileID: 0}
+  inactiveSprite: {fileID: 0}
+  activationParticles: {fileID: 0}
+--- !u!61 &760458466
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 760458464}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0.13845062, y: 1.2065058}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 2.3054047, y: 3.7294712}
+  m_EdgeRadius: 0
+--- !u!4 &760458467
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 760458464}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 45.16, y: -37.49, z: -0.038455475}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &771212621
 PrefabInstance:
@@ -4610,7 +4818,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 5
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &790667491
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -5015,7 +5225,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 5.5
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &844055533
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -59225,7 +59437,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8215782289304911651, guid: 76eac61770d29fa4184f9b26b6824707, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -33.55
+      value: -33.64
       objectReference: {fileID: 0}
     - target: {fileID: 8215782289304911651, guid: 76eac61770d29fa4184f9b26b6824707, type: 3}
       propertyPath: m_LocalPosition.z
@@ -59521,7 +59733,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &939872150
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -59869,7 +60083,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &988726152
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -60306,7 +60522,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1165827702
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -60620,7 +60838,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1179468763
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -61000,7 +61220,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 5
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1223133050
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -61166,7 +61388,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 5.5
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1287255663
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -61462,11 +61686,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1308354841243548261, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -67.917175
+      value: -67.91724
       objectReference: {fileID: 0}
     - target: {fileID: 1308354841243548261, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 20.463928
+      value: 20.46399
       objectReference: {fileID: 0}
     - target: {fileID: 1806446187817274072, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -61666,11 +61890,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4708386788519731153, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -5.02
+      value: -5.85
       objectReference: {fileID: 0}
     - target: {fileID: 4708386788519731153, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 5.04
+      value: 4.568
       objectReference: {fileID: 0}
     - target: {fileID: 4708386788519731153, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_LocalPosition.z
@@ -61815,6 +62039,10 @@ PrefabInstance:
     - target: {fileID: 6597403887149215505, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0.000061035156
+      objectReference: {fileID: 0}
+    - target: {fileID: 6754565164538936117, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
+      propertyPath: jumpForce
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 7934465750354573849, guid: 2c72a6faa0ef8054b963267293a18094, type: 3}
       propertyPath: m_AnchorMax.y
@@ -62344,7 +62572,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 4.4
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1376305987
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -62519,7 +62749,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1396390501
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -62738,7 +62970,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 6
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1415575744
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -62873,7 +63107,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1428299528
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -63231,7 +63467,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 5.5
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1495980709
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -63318,7 +63556,7 @@ GameObject:
   - component: {fileID: 1505114619}
   - component: {fileID: 1505114618}
   - component: {fileID: 1505114617}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: Tilemap
   m_TagString: Chao
   m_Icon: {fileID: 0}
@@ -68174,8 +68412,8 @@ Tilemap:
   - first: {x: 120, y: -65, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 74
-      m_TileSpriteIndex: 35
+      m_TileIndex: 80
+      m_TileSpriteIndex: 86
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -125871,7 +126109,7 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: a15c63fa2a41fc34eacb3a0dbaf098e8, type: 2}
   - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: 05b8336061a25f6429dc7b1acb3ca222, type: 2}
-  - m_RefCount: 3
+  - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: e52196ff2287d294bb123e121dd49776, type: 2}
   - m_RefCount: 200
     m_Data: {fileID: 11400000, guid: 6ac64dcc95f6a3c45aad9f85af6179d5, type: 2}
@@ -125883,7 +126121,7 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: ece1af02bb25a2447836da59705afda2, type: 2}
   - m_RefCount: 81
     m_Data: {fileID: 11400000, guid: afbdaf35c035c94428717eee2075da5b, type: 2}
-  - m_RefCount: 1
+  - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: 778fcfbef0338df49bccc44980b33914, type: 2}
   - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: e1648d6da6a3aa24786e86f8ac914fb3, type: 2}
@@ -125968,7 +126206,7 @@ Tilemap:
     m_Data: {fileID: 97195411, guid: c0e8b7d3c2d4d8d48b7a79485ca93309, type: 3}
   - m_RefCount: 2
     m_Data: {fileID: -1224380751, guid: c0e8b7d3c2d4d8d48b7a79485ca93309, type: 3}
-  - m_RefCount: 3
+  - m_RefCount: 2
     m_Data: {fileID: 51353341, guid: e73ab70d3a604e54aab4fa3fde14cb27, type: 3}
   - m_RefCount: 16
     m_Data: {fileID: 1227152250, guid: c0e8b7d3c2d4d8d48b7a79485ca93309, type: 3}
@@ -126070,7 +126308,7 @@ Tilemap:
     m_Data: {fileID: -512693217, guid: e73ab70d3a604e54aab4fa3fde14cb27, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: -2030809940, guid: cfad90b776d68a8478d09b5ab907ea95, type: 3}
-  - m_RefCount: 1
+  - m_RefCount: 2
     m_Data: {fileID: -238999667, guid: e73ab70d3a604e54aab4fa3fde14cb27, type: 3}
   m_TileMatrixArray:
   - m_RefCount: 6119
@@ -128331,7 +128569,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 6
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1530868192
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -128520,7 +128760,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 6
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1534876855
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -128847,7 +129089,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 6
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1590579870
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -129033,7 +129277,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1657003868
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -129518,7 +129764,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1728145210
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -129702,7 +129950,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1737215141
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -130114,7 +130364,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1822669078
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -130295,7 +130547,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 5.5
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1840170313
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -130751,7 +131005,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 6
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1944790633
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -130916,7 +131172,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &1971650534
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -131086,7 +131344,7 @@ GameObject:
   - component: {fileID: 1995327490}
   - component: {fileID: 1995327489}
   - component: {fileID: 1995327488}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: PlataformaMovel_Sprite_2
   m_TagString: Chao
   m_Icon: {fileID: 0}
@@ -131378,7 +131636,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 5.5
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &2021500423
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -131445,6 +131705,100 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5724997893578422382, guid: ad5e20a1d01eac94c8ecd300cc2f7069, type: 3}
   m_PrefabInstance: {fileID: 1692840466}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2049553634
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2049553637}
+  - component: {fileID: 2049553636}
+  - component: {fileID: 2049553635}
+  m_Layer: 0
+  m_Name: Respawn (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2049553635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2049553634}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f92200512ae4cef4a9237e798e004bee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activeSprite: {fileID: 0}
+  inactiveSprite: {fileID: 0}
+  activationParticles: {fileID: 0}
+--- !u!61 &2049553636
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2049553634}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0.13845062, y: 1.2065058}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 2.3054047, y: 3.7294712}
+  m_EdgeRadius: 0
+--- !u!4 &2049553637
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2049553634}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 13.49, y: -58.76, z: -0.038455475}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &2051912659 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5724997893578422382, guid: ad5e20a1d01eac94c8ecd300cc2f7069, type: 3}
@@ -131783,7 +132137,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 9
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &2065125683
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -131878,7 +132234,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 4.4
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &2067537439
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -131983,7 +132341,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 7
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0
+  maxTransitionZoom: 10.5
+  transitionCooldown: 0.05
 --- !u!61 &2117769557
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -132171,6 +132531,9 @@ SceneRoots:
   - {fileID: 107348780}
   - {fileID: 1533485164}
   - {fileID: 1724019718}
+  - {fileID: 2049553637}
+  - {fileID: 760458467}
+  - {fileID: 440826885}
   - {fileID: 311870753}
   - {fileID: 1331874796}
   - {fileID: 1425969210}
