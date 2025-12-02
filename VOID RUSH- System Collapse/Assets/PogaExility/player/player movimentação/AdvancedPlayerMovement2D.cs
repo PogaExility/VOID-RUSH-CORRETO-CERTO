@@ -10,21 +10,31 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     public PlayerAnimatorController animatorController;
     public PlayerController playerController;
     public Camera mainCamera;
-    public TextMeshProUGUI stateCheckText;
+    // Removido: public TextMeshProUGUI stateCheckText;
     public LayerMask collisionLayer;
     [Tooltip("Defina aqui qual layer é usada para as plataformas atravessáveis.")]
     public LayerMask platformLayer;
 
-    [Header("Movimento")]
-    public float moveSpeed = 8f;
-    public float acceleration = 50f;
+    [Header("Movimento - Game Feel")]
+    public float moveSpeed = 10f;
+    public float acceleration = 90f;
     public float deceleration = 60f;
+    [Tooltip("Multiplicador de aceleração quando está no ar (0.5 = metade do controle).")]
+    [Range(0f, 1f)] public float airAccelerationMult = 0.65f;
+    [Tooltip("Força extra aplicada para virar de direção instantaneamente no chão.")]
+    public float turnAcceleration = 120f;
 
-    [Header("Pulo")]
-    public float jumpForce = 12f;
-    public float gravityScaleOnFall = 1.6f;
+    [Header("Pulo - Game Feel")]
+    public float jumpForce = 16f;
+    public float gravityScaleOnFall = 2.5f;
     public float baseGravity = 1f;
     public float coyoteTime = 0.1f;
+
+    [Header("Jump Hang (Flutuar no topo)")]
+    [Tooltip("Velocidade vertical considerada 'topo do pulo'.")]
+    public float jumpHangThreshold = 1.0f;
+    [Tooltip("Multiplicador de gravidade durante o topo do pulo (menor = flutua mais).")]
+    public float jumpHangGravityMult = 0.5f;
 
     [Header("Parede")]
     public float wallSlideSpeed = 2f;
@@ -228,8 +238,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         }
 
         // 2. Bloqueio por Estados de Ação ou Transição
-        // Observe que 'isCrawling' NÃO está nesta lista, pois você pode se mover enquanto rasteja.
-        // Apenas as transições (baixando/levantando) bloqueiam o movimento.
         if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback || isCrouchingDown || isStandingUp)
         {
             return;
@@ -238,37 +246,72 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         // 3. Lógica de Parábola (Pulos forçados/Launch)
         if (isInParabolaArc)
         {
-            if (isIgnoringSteeringInput)
-            {
-                return;
-            }
+            if (isIgnoringSteeringInput) return;
 
             // Permite virar o personagem no ar durante a parábola
             bool wantsToChangeDirection = (moveInput > 0 && rb.linearVelocity.x < -0.1f) || (moveInput < 0 && rb.linearVelocity.x > 0.1f);
-
             if (wantsToChangeDirection)
             {
                 rb.linearVelocity = new Vector2(-rb.linearVelocity.x, rb.linearVelocity.y);
                 Flip();
             }
-
             return;
         }
 
-        // 4. Bloqueio de empurrar parede no ar (evita ficar grudado)
+        // 4. Bloqueio de empurrar parede no ar
         bool isPushingAgainstWall = !isGrounded && IsTouchingWall() && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
         if (isPushingAgainstWall) return;
 
-        // 5. Definição da Velocidade Alvo
-        // Se estiver rastejando, usa a velocidade lenta. Se não, usa a normal.
+        // --- NOVA FÍSICA DE MOVIMENTAÇÃO (Snappy Movement) ---
+
+        // Define a velocidade alvo
         float currentSpeed = isCrawling ? crawlSpeed : moveSpeed;
         float targetSpeed = moveInput * currentSpeed;
 
-        // 6. Aplicação da Força Física
+        // Calcula a diferença entre a velocidade atual e a desejada
         float speedDiff = targetSpeed - rb.linearVelocity.x;
-        float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deceleration;
 
-        rb.AddForce(speedDiff * accelRate * Vector2.right);
+        float accelRate;
+
+        // Lógica de Aceleração vs Desaceleração vs Virada
+        if (isGrounded)
+        {
+            if (Mathf.Abs(targetSpeed) < 0.01f)
+            {
+                // Quer parar
+                accelRate = deceleration;
+            }
+            else if (Mathf.Sign(targetSpeed) != Mathf.Sign(rb.linearVelocity.x) && Mathf.Abs(rb.linearVelocity.x) > 0.1f)
+            {
+                // Quer virar (Turn) - Aplica força extra para evitar o "efeito sabão"
+                accelRate = turnAcceleration;
+            }
+            else
+            {
+                // Quer acelerar normal
+                accelRate = acceleration;
+            }
+        }
+        else
+        {
+            // No ar, o controle é reduzido pelo multiplicador
+            if (Mathf.Abs(targetSpeed) < 0.01f)
+            {
+                // Parar no ar é um pouco mais lento (inércia)
+                accelRate = deceleration * airAccelerationMult;
+            }
+            else
+            {
+                accelRate = acceleration * airAccelerationMult;
+            }
+        }
+
+        // Aplica a força calculada da maneira correta: Força = Massa * Aceleração
+        // Usamos Pow para suavizar a curva de força quando velocidade aproxima do alvo, 
+        // mas mantendo o "snap" inicial.
+        float movementForce = speedDiff * accelRate;
+
+        rb.AddForce(movementForce * Vector2.right);
     }
 
     private void HandleGravity()
@@ -280,8 +323,24 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         }
         else
         {
-            // Restaura a gravidade correta (base ou de queda).
-            rb.gravityScale = rb.linearVelocity.y < 0 ? currentGravityScaleOnFall : baseGravity;
+            // --- NOVA FÍSICA DE GRAVIDADE (Jump Hang & Better Fall) ---
+
+            // 1. Está caindo?
+            if (rb.linearVelocity.y < 0)
+            {
+                rb.gravityScale = currentGravityScaleOnFall;
+            }
+            // 2. Está no topo do pulo? (Jump Hang)
+            // Se a velocidade vertical for pequena (perto de 0), reduzimos a gravidade para flutuar.
+            else if (Mathf.Abs(rb.linearVelocity.y) < jumpHangThreshold && !isGrounded)
+            {
+                rb.gravityScale = baseGravity * jumpHangGravityMult;
+            }
+            // 3. Está subindo (início do pulo)
+            else
+            {
+                rb.gravityScale = baseGravity;
+            }
         }
     }
 
@@ -756,18 +815,7 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
 
     private void UpdateDebugUI()
     {
-        if (stateCheckText != null)
-        {
-            Vector2 currentVelocity = rb.linearVelocity;
-            stateCheckText.text = $"Grounded: {CheckState(PlayerState.IsGrounded)}\n" +
-                                  $"WallSliding: {CheckState(PlayerState.IsWallSliding)}\n" +
-                                  $"TouchingWall: {CheckState(PlayerState.IsTouchingWall)}\n" +
-                                  $"Dashing: {CheckState(PlayerState.IsDashing)}\n" +
-                                  $"InParabola: {CheckState(PlayerState.IsInParabola)}\n" +
-                                  $"--- VELOCIDADE ---\n" +
-                                  $"X Speed: {currentVelocity.x:F2}\n" +
-                                  $"Y Speed: {currentVelocity.y:F2}";
-        }
+        // Debug UI foi removida conforme solicitado.
     }
 
     public bool CheckState(PlayerState state)
