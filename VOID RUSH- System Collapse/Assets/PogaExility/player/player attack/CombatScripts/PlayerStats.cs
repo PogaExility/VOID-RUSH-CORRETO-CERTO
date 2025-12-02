@@ -78,7 +78,15 @@ public class PlayerStats : MonoBehaviour
     }
     public void TakeDamage(float amount, Vector2 attackDirection, float incomingKnockbackPower)
     {
+        // 1. Checagem de Invencibilidade por tempo (Dano tomado anteriormente)
         if (isInvincible) return;
+
+        // 2. NOVA CHECAGEM: Imortalidade durante o Dash (I-Frames)
+        // Se estiver dando Dash ou WallDash, ignora o dano completamente.
+        if (movementScript != null && (movementScript.IsDashing() || movementScript.IsWallDashing()))
+        {
+            return;
+        }
 
         _currentHealth -= amount;
         if (_currentHealth < 0) _currentHealth = 0;
@@ -88,21 +96,14 @@ public class PlayerStats : MonoBehaviour
         if (_currentHealth > 0)
         {
             // --- INÍCIO DA LÓGICA DE KNOCKBACK DINÂMICO ---
-
-            // 1. Calcula a força final da repulsão (Força do Ataque - Resistência do Alvo)
             float finalForce = incomingKnockbackPower - knockbackResistance;
 
-            // 2. Só aplica o knockback se a força do ataque superar a resistência.
             if (finalForce > 0)
             {
-                // 3. Comanda o script de movimento para EXECUTAR a repulsão com a força calculada.
-                //    (A função ExecuteKnockback será criada no próximo passo).
                 movementScript.ExecuteKnockback(finalForce, attackDirection);
             }
-
             // --- FIM DA LÓGICA DE KNOCKBACK DINÂMICO ---
 
-            // A lógica de invencibilidade permanece a mesma.
             StartCoroutine(InvincibilityCoroutine());
         }
         else

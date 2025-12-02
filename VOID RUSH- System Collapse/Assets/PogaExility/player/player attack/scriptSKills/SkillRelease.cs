@@ -66,45 +66,68 @@ public class SkillRelease : MonoBehaviour
     {
         if (skill == null) return false;
 
-        // Primeiro, checamos o input. Se não houver input, não fazemos mais nada.
+        // 1. Checagem de Input
         if (!CheckKeyPress(skill)) return false;
 
-        // Se a tecla foi pressionada, AGORA sim começamos o debug.
+        // Debug de Input
         Debug.Log($"--- TENTANDO ATIVAR: {skill.skillName} (Input Recebido) ---");
 
+        // 2. Checagem de Cooldown
         if (skillCooldowns.ContainsKey(skill))
         {
             Debug.Log("<color=red>FALHA:</color> Skill está em cooldown.");
             return false;
         }
 
+        // 3. Checagem de Ação em Andamento (Evita spam ou sobreposição)
         if (currentActionCoroutine != null)
         {
             Debug.Log($"<color=red>FALHA:</color> Outra ação já está em execução.");
             return false;
         }
 
+        // 4. Checagem de Teclas de Cancelamento
         if (skill.cancelIfKeysHeld.Any(key => Input.GetKey(key)))
         {
             Debug.Log("<color=red>FALHA:</color> Uma tecla de cancelamento está sendo segurada.");
             return false;
         }
 
-        // Passamos 'true' para a função de debug
+        // 5. NOVA CHECAGEM: Energia
+        // Acessamos a EnergyBar através do PlayerController.
+        if (playerController != null && playerController.energyBar != null)
+        {
+            // Se a skill tem custo e não temos energia suficiente, falha.
+            if (skill.energyCost > 0 && !playerController.energyBar.HasEnoughEnergy(skill.energyCost))
+            {
+                Debug.Log($"<color=red>FALHA:</color> Energia insuficiente. Necessário: {skill.energyCost}");
+                return false;
+            }
+        }
+
+        // 6. Checagem de Condições de Estado (Chão, Ar, Parede, etc.)
         if (!CheckStateConditions(skill, true))
         {
-            // A própria função já vai logar a falha de estado
             return false;
         }
 
         Debug.Log("<color=green>SUCESSO:</color> Todas as condições foram atendidas. Executando ação.");
 
+        // 7. Execução e Consumo
         if (ExecuteAction(skill))
         {
+            // Aplica Cooldown
             if (skill.cooldownDuration > 0)
             {
                 skillCooldowns[skill] = skill.cooldownDuration;
             }
+
+            // APLICA CONSUMO DE ENERGIA AQUI
+            if (playerController != null && playerController.energyBar != null && skill.energyCost > 0)
+            {
+                playerController.energyBar.ConsumeEnergy(skill.energyCost);
+            }
+
             return true;
         }
 

@@ -12,6 +12,10 @@ public class CameraOverrideZone : MonoBehaviour
     private Collider2D zoneCollider;
     private Coroutine activeTransitionCoroutine;
 
+    // Cache para evitar FindObject pesado durante o jogo
+    private static CinemachineCamera cachedCamera;
+    private static CinemachineConfiner2D cachedConfiner;
+
     void Awake()
     {
         zoneCollider = GetComponent<Collider2D>();
@@ -22,18 +26,15 @@ public class CameraOverrideZone : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            CinemachineCamera virtualCamera = FindAnyObjectByType<CinemachineCamera>();
-            CinemachineConfiner2D confiner = FindAnyObjectByType<CinemachineConfiner2D>();
+            // Inicializa cache se necessário
+            if (cachedCamera == null) cachedCamera = FindAnyObjectByType<CinemachineCamera>();
+            if (cachedConfiner == null) cachedConfiner = FindAnyObjectByType<CinemachineConfiner2D>();
 
-            if (virtualCamera == null || confiner == null) return;
+            if (cachedCamera == null || cachedConfiner == null) return;
 
             if (activeTransitionCoroutine != null) StopCoroutine(activeTransitionCoroutine);
 
-            // Override temporário
-            confiner.BoundingShape2D = zoneCollider;
-            confiner.InvalidateBoundingShapeCache();
-
-            activeTransitionCoroutine = StartCoroutine(TransitionZoom(virtualCamera, targetOrthographicSize, transitionDuration));
+            activeTransitionCoroutine = StartCoroutine(TransitionSequence(cachedCamera, cachedConfiner));
         }
     }
 
@@ -41,19 +42,23 @@ public class CameraOverrideZone : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
+            if (activeTransitionCoroutine != null) StopCoroutine(activeTransitionCoroutine);
+
             // Procura a sala "mãe" onde o player está agora
             RoomBoundary parentRoom = FindParentRoomFor(other.transform);
 
             if (parentRoom != null)
             {
-                // Chama ActivateRoom diretamente para restaurar o estado correto
-                parentRoom.ActivateRoom(other);
+                // Devolve o controle para a sala grande
+                parentRoom.ActivateRoom(other.GetComponent<Collider2D>());
             }
         }
     }
 
     private RoomBoundary FindParentRoomFor(Transform playerTransform)
     {
+        // Nota: FindObjectsByType ainda é pesado, mas no Exit é menos crítico que no Enter.
+        // O ideal seria ter uma lista global gerenciada por um Manager, mas manteremos assim por enquanto.
         RoomBoundary[] allRooms = FindObjectsByType<RoomBoundary>(FindObjectsSortMode.None);
         foreach (var room in allRooms)
         {
@@ -67,18 +72,36 @@ public class CameraOverrideZone : MonoBehaviour
         return null;
     }
 
-    private IEnumerator TransitionZoom(CinemachineCamera cam, float targetSize, float duration)
+    private IEnumerator TransitionSequence(CinemachineCamera cam, CinemachineConfiner2D confiner)
     {
         float startSize = cam.Lens.OrthographicSize;
         float elapsedTime = 0f;
 
-        while (elapsedTime < duration)
+        // 1. DESATIVA O CONFINER (Para não puxar a câmera violentamente)
+        confiner.enabled = false;
+
+        // 2. TROCA O SHAPE
+        confiner.BoundingShape2D = zoneCollider;
+        confiner.InvalidateBoundingShapeCache();
+
+        // 3. FAZ O ZOOM E A TRANSIÇÃO
+        while (elapsedTime < transitionDuration)
         {
-            float progress = elapsedTime / duration;
-            cam.Lens.OrthographicSize = Mathf.Lerp(startSize, targetSize, progress);
+            float progress = elapsedTime / transitionDuration;
+            // Usando SmoothStep para ficar mais suave
+            float smoothProgress = Mathf.SmoothStep(0, 1, progress);
+
+            cam.Lens.OrthographicSize = Mathf.Lerp(startSize, targetOrthographicSize, smoothProgress);
+
             elapsedTime += Time.deltaTime;
             yield return null;
         }
-        cam.Lens.OrthographicSize = targetSize;
+
+        cam.Lens.OrthographicSize = targetOrthographicSize;
+
+        // 4. REATIVA O CONFINER (Agora que o zoom já ajustou)
+        confiner.enabled = true;
+
+        activeTransitionCoroutine = null;
     }
 }
