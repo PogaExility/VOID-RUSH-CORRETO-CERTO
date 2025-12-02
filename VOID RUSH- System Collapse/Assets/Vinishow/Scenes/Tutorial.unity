@@ -164,7 +164,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &11382601
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -375,7 +374,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &60092588
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -975,7 +973,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &144015560
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1522,7 +1519,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &240957077
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1783,7 +1779,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &283315582
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -2351,6 +2346,16 @@ Tilemap:
   m_GameObject: {fileID: 430293829}
   m_Enabled: 1
   m_Tiles:
+  - first: {x: 56, y: -49, z: 0}
+    second:
+      serializedVersion: 2
+      m_TileIndex: 1
+      m_TileSpriteIndex: 1
+      m_TileMatrixIndex: 0
+      m_TileColorIndex: 0
+      m_TileObjectToInstantiateIndex: 65535
+      dummyAlignment: 0
+      m_AllTileFlags: 1073741825
   - first: {x: 46, y: -28, z: 0}
     second:
       serializedVersion: 2
@@ -2665,15 +2670,15 @@ Tilemap:
   m_TileAssetArray:
   - m_RefCount: 31
     m_Data: {fileID: 11400000, guid: 5529a20f27c129d42aafedb166484b5a, type: 2}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
+  - m_RefCount: 1
+    m_Data: {fileID: 11400000, guid: 5d5c98d9bc37a8c4eb8b4897371d82e8, type: 2}
   m_TileSpriteArray:
   - m_RefCount: 31
     m_Data: {fileID: -1846804093, guid: e73ab70d3a604e54aab4fa3fde14cb27, type: 3}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
+  - m_RefCount: 1
+    m_Data: {fileID: 6882303124984309148, guid: 8b7bf3e6d6564ea4ca9ce5167372acd4, type: 3}
   m_TileMatrixArray:
-  - m_RefCount: 31
+  - m_RefCount: 32
     m_Data:
       e00: 1
       e01: 0
@@ -2692,13 +2697,13 @@ Tilemap:
       e32: 0
       e33: 1
   m_TileColorArray:
-  - m_RefCount: 31
+  - m_RefCount: 32
     m_Data: {r: 1, g: 1, b: 1, a: 1}
   m_TileObjectToInstantiateArray: []
   m_AnimationFrameRate: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Origin: {x: 0, y: -29, z: 0}
-  m_Size: {x: 67, y: 29, z: 1}
+  m_Origin: {x: 0, y: -49, z: 0}
+  m_Size: {x: 67, y: 49, z: 1}
   m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
   m_TileOrientation: 0
   m_TileOrientationMatrix:
@@ -2977,7 +2982,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &508674058
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -3559,7 +3563,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &574771986
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4115,7 +4118,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &700678594
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4227,7 +4229,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &701322325
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4325,7 +4326,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &729136302
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4820,7 +4820,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &790667491
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -5227,7 +5226,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &844055533
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -59735,7 +59733,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &939872150
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -60085,7 +60082,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &988726152
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -60524,7 +60520,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1165827702
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -60840,7 +60835,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1179468763
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -61222,7 +61216,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1223133050
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -61390,7 +61383,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1287255663
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -62574,7 +62566,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1376305987
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -62751,7 +62742,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1396390501
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -62972,7 +62962,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1415575744
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -63109,7 +63098,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1428299528
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -63469,7 +63457,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1495980709
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -128571,7 +128558,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1530868192
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -128762,7 +128748,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1534876855
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -129091,7 +129076,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1590579870
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -129279,7 +129263,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1657003868
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -129766,7 +129749,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1728145210
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -129952,7 +129934,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1737215141
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -130366,7 +130347,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1822669078
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -130549,7 +130529,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1840170313
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -131007,7 +130986,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1944790633
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -131174,7 +131152,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &1971650534
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -131638,7 +131615,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &2021500423
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -132139,7 +132115,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &2065125683
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -132236,7 +132211,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &2067537439
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -132343,7 +132317,6 @@ MonoBehaviour:
   roomPadding: 1.1
   transitionDuration: 0
   maxTransitionZoom: 10.5
-  transitionCooldown: 0.05
 --- !u!61 &2117769557
 BoxCollider2D:
   m_ObjectHideFlags: 0

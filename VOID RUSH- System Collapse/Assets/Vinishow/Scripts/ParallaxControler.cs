@@ -32,7 +32,7 @@ public class ParallaxController : MonoBehaviour
         while (cinemachineBrain == null)
         {
             // MODIFICAÇÃO PRINCIPAL AQUI: Procuramos pelo componente, não pela tag.
-            cinemachineBrain = FindObjectOfType<CinemachineBrain>();
+            cinemachineBrain = FindFirstObjectByType<CinemachineBrain>();
 
             // Se não encontrou, espera até o próximo frame.
             if (cinemachineBrain == null)

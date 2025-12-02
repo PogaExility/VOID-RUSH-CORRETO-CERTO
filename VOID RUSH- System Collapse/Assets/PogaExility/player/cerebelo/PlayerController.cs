@@ -14,7 +14,7 @@ public class PlayerController : MonoBehaviour
     public GameObject inventoryPanel;
     public GameObject combatHUDPanel;
     public EnergyBarController energyBar;
- 
+
 
     [Header("Referências de Movimento e Combate")]
     public SkillRelease skillRelease;
@@ -38,7 +38,7 @@ public class PlayerController : MonoBehaviour
     [Header("Configuração de Áudio")]
     [Tooltip("Tempo em segundos entre cada som de passo (ex: 0.35 para caminhada normal).")]
     public float footstepInterval = 0.35f;
-    private float footstepTimer = 0f;
+    // LINHA REMOVIDA: private float footstepTimer = 0f;
 
     // Estados Privados
     private bool attackBuffered = false;

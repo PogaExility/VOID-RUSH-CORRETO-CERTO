@@ -1406,9 +1406,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animatorController: {fileID: 4961355594823665309}
-  playerController: {fileID: 0}
+  playerController: {fileID: 8298078936381974819}
   mainCamera: {fileID: 8611651378308214009, guid: 1b9ec4c7c22f1644784e88ace077e027, type: 3}
-  stateCheckText: {fileID: 0}
   collisionLayer:
     serializedVersion: 2
     m_Bits: 32896
@@ -1418,10 +1417,14 @@ MonoBehaviour:
   moveSpeed: 6
   acceleration: 50
   deceleration: 60
+  airAccelerationMult: 0.65
+  turnAcceleration: 120
   jumpForce: 12
   gravityScaleOnFall: 1.6
   baseGravity: 1
   coyoteTime: 0.1
+  jumpHangThreshold: 1
+  jumpHangGravityMult: 0.5
   wallSlideSpeed: 2
   wallJumpForce: {x: 10, y: 12}
   wallCheckDistance: 0.1
@@ -1433,8 +1436,8 @@ MonoBehaviour:
   climbingSpeed: 5
   ladderLayer:
     serializedVersion: 2
-    m_Bits: 0
-  soundEmitterPrefab: {fileID: 0}
+    m_Bits: 16384
+  soundEmitterPrefab: {fileID: 8103173577394873407}
 --- !u!95 &6689212545231447408
 Animator:
   serializedVersion: 7
