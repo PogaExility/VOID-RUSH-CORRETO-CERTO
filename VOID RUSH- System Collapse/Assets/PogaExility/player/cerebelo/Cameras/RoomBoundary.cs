@@ -5,214 +5,158 @@ using System.Collections;
 [RequireComponent(typeof(Collider2D))]
 public class RoomBoundary : MonoBehaviour
 {
-    [Header("Modo da Sala")]
+    [Header("Settings")]
+    [Tooltip("Se true, trava o zoom no tamanho máximo da sala. Se false, usa o Target Size (respeitando o limite).")]
     [SerializeField] private bool showEntireRoom = false;
 
-    [Header("Configurações de Câmera")]
-    [Tooltip("Zoom padrão ao seguir o player.")]
+    [Tooltip("Tamanho de Zoom ideal. Será ignorado se a sala for menor que isso.")]
     [SerializeField] private float targetOrthographicSize = 9f;
-    [Tooltip("Margem para o modo Sala Inteira.")]
-    [SerializeField] private float roomPadding = 1.1f;
 
-    [Header("Configurações de Transição (Turbo)")]
-    [Tooltip("Duração total da transição.")]
+    [Tooltip("Margem de respiro. 0.9 = 90% do tamanho da sala (10% de folga para mover).")]
+    [Range(0.5f, 0.99f)]
+    [SerializeField] private float roomPadding = 0.95f; // Reduzi levemente para garantir movimento
+
+    [Tooltip("Tempo da transição.")]
     [SerializeField] private float transitionDuration = 0.25f;
 
-    [Tooltip("Pico do zoom out. Deve ser maior que o Zoom padrão.")]
+    [Tooltip("Tentativa de Zoom Out. Será cortado matematicamente se a sala for apertada.")]
     [SerializeField] private float maxTransitionZoom = 10.5f;
 
-    // Referências internas
     private Collider2D roomCollider;
-    private static Coroutine activeTransitionCoroutine;
+    private static Coroutine activeRoutine;
 
-    // --- LÓGICA DE GERENCIAMENTO DE SALAS ---
-    private static RoomBoundary currentActiveRoom = null;
-    private static RoomBoundary nextPotentialRoom = null;
-
-    // --- CACHE DE COMPONENTES DO CINEMACHINE ---
-    // Static para que todas as salas compartilhem as mesmas referências da câmera principal
-    private static CinemachineCamera cachedCamera;
+    // Cache
+    private static CinemachineCamera cachedCam;
     private static CinemachineConfiner2D cachedConfiner;
 
-    // Proxy para o modo "Sala Inteira" (Centraliza a câmera)
-    private static Transform _proxyTarget;
-    private static Transform ProxyTarget
-    {
-        get
-        {
-            if (_proxyTarget == null)
-            {
-                GameObject proxyGO = new GameObject("CameraProxyTarget");
-                _proxyTarget = proxyGO.transform;
-            }
-            return _proxyTarget;
-        }
-    }
+    // Lógica de Estado
+    private static RoomBoundary currentRoom = null;
+    private static RoomBoundary nextRoom = null;
 
     void Awake()
     {
         roomCollider = GetComponent<Collider2D>();
         if (!roomCollider.isTrigger)
-            Debug.LogWarning($"RoomBoundary em '{gameObject.name}' precisa de um Collider Trigger.", gameObject);
-    }
-
-    void Start()
-    {
-        // Tenta encontrar a câmera e o confiner no início do jogo para evitar lag depois
-        if (cachedCamera == null) cachedCamera = FindAnyObjectByType<CinemachineCamera>();
-        if (cachedConfiner == null) cachedConfiner = FindAnyObjectByType<CinemachineConfiner2D>();
+            Debug.LogError($"[RoomBoundary] O Collider de {name} precisa ser Trigger!", gameObject);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
-        {
-            // Se não há sala ativa, esta vira a ativa
-            if (currentActiveRoom == null)
-            {
-                ActivateRoom(other);
-            }
-            // Se já tem sala ativa, esta é a próxima em potencial
-            else if (this != currentActiveRoom)
-            {
-                nextPotentialRoom = this;
-            }
-        }
+        if (!other.CompareTag("Player")) return;
+
+        if (currentRoom == null) ActivateRoom(other);
+        else if (this != currentRoom) nextRoom = this;
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
-        {
-            // Se saiu da sala atual...
-            if (this == currentActiveRoom)
-            {
-                // ...e tem uma próxima engatilhada, ativa a próxima
-                if (nextPotentialRoom != null)
-                {
-                    nextPotentialRoom.ActivateRoom(other);
-                }
-            }
-            // Se saiu da sala potencial, cancela a previsão
-            else if (this == nextPotentialRoom)
-            {
-                nextPotentialRoom = null;
-            }
-        }
+        if (!other.CompareTag("Player")) return;
+
+        if (this == currentRoom && nextRoom != null)
+            nextRoom.ActivateRoom(other);
+        else if (this == nextRoom)
+            nextRoom = null;
     }
 
-    public void ActivateRoom(Collider2D playerCollider)
+    public void ActivateRoom(Collider2D player)
     {
-        currentActiveRoom = this;
-        nextPotentialRoom = null;
+        currentRoom = this;
+        nextRoom = null;
 
-        // Segurança: Garante as referências caso o Start não tenha pego (ex: Player spawnou depois)
-        if (cachedCamera == null) cachedCamera = FindAnyObjectByType<CinemachineCamera>();
+        if (cachedCam == null) cachedCam = FindAnyObjectByType<CinemachineCamera>();
         if (cachedConfiner == null) cachedConfiner = FindAnyObjectByType<CinemachineConfiner2D>();
 
-        if (cachedCamera == null) return;
+        if (cachedCam == null || cachedConfiner == null) return;
 
-        // Interrompe transição anterior se houver
-        if (activeTransitionCoroutine != null) StopCoroutine(activeTransitionCoroutine);
-
-        // Inicia a nova transição
-        activeTransitionCoroutine = StartCoroutine(StagedTransition(cachedCamera, playerCollider.transform));
+        if (activeRoutine != null) StopCoroutine(activeRoutine);
+        activeRoutine = StartCoroutine(TransitionRoutine(player.transform));
     }
 
-    private IEnumerator StagedTransition(CinemachineCamera cam, Transform playerTransform)
+    private IEnumerator TransitionRoutine(Transform playerTarget)
     {
-        float startSize = cam.Lens.OrthographicSize;
-        float halfDuration = transitionDuration / 2f;
-        float elapsedTime = 0f;
+        float startZoom = cachedCam.Lens.OrthographicSize;
+        float timer = 0f;
+        float halfTime = transitionDuration * 0.5f;
 
-        // =================================================================
-        // FASE 1: ZOOM OUT
-        // =================================================================
-        // Abre a câmera para dar "respiro" na troca de colisor
-        while (elapsedTime < halfDuration)
+        // 1. CÁLCULO RIGOROSO DOS LIMITES
+        // Pega as extensões (metade da largura/altura) do colisor da sala
+        Bounds b = roomCollider.bounds;
+        float roomHalfHeight = b.extents.y;
+
+        // Calcula o Aspect Ratio (evita erros se for 0)
+        float aspect = cachedCam.Lens.Aspect;
+        if (aspect < 0.01f) aspect = (float)Screen.width / Screen.height;
+
+        // Calcula a altura máxima equivalente baseada na largura da sala
+        float roomHalfWidthAsHeight = b.extents.x / aspect;
+
+        // O Limite Físico é o menor valor. Se a câmera passar disso, ela sai da sala.
+        float physicalLimit = Mathf.Min(roomHalfHeight, roomHalfWidthAsHeight);
+
+        // 2. APLICAÇÃO DA FOLGA (CRUCIAL PARA O MOVIMENTO)
+        // Multiplicamos pelo padding (ex: 0.95). Isso garante que a câmera seja 
+        // 5% menor que a sala, permitindo que ela se mova para seguir o player.
+        float usableMaxZoom = physicalLimit * roomPadding;
+
+        // 3. DEFINIÇÃO DOS ALVOS
+        // Se showEntireRoom for true, usamos o máximo permitido. 
+        // Se for false, usamos o target desejado, mas CEIFADO pelo máximo permitido.
+        float finalTargetZoom = showEntireRoom ? usableMaxZoom : Mathf.Min(targetOrthographicSize, usableMaxZoom);
+
+        // Define o pico da transição. Ele tenta ir até o maxTransitionZoom, 
+        // mas nunca pode exceder o usableMaxZoom desta sala.
+        float peakZoom = Mathf.Min(maxTransitionZoom, usableMaxZoom);
+
+        // LÓGICA DE SEGURANÇA:
+        // Se a câmera atual (startZoom) for maior que o que a nova sala aguenta (usableMaxZoom),
+        // o "Pico" deve ser o usableMaxZoom. Isso força a câmera a encolher na Fase 1 
+        // antes de ligarmos o Confiner, evitando que ela trave no centro.
+        if (startZoom > usableMaxZoom)
         {
-            float progress = Mathf.SmoothStep(0, 1, elapsedTime / halfDuration);
-            cam.Lens.OrthographicSize = Mathf.Lerp(startSize, maxTransitionZoom, progress);
-            elapsedTime += Time.deltaTime;
+            peakZoom = usableMaxZoom;
+        }
+
+        // ====================================================================
+        // FASE 1: AJUSTE INICIAL (Zoom para o Pico)
+        // ====================================================================
+        while (timer < halfTime)
+        {
+            float t = Mathf.SmoothStep(0f, 1f, timer / halfTime);
+            cachedCam.Lens.OrthographicSize = Mathf.Lerp(startZoom, peakZoom, t);
+            timer += Time.deltaTime;
             yield return null;
         }
-        cam.Lens.OrthographicSize = maxTransitionZoom;
+        cachedCam.Lens.OrthographicSize = peakZoom;
 
-        // =================================================================
-        // TROCA DE CONTEXTO (NO PICO DO ZOOM)
-        // =================================================================
+        // ====================================================================
+        // FASE 2: TROCA DE CONTEXTO
+        // ====================================================================
+        // Agora que o zoom está seguro (menor que a sala), trocamos o Confiner.
+        cachedConfiner.BoundingShape2D = roomCollider;
+        cachedConfiner.InvalidateBoundingShapeCache();
 
-        // 1. Aplica o novo formato da sala ao Confiner
-        if (cachedConfiner != null)
+        // Define o player como alvo imediatamente
+        cachedCam.Follow = playerTarget;
+
+        // Força o Cinemachine a ignorar o amortecimento anterior e pular para o novo cálculo
+        // Isso ajuda a destravar do centro se houve uma troca brusca
+        cachedCam.PreviousStateIsValid = false;
+
+        yield return null; // Espera um frame para a física processar
+
+        // ====================================================================
+        // FASE 3: AJUSTE FINAL (Zoom para o Alvo)
+        // ====================================================================
+        timer = 0f;
+        while (timer < halfTime)
         {
-            cachedConfiner.BoundingShape2D = roomCollider;
-            cachedConfiner.InvalidateBoundingShapeCache(); // Importante: Força o recálculo imediato
-        }
-
-        // 2. Define o alvo da câmera
-        float finalTargetSize = showEntireRoom ? CalculateOrthographicSize() : targetOrthographicSize;
-        Vector3 proxyStartPos = playerTransform.position;
-
-        if (showEntireRoom)
-        {
-            cam.Follow = ProxyTarget;
-            // Começa o proxy na posição do player para suavizar o movimento até o centro
-            ProxyTarget.position = proxyStartPos;
-        }
-        else
-        {
-            cam.Follow = playerTransform;
-        }
-
-        // Aguarda um frame para o Cinemachine processar a mudança de shape
-        yield return null;
-
-        // =================================================================
-        // FASE 2: ZOOM IN
-        // =================================================================
-        // Enquanto fecha o zoom, o Confiner vai ajustar a câmera aos novos limites
-        elapsedTime = 0f;
-        while (elapsedTime < halfDuration)
-        {
-            float progress = Mathf.SmoothStep(0, 1, elapsedTime / halfDuration);
-
-            // Zoom In
-            cam.Lens.OrthographicSize = Mathf.Lerp(maxTransitionZoom, finalTargetSize, progress);
-
-            // Se for sala inteira, move o foco para o centro
-            if (showEntireRoom)
-            {
-                ProxyTarget.position = Vector3.Lerp(proxyStartPos, roomCollider.bounds.center, progress);
-            }
-
-            elapsedTime += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, timer / halfTime);
+            cachedCam.Lens.OrthographicSize = Mathf.Lerp(peakZoom, finalTargetZoom, t);
+            timer += Time.deltaTime;
             yield return null;
         }
+        cachedCam.Lens.OrthographicSize = finalTargetZoom;
 
-        // Finalização exata
-        cam.Lens.OrthographicSize = finalTargetSize;
-        if (showEntireRoom) ProxyTarget.position = roomCollider.bounds.center;
-
-        activeTransitionCoroutine = null;
-    }
-
-    private float CalculateOrthographicSize()
-    {
-        // Calcula o tamanho necessário para mostrar a sala inteira baseada na proporção da tela
-        float screenAspect = (float)Screen.width / Screen.height;
-        float roomAspect = roomCollider.bounds.size.x / roomCollider.bounds.size.y;
-
-        float size;
-        if (roomAspect > screenAspect)
-        {
-            // Sala mais larga que a tela: ajusta pela largura
-            size = (roomCollider.bounds.size.x / screenAspect) * 0.5f;
-        }
-        else
-        {
-            // Sala mais alta que a tela: ajusta pela altura
-            size = roomCollider.bounds.size.y * 0.5f;
-        }
-        return size * roomPadding;
+        activeRoutine = null;
     }
 }

@@ -4,12 +4,15 @@ using Unity.Cinemachine;
 [RequireComponent(typeof(CinemachineCamera), typeof(CinemachineConfiner2D))]
 public class CinemachineTargetSetter : MonoBehaviour
 {
+    [Header("Configurações de Rastreamento")]
+    [Tooltip("Tag usada para identificar o Player na cena.")]
     [SerializeField] private string playerTag = "Player";
 
-    // Intervalo para verificar se o player saiu dos limites (segurança contra bugs de colisão/respawn)
+    [Tooltip("Intervalo (em segundos) entre as verificações de segurança. Valores menores são mais precisos, mas gastam mais CPU.")]
     [SerializeField] private float checkInterval = 0.5f;
-    private float nextCheckTime = 0f;
 
+    // Estado interno
+    private float nextCheckTime = 0f;
     private CinemachineCamera virtualCamera;
     private CinemachineConfiner2D confiner;
 
@@ -17,30 +20,33 @@ public class CinemachineTargetSetter : MonoBehaviour
     {
         virtualCamera = GetComponent<CinemachineCamera>();
         confiner = GetComponent<CinemachineConfiner2D>();
+
+        if (virtualCamera == null) Debug.LogError("[TargetSetter] CinemachineCamera não encontrado!", this);
+        if (confiner == null) Debug.LogError("[TargetSetter] CinemachineConfiner2D não encontrado!", this);
     }
 
     void Start()
     {
+        // Tenta configurar o player imediatamente no início da cena
         FindAndSetupPlayer();
     }
 
     void Update()
     {
-        // Se o confiner estiver desativado, significa que uma transição de sala está ocorrendo.
-        // NÃO fazemos nada para não interromper a lógica do RoomBoundary/OverrideZone.
-        if (confiner != null && !confiner.enabled) return;
-
-        // CASO 1: Player morreu/foi destruído (perdeu o Follow)
+        // VERIFICAÇÃO 1: O Player sumiu?
+        // Isso acontece em respawns, trocas de cena ou destruição do objeto.
         if (virtualCamera.Follow == null)
         {
             FindAndSetupPlayer();
+            return;
         }
 
-        // CASO 2: Verificação periódica.
-        if (virtualCamera.Follow != null && Time.time >= nextCheckTime)
+        // VERIFICAÇÃO 2: O Player saiu da área permitida?
+        // Executa periodicamente para economizar processamento.
+        if (Time.time >= nextCheckTime)
         {
             nextCheckTime = Time.time + checkInterval;
-            EnsurePlayerIsInsideBounds();
+            ValidatePlayerBounds();
         }
     }
 
@@ -50,41 +56,62 @@ public class CinemachineTargetSetter : MonoBehaviour
 
         if (playerTarget != null)
         {
+            // Reconecta a câmera ao player
             virtualCamera.Follow = playerTarget.transform;
-            // Força a busca pela sala onde o player nasceu/renasceu
-            FindRoomForPlayer(playerTarget);
+
+            // Como acabamos de achar o player (talvez num respawn),
+            // não sabemos em que sala ele está. Forçamos uma busca imediata.
+            ForceRoomUpdate(playerTarget);
         }
     }
 
-    private void EnsurePlayerIsInsideBounds()
+    private void ValidatePlayerBounds()
     {
-        // Se o confiner não tem forma definida, ou se o player saiu da forma atual...
-        if (confiner.BoundingShape2D == null || !confiner.BoundingShape2D.bounds.Contains(virtualCamera.Follow.position))
+        // Se o Confiner não tem nenhum colisor definido, o sistema está quebrado.
+        // Precisamos achar uma sala urgentemente.
+        if (confiner.BoundingShape2D == null)
         {
-            // ...tenta achar a sala correta novamente.
-            FindRoomForPlayer(virtualCamera.Follow.gameObject);
+            ForceRoomUpdate(virtualCamera.Follow.gameObject);
+            return;
+        }
+
+        // Se o Confiner tem forma, verificamos se o player ainda está dentro dela.
+        // Bounds.Contains é uma verificação rápida (caixa retangular).
+        // Se o player saiu (bug de colisão, teleporte), forçamos a atualização.
+        if (!confiner.BoundingShape2D.bounds.Contains(virtualCamera.Follow.position))
+        {
+            // Debug.Log("[TargetSetter] Player fora dos limites! Buscando nova sala...");
+            ForceRoomUpdate(virtualCamera.Follow.gameObject);
         }
     }
 
-    private void FindRoomForPlayer(GameObject player)
+    private void ForceRoomUpdate(GameObject player)
     {
         Collider2D playerCollider = player.GetComponent<Collider2D>();
+
+        // Sem collider no player, não dá para saber onde ele está.
         if (playerCollider == null) return;
 
-        // Procura em todas as salas da cena
-        // Nota: FindObjectsByType é pesado, mas aqui roda apenas a cada 0.5s ou em emergências.
+        // Busca todas as salas (RoomBoundary) existentes na cena.
+        // NOTA: FindObjectsByType pode ser pesado se houverem milhares de objetos,
+        // mas como este método roda apenas em emergências (respawn/erro), é aceitável.
         RoomBoundary[] allRooms = FindObjectsByType<RoomBoundary>(FindObjectsSortMode.None);
 
         foreach (var room in allRooms)
         {
             Collider2D roomCol = room.GetComponent<Collider2D>();
 
-            // Se o player estiver dentro dos limites desta sala
-            if (roomCol != null && roomCol.bounds.Contains(player.transform.position))
+            // Ignora salas mal configuradas
+            if (roomCol == null) continue;
+
+            // Verifica se a posição do player está dentro desta sala específica
+            if (roomCol.bounds.Contains(player.transform.position))
             {
-                // Reativa a sala. A sala vai lidar com o Zoom/Transição se necessário.
+                // Encontramos a sala correta!
+                // Chamamos ActivateRoom para que o RoomBoundary configure
+                // o Zoom, o Confiner e os limites matemáticos corretamente.
                 room.ActivateRoom(playerCollider);
-                return;
+                return; // Encerra o loop, trabalho feito.
             }
         }
     }
