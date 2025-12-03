@@ -15,6 +15,9 @@ public class CameraOverrideZone : MonoBehaviour
     [Tooltip("Duração total da transição.")]
     [SerializeField] private float transitionDuration = 0.5f;
 
+    [Tooltip("Teto MÁXIMO absoluto. O zoom nunca passará deste valor, mesmo que a zona seja enorme.")]
+    [SerializeField] private float absoluteMaxZoom = 14f;
+
     private Collider2D zoneCollider;
     private Coroutine activeTransitionCoroutine;
 
@@ -84,32 +87,44 @@ public class CameraOverrideZone : MonoBehaviour
         float halfDuration = transitionDuration / 2f;
         float elapsedTime = 0f;
 
-        // 1. MATEMÁTICA: CALCULA O LIMITE FÍSICO DA ZONA
-        // Descobre o tamanho máximo que a câmera pode ter aqui dentro
-        float aspect = cam.Lens.Aspect > 0 ? cam.Lens.Aspect : 1.77f;
+        // --- 1. MATEMÁTICA BLINDADA (Igual ao RoomBoundary) ---
+
+        // Pega Aspect Ratio seguro
+        float aspect = cam.Lens.Aspect;
+        if (aspect < 0.01f) aspect = (float)Screen.width / Screen.height;
+
+        // Calcula limites físicos (Metade do tamanho)
         Bounds b = zoneCollider.bounds;
-        float heightLimit = b.size.y * 0.5f;
-        float widthLimit = (b.size.x / aspect) * 0.5f;
+        float zoneHalfHeight = b.extents.y;
+        float zoneHalfWidthAsHeight = b.extents.x / aspect;
 
-        // O limite absoluto é a menor dimensão (para não vazar nem em cima nem dos lados)
-        float absoluteLimit = Mathf.Min(heightLimit, widthLimit);
+        // Limite Físico Absoluto (Menor dimensão)
+        float physicalLimit = Mathf.Min(zoneHalfHeight, zoneHalfWidthAsHeight);
 
-        // 2. DEFINE ALVOS SEGUROS
-        // O pico do zoom nunca pode ser maior que o limite da zona
-        float safePeak = Mathf.Min(maxTransitionZoom, absoluteLimit);
+        // Limite Utilizável:
+        // É o menor valor entre: (Limite Físico com 1% de folga) E (Teto Absoluto configurado)
+        float usableMaxZoom = Mathf.Min(physicalLimit * 0.99f, absoluteMaxZoom);
 
-        // O alvo final também não (com 1% de margem de segurança para não ver o "vazio")
-        float safeTarget = Mathf.Min(targetOrthographicSize, absoluteLimit * 0.99f);
+        // --- 2. DEFINIÇÃO DE ALVOS ---
 
-        // Se a câmera atual já for maior que a zona (ex: entrando de uma sala grande para um túnel),
-        // o pico deve ser imediatamente o limite da zona para evitar glitch visual.
-        if (startSize > absoluteLimit) safePeak = absoluteLimit;
+        // Alvo Final: O que você quer (5), mas nunca maior que o Usável
+        float safeTarget = Mathf.Min(targetOrthographicSize, usableMaxZoom);
 
-        // FASE 1: TRANSIÇÃO ATÉ O PICO
+        // Pico da Transição: Tenta ir ao máximo (10.5), mas nunca maior que o Usável
+        float safePeak = Mathf.Min(maxTransitionZoom, usableMaxZoom);
+
+        // Correção de Entrada: Se a câmera atual já é maior que a zona permite,
+        // o pico TEM que ser o limite da zona para forçar encolhimento imediato.
+        if (startSize > usableMaxZoom)
+        {
+            safePeak = usableMaxZoom;
+        }
+
+        // --- FASE 1: TRANSIÇÃO PARA O PICO ---
         while (elapsedTime < halfDuration)
         {
-            float progress = Mathf.SmoothStep(0, 1, elapsedTime / halfDuration);
-            cam.Lens.OrthographicSize = Mathf.Lerp(startSize, safePeak, progress);
+            float t = Mathf.SmoothStep(0, 1, elapsedTime / halfDuration);
+            cam.Lens.OrthographicSize = Mathf.Lerp(startSize, safePeak, t);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
@@ -119,15 +134,17 @@ public class CameraOverrideZone : MonoBehaviour
         confiner.BoundingShape2D = zoneCollider;
         confiner.InvalidateBoundingShapeCache();
 
-        // Espera um frame para o Cinemachine processar a troca
-        yield return null;
+        // Reseta amortecimento para evitar drift
+        cam.PreviousStateIsValid = false;
 
-        // FASE 2: AJUSTE FINAL (Zoom para o tamanho alvo seguro)
+        yield return null; // Frame de respiro
+
+        // --- FASE 2: AJUSTE FINAL ---
         elapsedTime = 0f;
         while (elapsedTime < halfDuration)
         {
-            float progress = Mathf.SmoothStep(0, 1, elapsedTime / halfDuration);
-            cam.Lens.OrthographicSize = Mathf.Lerp(safePeak, safeTarget, progress);
+            float t = Mathf.SmoothStep(0, 1, elapsedTime / halfDuration);
+            cam.Lens.OrthographicSize = Mathf.Lerp(safePeak, safeTarget, t);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
