@@ -17,72 +17,67 @@ public class RangedWeapon : WeaponBase
         base.Initialize(data, savedAmmo);
         CurrentAmmo = (savedAmmo == -1) ? weaponData.magazineSize : savedAmmo;
     }
-      // Função `Attack` alterada para evitar a duplicação de prefabs de pólvora.
+    // Função `Attack` alterada para evitar a duplicação de prefabs de pólvora.
+    // Função Attack corrigida para instanciar solto no mundo
     public override void Attack()
     {
         if (Time.time < lastAttackTime + weaponData.attackRate || isReloading) return;
-        
+
         lastAttackTime = Time.time;
 
-        // --- ADIÇÃO: LÓGICA PARA TOCAR O SOM DO TIRO ---
-        // Pega a referência do AudioSource do jogador através do WeaponHandler.
         var audioSource = WeaponHandler.Instance.PlayerAudioSource;
-        // Se a arma tem um som de tiro definido e o AudioSource foi encontrado...
         if (weaponData.shotSound != null && audioSource != null)
         {
-            // ...toca o som.
             audioSource.PlayOneShot(weaponData.shotSound);
         }
-        // --- FIM DA ADIÇÃO ---
 
-        // --- Recoil acontece em todos os tiros ---
         if (recoilCoroutine != null) StopCoroutine(recoilCoroutine);
         recoilCoroutine = StartCoroutine(RecoilCoroutine());
-        
-        // --- Lógica de Disparo e Efeitos Visuais ---
+
         if (CurrentAmmo > 0)
         {
-            // Efeito visual de pólvora SÓ para o tiro com bala.
             if (weaponData.gunpowderPrefab != null)
             {
-                Vector3 spawnPosition = muzzlePoint.position + (muzzlePoint.right * weaponData.gunpowderSpawnOffset);
-                GameObject gunpowderGO = Instantiate(weaponData.gunpowderPrefab, spawnPosition, muzzlePoint.rotation);
-                gunpowderGO.transform.SetParent(null); // Desvincula para não herdar escala/movimento
+                // MUDANÇA: Instanciamos usando a rotação do muzzle, mas SEM PARENT (null no final não é necessário pois essa sobrecarga já é world space)
+                // A posição inicial não importa tanto pois o Initialize vai corrigir no mesmo frame via UpdatePositionAndRotation
+                GameObject gunpowderGO = Instantiate(weaponData.gunpowderPrefab, muzzlePoint.position, muzzlePoint.rotation);
+
+                GunpowderExplosion script = gunpowderGO.GetComponent<GunpowderExplosion>();
+                if (script != null)
+                {
+                    // Enviamos os dados e o Initialize já vai posicionar corretamente usando o TransformPoint
+                    script.Initialize(0, 0, 0, RangedKnockbackDirection.Frente, Vector2.zero, muzzlePoint, weaponData.gunpowderSpawnOffset);
+                }
             }
             FireBullet();
         }
         else
         {
-            // O Ataque de Desespero instancia seu PRÓPRIO prefab, que conterá la lógica de dano.
             DesperationAttack();
         }
     }
 
-    // Função `DesperationAttack` alterada para enviar a direção do cano da arma.
+    // Função DesperationAttack corrigida
     private void DesperationAttack()
     {
         Debug.Log("Ataque de curto alcance sem munição!");
 
         if (weaponData.gunpowderPrefab != null)
         {
-            // --- LÓGICA DE POSICIONAMENTO ADICIONADA AQUI ---
-            // Calcula a posição de spawn com o offset, igual ao tiro normal.
-            Vector3 spawnPosition = muzzlePoint.position + (muzzlePoint.right * weaponData.gunpowderSpawnOffset);
-
-            // Instancia o prefab na nova posição calculada.
-            GameObject explosionGO = Instantiate(weaponData.gunpowderPrefab, spawnPosition, muzzlePoint.rotation);
-            // --- FIM DA MUDANÇA ---
+            // Instancia no lugar do muzzle
+            GameObject explosionGO = Instantiate(weaponData.gunpowderPrefab, muzzlePoint.position, muzzlePoint.rotation);
 
             GunpowderExplosion explosionScript = explosionGO.GetComponent<GunpowderExplosion>();
             if (explosionScript != null)
             {
-                // O resto da função permanece igual.
                 explosionScript.Initialize(
                     weaponData.powderDamage,
                     weaponData.powderRange,
                     weaponData.powderKnockback,
                     weaponData.powderKnockbackDirection,
-                    muzzlePoint.right
+                    muzzlePoint.right,
+                    muzzlePoint,
+                    weaponData.gunpowderSpawnOffset
                 );
             }
         }

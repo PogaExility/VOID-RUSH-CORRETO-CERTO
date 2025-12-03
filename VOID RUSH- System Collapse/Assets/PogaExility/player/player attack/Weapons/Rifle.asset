@@ -36,7 +36,7 @@ MonoBehaviour:
   powderKnockbackDirection: 0
   acceptedAmmo:
   - {fileID: 11400000, guid: 0121d8d5195f0124da361bb77420f161, type: 2}
-  gunpowderSpawnOffset: 0.5
+  gunpowderSpawnOffset: 30
   bulletPrefab: {fileID: 5714271926393328017, guid: 2887cfb781ee241468aad215fb9e7351, type: 3}
   bulletDamage: 10
   bulletSpeed: 20

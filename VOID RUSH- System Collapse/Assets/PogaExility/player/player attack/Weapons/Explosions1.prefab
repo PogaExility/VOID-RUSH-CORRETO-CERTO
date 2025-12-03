@@ -31,7 +31,7 @@ Transform:
   m_GameObject: {fileID: 4850390941570321052}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.087, y: -10.026, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -106,7 +106,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 1024
+    m_Bits: 64
   explosionSound: {fileID: 8300000, guid: fab1a00c6a5d97c40a927c33c7c87da2, type: 3}
   explosionVolume: 2
   explosionPitch: 3
