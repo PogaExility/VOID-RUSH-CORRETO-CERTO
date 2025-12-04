@@ -8,9 +8,9 @@ public class SO_EnemyStats : ScriptableObject
     public float maxHealth = 100f;
 
     [Header("--- Efeitos Visuais (VFX) ---")]
-    public GameObject hitVFX;         // Sangue/Faísca ao tomar dano
-    public GameObject deathVFX;       // Fumaça/Explosão pequena ao morrer
-    public GameObject meleeAttackVFX; // Faísca quando ele soca/bate
+    public GameObject hitVFX;
+    public GameObject deathVFX;
+    public GameObject meleeAttackVFX;
 
     [Header("--- Movimento ---")]
     public float patrolSpeed = 2f;
@@ -26,8 +26,14 @@ public class SO_EnemyStats : ScriptableObject
     public float patrolScanSpeed = 2f;
 
     [Header("--- Sentidos ---")]
-    public float visionRange = 10f;
-    [Range(0, 360)] public float visionAngle = 110f;
+    public float visionRange = 10f; // Alcance do Cone
+
+    // --- NOVO: Visão em Área (Proximidade) ---
+    [Tooltip("Se o player entrar nesse raio, é detectado independente do ângulo ou paredes.")]
+    public float proximityDetectionRange = 3f;
+    // ----------------------------------------
+
+    [Range(0, 360)] public float visionAngle = 110f; // Ângulo do Cone
     public float hearingRange = 15f;
     public float memoryDuration = 5f;
     public LayerMask targetLayer;
@@ -41,13 +47,17 @@ public class SO_EnemyStats : ScriptableObject
 
     public float damage = 10f;
     public float knockbackPower = 10f;
+    public bool isImmuneToKnockback = false;
+    [Tooltip("Quanto de força é subtraída do empurrão recebido.")]
+    public float knockbackResistance = 0f;
     public bool canMoveWhileAttacking = false;
 
     [Header("--- Modo Kamikaze ---")]
     public bool isExploder = false;
     public float explosionRadius = 3f;
+    public float explosionDamage = 50f;
     public float explosionFuseTime = 1.5f;
-    public GameObject explosionVFX; // Explosão GRANDE do Kamikaze
+    public GameObject explosionVFX;
 
     [Header("--- Melee ---")]
     public Vector2 hitboxSize = new Vector2(1f, 1f);
@@ -58,11 +68,11 @@ public class SO_EnemyStats : ScriptableObject
     public float projectileSpeed = 15f;
 
     [Header("--- Áudio (SFX) ---")]
-    public AudioClip idleSound;      // Som ambiente/respiração (opcional)
-    public AudioClip[] footstepSounds; // Lista de passos para variar
-    public AudioClip attackSound;    // Som do golpe ou tiro
-    public AudioClip damageSound;    // Som ao receber dano
-    public AudioClip deathSound;     // Som ao morrer
-    public AudioClip explosionSound; // Som específico do Kamikaze
-    public AudioClip fuseSound;      // Som do pavio queimando (Kamikaze)
+    public AudioClip idleSound;
+    public AudioClip[] footstepSounds;
+    public AudioClip attackSound;
+    public AudioClip damageSound;
+    public AudioClip deathSound;
+    public AudioClip explosionSound;
+    public AudioClip fuseSound;
 }

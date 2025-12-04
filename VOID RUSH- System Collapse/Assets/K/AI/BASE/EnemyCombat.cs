@@ -5,7 +5,7 @@ public class EnemyCombat : MonoBehaviour
 {
     private EnemyBrain _brain;
     private EnemyAnimationLink _animLink;
-    private AudioSource _audioSource; // Referência ao AudioSource do Health
+    private AudioSource _audioSource;
     private float _nextAttackTime;
 
     void Start()
@@ -19,9 +19,48 @@ public class EnemyCombat : MonoBehaviour
     {
         if (Time.time >= _nextAttackTime)
         {
+            // --- NOVO: Verificação de Linha de Visão para Ranged ---
+            if (_brain.stats.isRanged)
+            {
+                if (!HasLineOfSight(target))
+                {
+                    // Tem parede na frente, não atira.
+                    return;
+                }
+            }
+            // -------------------------------------------------------
+
             _nextAttackTime = Time.time + _brain.stats.attackCooldown;
             StartCoroutine(PerformAttack(target));
         }
+    }
+
+    // Função auxiliar para verificar se tem parede no caminho
+    bool HasLineOfSight(Transform target)
+    {
+        if (target == null) return false;
+
+        Vector2 origin = _brain.attackPoint != null ? _brain.attackPoint.position : transform.position;
+        Vector2 direction = target.position - (Vector3)origin;
+        float distance = direction.magnitude;
+
+        // Lança raio que colide com Target (Player) OU Obstacle (Parede/Chão)
+        // Certifique-se de configurar a obstacleLayer no SO_EnemyStats
+        RaycastHit2D hit = Physics2D.Raycast(origin, direction.normalized, _brain.stats.visionRange, _brain.stats.targetLayer | _brain.stats.obstacleLayer);
+
+        if (hit.collider != null)
+        {
+            // Se bater em algo, verificamos se é o Player (TargetLayer)
+            // Se a layer do objeto batido faz parte da TargetLayer, então temos visão.
+            if (((1 << hit.collider.gameObject.layer) & _brain.stats.targetLayer) != 0)
+            {
+                return true;
+            }
+            // Se bateu em qualquer outra coisa (parede), retorna falso.
+            return false;
+        }
+
+        return false;
     }
 
     IEnumerator PerformAttack(Transform target)
@@ -31,10 +70,8 @@ public class EnemyCombat : MonoBehaviour
         // --- LÓGICA DO KAMIKAZE ---
         if (_brain.stats.isExploder)
         {
-            // FASE 1: AVISO + SOM DO PAVIO
             if (_animLink) _animLink.SetKamikazePrepare(true);
 
-            // Toca som do pavio/frequência subindo
             if (_brain.stats.fuseSound && _audioSource)
                 _audioSource.PlayOneShot(_brain.stats.fuseSound);
 
@@ -42,22 +79,20 @@ public class EnemyCombat : MonoBehaviour
 
             yield return new WaitForSeconds(totalTime * 0.7f);
 
-            // FASE 2: INFLAR
             if (_animLink) _animLink.TriggerFinalPhase();
 
             yield return new WaitForSeconds(totalTime * 0.3f);
 
-            // FASE 3: EXPLOSÃO
             Collider2D[] explosionHits = Physics2D.OverlapCircleAll(transform.position, _brain.stats.explosionRadius, _brain.stats.targetLayer);
             foreach (var hit in explosionHits)
             {
-                ApplyDamageToTarget(hit);
+                // Kamikaze usa explosionDamage
+                ApplyDamageToTarget(hit, _brain.stats.explosionDamage);
             }
 
             if (_brain.stats.explosionVFX)
                 Instantiate(_brain.stats.explosionVFX, transform.position, Quaternion.identity);
 
-            // Som da explosão (PlayClipAtPoint pois o objeto será destruído)
             if (_brain.stats.explosionSound)
                 AudioSource.PlayClipAtPoint(_brain.stats.explosionSound, transform.position, 1f);
 
@@ -70,14 +105,13 @@ public class EnemyCombat : MonoBehaviour
 
         if (_animLink) _animLink.TriggerAttackAnim();
 
-        // Som de Ataque (Soco ou Disparo)
         if (_brain.stats.attackSound && _audioSource)
         {
             _audioSource.pitch = Random.Range(0.9f, 1.1f);
             _audioSource.PlayOneShot(_brain.stats.attackSound);
         }
 
-        yield return new WaitForSeconds(0.3f); // Delay do impacto
+        yield return new WaitForSeconds(0.3f);
 
         if (_brain.stats.isRanged)
         {
@@ -102,7 +136,8 @@ public class EnemyCombat : MonoBehaviour
 
             foreach (var hit in hits)
             {
-                ApplyDamageToTarget(hit);
+                // Melee usa damage normal
+                ApplyDamageToTarget(hit, _brain.stats.damage);
             }
         }
 
@@ -112,12 +147,13 @@ public class EnemyCombat : MonoBehaviour
         if (!_brain.stats.canMoveWhileAttacking) _brain.motor.Freeze(false);
     }
 
-    void ApplyDamageToTarget(Collider2D hit)
+    // Alterei para aceitar valor de dano customizado (útil pro Kamikaze)
+    void ApplyDamageToTarget(Collider2D hit, float damageAmount)
     {
         if (hit.TryGetComponent<PlayerStats>(out var player))
         {
             Vector2 knockDir = (hit.transform.position - transform.position).normalized;
-            player.TakeDamage(_brain.stats.damage, knockDir, _brain.stats.knockbackPower);
+            player.TakeDamage(damageAmount, knockDir, _brain.stats.knockbackPower);
         }
     }
 

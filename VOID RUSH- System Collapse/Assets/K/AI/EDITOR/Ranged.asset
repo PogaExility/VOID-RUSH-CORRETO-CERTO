@@ -15,7 +15,7 @@ MonoBehaviour:
   enemyName: Inimigo ranged
   maxHealth: 50
   hitVFX: {fileID: 0}
-  deathVFX: {fileID: 0}
+  deathVFX: {fileID: 346142837613684483, guid: 173d3cd410055bd45bcdb595d73c083f, type: 3}
   meleeAttackVFX: {fileID: 0}
   patrolSpeed: 2
   chaseSpeed: 4
@@ -25,6 +25,7 @@ MonoBehaviour:
   patrolScanAngle: 70
   patrolScanSpeed: 2
   visionRange: 50
+  proximityDetectionRange: 2
   visionAngle: 180
   hearingRange: 15
   memoryDuration: 5
@@ -40,12 +41,22 @@ MonoBehaviour:
   postAttackDelay: 0.3
   damage: 10
   knockbackPower: 0
+  isImmuneToKnockback: 0
+  knockbackResistance: 0
   canMoveWhileAttacking: 0
   isExploder: 0
   explosionRadius: 3
+  explosionDamage: 50
   explosionFuseTime: 1.5
   explosionVFX: {fileID: 0}
   hitboxSize: {x: 1, y: 1}
   hitboxOffset: {x: 0.5, y: 0}
   projectilePrefab: {fileID: 1172556412149463058, guid: 4312823a7d5003d43a796d4943cd5916, type: 3}
   projectileSpeed: 12
+  idleSound: {fileID: 0}
+  footstepSounds: []
+  attackSound: {fileID: 0}
+  damageSound: {fileID: 0}
+  deathSound: {fileID: 0}
+  explosionSound: {fileID: 0}
+  fuseSound: {fileID: 0}
