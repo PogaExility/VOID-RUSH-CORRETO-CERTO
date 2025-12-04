@@ -73,6 +73,12 @@ public class EnemyHealth : MonoBehaviour
 
     void Die()
     {
+
+        if (SceneGoalManagerVD.Instance != null)
+        {
+            SceneGoalManagerVD.Instance.OnEnemyDefeated();
+        }
+
         _isDead = true;
         _brain.motor.Stop();
         _brain.motor.enabled = false;

@@ -12,6 +12,7 @@ TagManager:
   - CameraBoundary
   - Plataforma
   - InteractiveProps
+  - PlacarInimigosUI
   layers:
   - Default
   - TransparentFX
