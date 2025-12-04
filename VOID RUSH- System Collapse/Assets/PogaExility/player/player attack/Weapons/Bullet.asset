@@ -33,15 +33,18 @@ MonoBehaviour:
   powderDamage: 2
   powderRange: 2
   powderKnockback: 3
+  powderKnockbackDirection: 0
   acceptedAmmo: []
   gunpowderSpawnOffset: 0.5
   bulletPrefab: {fileID: 5714271926393328017, guid: 2887cfb781ee241468aad215fb9e7351, type: 3}
   bulletDamage: 10
   bulletSpeed: 1000
   bulletLifetime: 3
-  bulletKnockback: 1000
+  bulletKnockback: 10
+  bulletKnockbackDirection: 0
   pierceCount: 0
   damageFalloff: 0.3
+  attackCooldown: 0.2
   comboResetTime: 0.8
   lungeDuration: 0.15
   comboSteps: []
@@ -52,3 +55,4 @@ MonoBehaviour:
   busterShotPrefab: {fileID: 0}
   chargedShotPrefab: {fileID: 0}
   healthToRestore: 0
+  shotSound: {fileID: 0}
