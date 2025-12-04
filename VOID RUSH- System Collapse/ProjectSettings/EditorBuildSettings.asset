@@ -14,6 +14,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Vinishow/Scenes/Fase 1.unity
     guid: 243d2a9f2675d614a8a0201a7ceafe47
+  - enabled: 1
+    path: Assets/Vinishow/Scenes/Fase 2.unity
+    guid: af9be915a34f6b546ac2becabffdb385
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
