@@ -1,12 +1,12 @@
 using UnityEngine;
 using System.Collections;
 
-[RequireComponent(typeof(AudioSource))] // Garante que tem AudioSource
+[RequireComponent(typeof(AudioSource))]
 public class EnemyHealth : MonoBehaviour
 {
     private EnemyBrain _brain;
     private EnemyAIController _ai;
-    private AudioSource _audioSource; // Nosso alto-falante
+    private AudioSource _audioSource;
     private float _currentHealth;
     private bool _isDead = false;
 
@@ -16,8 +16,7 @@ public class EnemyHealth : MonoBehaviour
         _ai = GetComponent<EnemyAIController>();
         _audioSource = GetComponent<AudioSource>();
 
-        // Configuração básica do áudio para não ficar 2D (som na cabeça)
-        _audioSource.spatialBlend = 1f; // 1 = 3D (som diminui com a distância)
+        _audioSource.spatialBlend = 1f;
         _audioSource.minDistance = 2f;
         _audioSource.maxDistance = 20f;
 
@@ -31,22 +30,36 @@ public class EnemyHealth : MonoBehaviour
 
         _currentHealth -= damage;
 
-        // --- SOM DE DANO ---
+        // Som de dano
         if (_brain.stats.damageSound && _audioSource)
         {
-            _audioSource.pitch = Random.Range(0.9f, 1.1f); // Variação leve
+            _audioSource.pitch = Random.Range(0.9f, 1.1f);
             _audioSource.PlayOneShot(_brain.stats.damageSound);
         }
 
-        // 1. Aplica Knockback
+        // --- LÓGICA DE KNOCKBACK COM RESISTÊNCIA ---
         if (_brain.motor != null)
-            _brain.motor.ApplyKnockback(knockbackDir, knockbackForce);
+        {
+            // 1. Checa se é totalmente imune
+            if (!_brain.stats.isImmuneToKnockback)
+            {
+                // 2. Calcula: Força Recebida - Resistência do Inimigo
+                float finalForce = knockbackForce - _brain.stats.knockbackResistance;
 
-        // 2. Avisa a IA (Reação)
+                // 3. Só aplica se sobrar força positiva (Mathf.Max garante que não fique negativo)
+                if (finalForce > 0)
+                {
+                    _brain.motor.ApplyKnockback(knockbackDir, finalForce);
+                }
+            }
+        }
+        // -------------------------------------------
+
+        // Avisa a IA (Reação)
         if (_ai != null)
             _ai.OnSuspiciousActivityDetected(transform.position - (Vector3)knockbackDir);
 
-        // 3. VFX de Dano
+        // VFX de Dano
         if (_brain.stats.hitVFX != null)
             Instantiate(_brain.stats.hitVFX, transform.position, Quaternion.identity);
 
@@ -55,10 +68,8 @@ public class EnemyHealth : MonoBehaviour
         if (_currentHealth <= 0) Die();
     }
 
-    public void TakeDamage(float damage)
-    {
-        TakeDamage(damage, Vector2.zero, 0);
-    }
+    // (O resto do script permanece igual ao anterior)
+    public void TakeDamage(float damage) => TakeDamage(damage, Vector2.zero, 0);
 
     void Die()
     {
@@ -68,24 +79,17 @@ public class EnemyHealth : MonoBehaviour
         GetComponent<Collider2D>().enabled = false;
         if (_ai) _ai.enabled = false;
 
-        // LÓGICA DE SOM E VFX DE MORTE
         if (_brain.stats.isExploder)
         {
-            // Se morreu antes de explodir, explode igual (ou mude para deathSound se preferir)
             if (_brain.stats.explosionVFX)
                 Instantiate(_brain.stats.explosionVFX, transform.position, Quaternion.identity);
-
-            // Som da explosão (PlayClipAtPoint cria um áudio temporário na cena)
             if (_brain.stats.explosionSound)
                 AudioSource.PlayClipAtPoint(_brain.stats.explosionSound, transform.position, 1f);
         }
         else
         {
-            // Morte normal
             if (_brain.stats.deathVFX)
                 Instantiate(_brain.stats.deathVFX, transform.position, Quaternion.identity);
-
-            // Som de morte
             if (_brain.stats.deathSound)
                 AudioSource.PlayClipAtPoint(_brain.stats.deathSound, transform.position, 1f);
         }

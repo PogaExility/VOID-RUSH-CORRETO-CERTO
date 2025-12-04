@@ -25,6 +25,7 @@ MonoBehaviour:
   patrolScanAngle: 45
   patrolScanSpeed: 2
   visionRange: 10
+  proximityDetectionRange: 3
   visionAngle: 110
   hearingRange: 15
   memoryDuration: 5
@@ -38,14 +39,24 @@ MonoBehaviour:
   attackRange: 1.5
   attackCooldown: 1.5
   postAttackDelay: 0.5
-  damage: 10
-  knockbackPower: 10
+  damage: 50
+  knockbackPower: 20
+  isImmuneToKnockback: 1
+  knockbackResistance: 0
   canMoveWhileAttacking: 0
   isExploder: 1
   explosionRadius: 4
+  explosionDamage: 50
   explosionFuseTime: 1.5
   explosionVFX: {fileID: 4862903873434885442, guid: a8d8215b32fe7934184ada7e5f96bfaa, type: 3}
   hitboxSize: {x: 1, y: 1}
   hitboxOffset: {x: 0.5, y: 0}
   projectilePrefab: {fileID: 0}
   projectileSpeed: 12
+  idleSound: {fileID: 0}
+  footstepSounds: []
+  attackSound: {fileID: 0}
+  damageSound: {fileID: 0}
+  deathSound: {fileID: 0}
+  explosionSound: {fileID: 0}
+  fuseSound: {fileID: 0}

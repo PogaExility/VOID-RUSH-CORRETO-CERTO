@@ -20,6 +20,9 @@ public class EnemyBrain : MonoBehaviour
     public Transform CurrentTarget { get; set; }
     public Vector3 LastKnownPosition { get; set; }
 
+    // Posição onde o inimigo nasceu (Home)
+    public Vector3 StartPosition { get; private set; }
+
     void Awake()
     {
         motor = GetComponent<EnemyMotor>();
@@ -27,12 +30,40 @@ public class EnemyBrain : MonoBehaviour
         combat = GetComponent<EnemyCombat>();
         health = GetComponent<EnemyHealth>();
 
-        // Desliga Root Motion para não bugar a física
         Animator anim = GetComponentInChildren<Animator>();
         if (anim != null) anim.applyRootMotion = false;
 
         if (attackPoint == null) attackPoint = transform;
         if (stats == null) Debug.LogError($"[EnemyBrain] {name} sem SO_EnemyStats!");
+    }
+
+    void Start()
+    {
+        // Salva onde o inimigo nasceu
+        StartPosition = transform.position;
+    }
+
+    void Update()
+    {
+        // --- LÓGICA DE RETORNO AO SPAWN ---
+        // Se não tem alvo detectado, verifica se precisa voltar para casa
+        if (CurrentTarget == null && motor != null)
+        {
+            float distToHome = Vector2.Distance(transform.position, StartPosition);
+
+            // Se estiver longe de casa, anda até lá
+            if (distToHome > stats.stopDistancePadding)
+            {
+                // CORREÇÃO AQUI: Usamos MoveTo em vez de Move
+                // Passamos 'false' no segundo parâmetro para indicar que NÃO é perseguição (usa patrolSpeed)
+                motor.MoveTo(StartPosition, false);
+            }
+            else
+            {
+                // Chegou em casa, para e trava
+                motor.Stop();
+            }
+        }
     }
 
     public void OnPlayerDetected(Transform player)
