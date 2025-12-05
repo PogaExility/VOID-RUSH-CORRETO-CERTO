@@ -54,9 +54,11 @@ MonoBehaviour:
   projectilePrefab: {fileID: 0}
   projectileSpeed: 12
   idleSound: {fileID: 0}
-  footstepSounds: []
+  footstepSounds:
+  - {fileID: 8300000, guid: 3519918deb2214e44a1c07fcdca9fd3b, type: 3}
+  - {fileID: 8300000, guid: 0c9e2cf560d87c645827029f65278e39, type: 3}
   attackSound: {fileID: 0}
-  damageSound: {fileID: 0}
+  damageSound: {fileID: 8300000, guid: ff9805f2ec58b9a4c892eb94d8709706, type: 3}
   deathSound: {fileID: 0}
   explosionSound: {fileID: 8300000, guid: abdf749f802407c478758e8d284105b1, type: 3}
   fuseSound: {fileID: 0}

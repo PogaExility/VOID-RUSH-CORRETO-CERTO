@@ -53,36 +53,36 @@ MonoBehaviour:
     playerAnimationClip: {fileID: 7400000, guid: 9c5cce670f717304e8a5c7bc54cdbd92, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: a1e4cf0c27730a04db3668d7f43d5c0e, type: 3}
     damage: 10
-    knockbackPower: 5
+    knockbackPower: 2
     knockbackDirection: 0
     lungeDistance: 0
     lungeSpeed: 0
     comboWindow: 0.4
-    comboSpeed: 2
+    comboSpeed: 3
     slashSound: {fileID: 8300000, guid: c8c1ad5726ef94f49a2024ac03f622f3, type: 3}
   - playerAnimationState: 20
     slashAnimationState: 3
     playerAnimationClip: {fileID: 7400000, guid: 412c1ca60930e824d86bd7e05ff40327, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: c876ba3407289a84d81e76a4a2315182, type: 3}
     damage: 12
-    knockbackPower: 7
+    knockbackPower: 2
     knockbackDirection: 0
     lungeDistance: 0
     lungeSpeed: 0
     comboWindow: 0.4
-    comboSpeed: 2
+    comboSpeed: 3
     slashSound: {fileID: 8300000, guid: c8c1ad5726ef94f49a2024ac03f622f3, type: 3}
   - playerAnimationState: 21
     slashAnimationState: 4
     playerAnimationClip: {fileID: 7400000, guid: 24bbab3eaa3cef348b1b824eff39f905, type: 2}
     slashEffectPrefab: {fileID: 7519332796033540798, guid: 364a1f89256f83e4c9e56ac9569e7075, type: 3}
     damage: 15
-    knockbackPower: 15
+    knockbackPower: 3
     knockbackDirection: 0
     lungeDistance: 1
-    lungeSpeed: 20
+    lungeSpeed: 0
     comboWindow: 0
-    comboSpeed: 1
+    comboSpeed: 3
     slashSound: {fileID: 8300000, guid: c8c1ad5726ef94f49a2024ac03f622f3, type: 3}
   chargeTime: 0
   energyCostPerChargeSecond: 0

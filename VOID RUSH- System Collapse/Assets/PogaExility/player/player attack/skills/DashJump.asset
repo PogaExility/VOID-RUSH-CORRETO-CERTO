@@ -35,7 +35,7 @@ MonoBehaviour:
   dashType: 0
   dashSpeed: 25
   dashDuration: 0.2
-  dashJump_DashSpeed: 25
+  dashJump_DashSpeed: 15
   dashJump_DashDuration: 0.2
   dashJump_JumpForce: 10
   dashJump_InputBuffer: 1000
