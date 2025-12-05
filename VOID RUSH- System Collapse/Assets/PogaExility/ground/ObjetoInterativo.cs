@@ -112,11 +112,19 @@ public class ObjetoInterativo : MonoBehaviour
         posicaoInicial = transform.position;
         vidaAtual = vidaMaxima;
 
-        // Aplica os clipes de animação (override) no Start, após o Animator ser inicializado
+        // --- CORREÇÃO AUTOMÁTICA ---
+        // Se o modo for TrocarSprite e você não definiu o "Sprite Inativo",
+        // o código salva o sprite atual do objeto como sendo o inativo.
+        // Isso impede que o objeto fique invisível ao dar Play.
+        if (modoVisual == ModoFeedbackVisual.TrocarSprite && spriteInativo == null && spriteRenderer != null)
+        {
+            spriteInativo = spriteRenderer.sprite;
+        }
+
+        // Aplica os clipes de animação (override) no Start
         if (modoVisual == ModoFeedbackVisual.TocarAnimacao && overrideController != null)
         {
             var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
-            // Assume que o controller base tem clipes chamados "placeholder_ativando" e "placeholder_desativando"
             if (clipeAtivando != null)
                 overrides.Add(new KeyValuePair<AnimationClip, AnimationClip>(overrideController.animationClips[0], clipeAtivando));
             if (clipeDesativando != null && overrideController.animationClips.Length > 1)
@@ -200,8 +208,15 @@ public class ObjetoInterativo : MonoBehaviour
         if (estaAtivo && modoDeUso == ModoDeUso.Reativavel) return;
         estaAtivo = true;
 
-        if (modoDeAtivacao != ModoDeAtivacao.PorDano) TocarFeedbackDeAtivacao(true);
-        else if (efeitoDeQuebraPrefab != null) Instantiate(efeitoDeQuebraPrefab, transform.position, Quaternion.identity);
+        // Se for "Por Dano", instancia o efeito de partículas (se houver)
+        if (modoDeAtivacao == ModoDeAtivacao.PorDano && efeitoDeQuebraPrefab != null)
+        {
+            Instantiate(efeitoDeQuebraPrefab, transform.position, Quaternion.identity);
+        }
+
+        // Aplica o feedback visual (Troca Sprite ou Toca Animação)
+        // Isso é importante: mesmo "Por Dano", podemos querer mudar o sprite para "quebrado"
+        TocarFeedbackDeAtivacao(true);
 
         aoAtivar.Invoke();
 
@@ -209,7 +224,30 @@ public class ObjetoInterativo : MonoBehaviour
         {
             bloqueado = true;
             if (promptVisual != null) promptVisual.SetActive(false);
-            if (modoDeAtivacao == ModoDeAtivacao.PorDano) Destroy(gameObject, 0.1f);
+
+            // CORREÇÃO:
+            // Só destrói o objeto se NÃO houver feedback visual configurado (como trocar para sprite quebrado).
+            // Se você configurou um "Sprite Ativo" (ex: caixa quebrada), não queremos destruir o objeto, apenas desativar o colisor.
+
+            if (modoDeAtivacao == ModoDeAtivacao.PorDano)
+            {
+                // Se tivermos um sprite para mostrar depois de quebrado, NÃO destrói.
+                if (modoVisual == ModoFeedbackVisual.TrocarSprite && spriteAtivo != null)
+                {
+                    // Desativa o colisor para não bater mais, mas mantém o visual
+                    GetComponent<Collider2D>().enabled = false;
+                }
+                else if (modoVisual == ModoFeedbackVisual.TocarAnimacao)
+                {
+                    // Se for animação, espera ela acabar (exemplo: 1 seg) ou destrói depois
+                    Destroy(gameObject, 1f);
+                }
+                else
+                {
+                    // Se não tem visual nenhum, aí sim destrói
+                    Destroy(gameObject, 0.1f);
+                }
+            }
         }
     }
 

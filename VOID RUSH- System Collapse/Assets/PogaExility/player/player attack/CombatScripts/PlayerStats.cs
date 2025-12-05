@@ -53,9 +53,19 @@ public class PlayerStats : MonoBehaviour
 
     private AdvancedPlayerMovement2D movementScript;
 
+    private PlayerSounds playerSounds;
+
     void Awake()
     {
         movementScript = GetComponent<AdvancedPlayerMovement2D>();
+
+        // --- ADIÇÃO: Cache do PlayerSounds ---
+        playerSounds = GetComponent<PlayerSounds>();
+        if (playerSounds == null)
+        {
+            // Tenta achar nos filhos caso a estrutura seja diferente
+            playerSounds = GetComponentInChildren<PlayerSounds>();
+        }
 
         if (playerSprite == null)
         {
@@ -66,13 +76,10 @@ public class PlayerStats : MonoBehaviour
             }
         }
 
-
         _currentHealth = MaxHealth;
         _currentBlockGauge = MaxBlockGauge;
-        // ...
         animatorController = GetComponent<PlayerAnimatorController>();
-        OnDeath += PlayDeathAnimation; 
-
+        OnDeath += PlayDeathAnimation;
     }
     public void TakeDamage(float amount, Vector2 attackDirection)
     {
@@ -81,10 +88,10 @@ public class PlayerStats : MonoBehaviour
     }
     public void TakeDamage(float amount, Vector2 attackDirection, float incomingKnockbackPower)
     {
-        // 1. Checagem de Invencibilidade (Se já levou dano recentemente, ignora)
+        // 1. Checagem de Invencibilidade
         if (isInvincible) return;
 
-        // 2. Checagem de Imortalidade durante Dash (Esquiva)
+        // 2. Checagem de Dash
         if (movementScript != null && (movementScript.IsDashing() || movementScript.IsWallDashing()))
         {
             return;
@@ -93,21 +100,31 @@ public class PlayerStats : MonoBehaviour
         // 3. Aplica o Dano
         _currentHealth -= amount;
 
-        // 4. Trava de segurança: Se a vida cair de 0, forçamos ela a ser 0.
-        // Isso é crucial para o método IsDead() retornar true corretamente.
+        // 4. Trava de segurança
         if (_currentHealth <= 0)
         {
             _currentHealth = 0;
         }
 
-        // 5. Notifica a UI (Barra de vida) com o valor já corrigido (0 ou positivo)
+        // --- TOCA O SOM DE DANO ---
+        // Agora usa a variável cached, que é mais garantida
+        if (playerSounds != null)
+        {
+            playerSounds.PlayDamageSound();
+        }
+        else
+        {
+            // Debug de segurança caso o som não saia
+            Debug.LogWarning("PlayerStats: Não foi possível tocar o som de dano. PlayerSounds não encontrado.");
+        }
+        // --------------------------------
+
+        // 5. Notifica a UI
         OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
 
-        // 6. Verifica se sobreviveu ou morreu
+        // 6. Sobreviveu ou Morreu?
         if (_currentHealth > 0)
         {
-            // --- LÓGICA DE KNOCKBACK DINÂMICO ---
-            // Calcula se a força do ataque supera a resistência do jogador
             float finalForce = incomingKnockbackPower - knockbackResistance;
 
             if (finalForce > 0)
@@ -115,17 +132,13 @@ public class PlayerStats : MonoBehaviour
                 movementScript.ExecuteKnockback(finalForce, attackDirection);
             }
 
-            // --- ATIVA I-FRAMES (Invencibilidade temporária) ---
             StartCoroutine(InvincibilityCoroutine());
         }
         else
         {
-            // --- MORTE ---
-            // Dispara o evento que o PlayerController está escutando para tocar a animação "morrendo"
             OnDeath?.Invoke();
         }
     }
-
     private void PlayDeathAnimation()
     {
        // animatorController.PlayState(PlayerAnimState.morrendo);

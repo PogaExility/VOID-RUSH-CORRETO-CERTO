@@ -2076,7 +2076,7 @@ MonoBehaviour:
   sfxSourcePrefab: {fileID: 1845743363233809909}
   masterVolume: 1
   musicVolume: 0.7
-  sfxVolume: 0.04
+  sfxVolume: 0.221
 --- !u!1 &2729139116032566009
 GameObject:
   m_ObjectHideFlags: 0
@@ -3041,8 +3041,8 @@ MonoBehaviour:
   baseMaxBlockGauge: 100
   lowHealthThreshold: 0.25
   damageFlashImage: {fileID: 5658028754802789875}
-  flashDuration: 0.1
-  invincibilityDuration: 1.5
+  flashDuration: 0.5
+  invincibilityDuration: 0.5
   playerSprite: {fileID: 4676949479588431994}
   flashSpeed: 10
   knockbackResistance: 5
@@ -3160,10 +3160,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   footstepSounds:
   - {fileID: 8300000, guid: 20467cfb5dcacf14390b4ffd16239e0e, type: 3}
-  jumpSound: {fileID: 8300000, guid: b86cedd3513225d4b91a9487a563658e, type: 3}
+  footstepVolume: 0.4
+  jumpSound: {fileID: 8300000, guid: d1e0dd86c2c23f442a99253a9ed5b94c, type: 3}
+  jumpVolume: 1000
   landSound: {fileID: 8300000, guid: 380b7986b3f840c4aace50e024178566, type: 3}
+  landVolume: 1.72
   dashSound: {fileID: 8300000, guid: d1443e9249188694f89feebff774f286, type: 3}
+  dashVolume: 3
   damageSound: {fileID: 8300000, guid: 9bb42860f101dbf43860ed5350ca33d7, type: 3}
+  damageVolume: 100
+  wallJumpSound: {fileID: 8300000, guid: d1e0dd86c2c23f442a99253a9ed5b94c, type: 3}
+  wallJumpVolume: 1000
+  wallDashSound: {fileID: 8300000, guid: d1443e9249188694f89feebff774f286, type: 3}
+  wallDashVolume: 1
+  wallSlideSound: {fileID: 0}
+  wallSlideVolume: 0
+  dashJumpSounds:
+  - {fileID: 8300000, guid: d1443e9249188694f89feebff774f286, type: 3}
+  dashJumpVolume: 50
+  wallDashJumpSounds:
+  - {fileID: 8300000, guid: d1443e9249188694f89feebff774f286, type: 3}
+  wallDashJumpVolume: 50
 --- !u!82 &8710149792981822411
 AudioSource:
   m_ObjectHideFlags: 0

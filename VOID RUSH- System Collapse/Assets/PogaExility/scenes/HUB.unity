@@ -17391,7 +17391,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 9
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0.25
+  maxTransitionZoom: 10.5
+  absoluteMaxZoom: 14
 --- !u!1 &384576079
 GameObject:
   m_ObjectHideFlags: 0
@@ -17713,7 +17715,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 4
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0.25
+  maxTransitionZoom: 10.5
+  absoluteMaxZoom: 14
 --- !u!61 &592359593
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -18447,7 +18451,9 @@ MonoBehaviour:
   showEntireRoom: 0
   targetOrthographicSize: 9
   roomPadding: 1.1
-  positionTransitionDuration: 0.8
+  transitionDuration: 0.25
+  maxTransitionZoom: 10.5
+  absoluteMaxZoom: 14
 --- !u!61 &754133188
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -38358,12 +38364,40 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1043171044550318413, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
+      propertyPath: aoAtivar.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1043171044550318413, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
       propertyPath: aoAtivar.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 517687928}
     - target: {fileID: 3245609130794545501, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
       propertyPath: m_Name
       value: Bgl pra destruir
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122991767632146858, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 110440c68c34f014c8f52f82da24d38c, type: 3}
+    - target: {fileID: 8122991767632146858, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122991767632146858, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8122991767632146858, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8520415313620801396, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8520415313620801396, guid: e7413e9374a62754196d6cbca1d0c501, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.y
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

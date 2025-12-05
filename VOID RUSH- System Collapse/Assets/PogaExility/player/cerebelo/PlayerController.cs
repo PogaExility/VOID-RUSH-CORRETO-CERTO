@@ -68,15 +68,9 @@ public class PlayerController : MonoBehaviour
         set
         {
             _isAttacking = value;
-            // Quando IsAttacking é setado para TRUE, desabilita a física do movimento.
-            if (value)
-            {
-                movementScript.DisablePhysicsControl();
-            }
-            else
-            {
-                movementScript.EnablePhysicsControl();
-            }
+            // MUDANÇA: Não desativamos mais a física ao atacar para permitir andar.
+            // if (value) movementScript.DisablePhysicsControl();
+            // else movementScript.EnablePhysicsControl();
         }
     }
 
@@ -180,7 +174,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // 1. TRAVA DE MORTE (Prioridade Máxima)
+        // 1. TRAVA DE MORTE
         if (playerStats.IsDead())
         {
             movementScript.SetMoveInput(0);
@@ -188,21 +182,17 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // 2. TRAVA DE DANO (Sincronizada com a Física)
-        // Agora perguntamos diretamente ao script de movimento se ele está em Knockback.
-        // Isso garante sincronia PERFEITA: Enquanto houver força física de dano, há animação e trava.
+        // 2. TRAVA DE DANO
         if (movementScript.IsTakingDamage())
         {
             movementScript.SetMoveInput(0);
             if (playerSounds != null) playerSounds.UpdateWalkingSound(false);
-
-            UpdateAnimations(); // Isso vai chamar SetAimingStateVisuals(false)
+            UpdateAnimations();
             return;
         }
 
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
 
-        // ... (Resto do Update continua igual: Inventory, Attacking, Inputs...)
         if (isInventoryOpen)
         {
             movementScript.SetMoveInput(0);
@@ -210,18 +200,15 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (IsAttacking)
-        {
-            movementScript.SetMoveInput(0);
-            if (playerSounds != null) playerSounds.UpdateWalkingSound(false);
-            return;
-        }
+        // --- MUDANÇA: REMOVIDA A TRAVA DE MOVIMENTO DO ATAQUE ---
+        // Antes aqui tinha um 'if (IsAttacking) return;'. Removemos isso.
+        // Agora o código segue para ler os inputs de movimento abaixo.
 
+        // --- Inputs Normais ---
         HandleCrawlInput();
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
-    
 
-        // Lógica de Pouso
+        // ... (O restante do Update continua igual, com lógica de pouso, skills, etc) ...
         bool isGroundedNow = movementScript.IsGrounded();
         bool justLanded = isGroundedNow && !wasGroundedLastFrame;
 
@@ -229,19 +216,14 @@ public class PlayerController : MonoBehaviour
         {
             Collider2D ground = movementScript.GetGroundCollider();
             bool landedOnPlatform = false;
-
             if (ground != null && (movementScript.platformLayer.value & (1 << ground.gameObject.layer)) > 0)
-            {
                 landedOnPlatform = true;
-            }
 
             if (!landedOnPlatform || !movementScript.IsIgnoringPlatforms())
             {
                 isLanding = true;
                 if (AudioManager.Instance != null && playerSounds != null && playerSounds.landSound != null)
-                {
                     AudioManager.Instance.PlaySoundEffect(playerSounds.landSound, transform.position);
-                }
             }
         }
 

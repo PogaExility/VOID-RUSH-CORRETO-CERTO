@@ -70,44 +70,41 @@ public class MeeleeWeapon : WeaponBase
         attackBuffered = false;
 
         playerAudioSource = playerController.GetComponent<AudioSource>();
-        // Se um som foi definido para este golpe e o AudioSource existe...
         if (currentStep.slashSound != null && playerAudioSource != null)
         {
-            // ...toca o som.
             playerAudioSource.PlayOneShot(currentStep.slashSound);
         }
 
-        playerController.movementScript.SetVelocity(0, playerController.movementScript.GetRigidbody().linearVelocity.y);
+        // --- MUDANÇA 1: REMOVIDO O COMANDO DE PARAR O PLAYER ---
+        // playerController.movementScript.SetVelocity(0, playerController.movementScript.GetRigidbody().linearVelocity.y);
 
         float speedMultiplier = Mathf.Max(0.1f, currentStep.comboSpeed);
         animatorController.SetAnimatorSpeed(AnimatorTarget.PlayerBody, speedMultiplier);
 
         Transform attackPoint = WeaponHandler.Instance.GetAttackPoint();
 
-        playerController.PerformLunge(currentStep.lungeDistance, currentStep.lungeSpeed);
+        // --- MUDANÇA 2: (Opcional) DESATIVAR O LUNGE ---
+        // Se você quer controle total de andar, o Lunge automático atrapalha.
+        // Se quiser o impulso, descomente a linha abaixo.
+        // playerController.PerformLunge(currentStep.lungeDistance, currentStep.lungeSpeed);
+
         animatorController.PlayState(AnimatorTarget.PlayerBody, currentStep.playerAnimationState);
 
-        // --- LÓGICA DE CORTE MODIFICADA ---
+        // --- LÓGICA DE CORTE ---
         if (currentSlashInstance != null) Destroy(currentSlashInstance);
         if (currentStep.slashEffectPrefab != null && attackPoint != null)
         {
-            // 1. Instancia o corte como FILHO do attackPoint.
             currentSlashInstance = Instantiate(currentStep.slashEffectPrefab, attackPoint);
 
-            // 2. Inicializa o corte com a nova direção de knockback.
             SlashEffect slashScript = currentSlashInstance.GetComponent<SlashEffect>();
             if (slashScript != null)
             {
-                // Pega a direção do knockback do SO e a converte em um vetor, já considerando o flip do jogador.
                 Vector2 knockbackDirection = GetKnockbackDirectionVector(currentStep.knockbackDirection);
-
-                // Passa o vetor de direção pré-calculado para o efeito de corte.
-                // (Isto causará um erro até atualizarmos o SlashEffect.cs)
                 slashScript.Initialize(currentStep.damage, currentStep.knockbackPower, knockbackDirection, currentStep.slashAnimationState);
                 slashScript.SetSpeed(speedMultiplier);
             }
 
-            AudioSource playerAudioSource = playerController.GetComponent<AudioSource>();
+            // Som do corte (Slash)
             if (currentStep.slashSound != null && playerAudioSource != null)
             {
                 playerAudioSource.PlayOneShot(currentStep.slashSound);

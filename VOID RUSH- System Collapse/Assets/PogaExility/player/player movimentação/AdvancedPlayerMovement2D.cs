@@ -363,6 +363,9 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         isWallSliding = true;
         currentWallSlideSpeed = speed;
 
+        // Toca o som de deslizar (Loop)
+        if (playerSounds != null) playerSounds.UpdateWallSlideSound(true);
+
         if (isTouchingWallRight && isFacingRight) Flip();
         else if (isTouchingWallLeft && !isFacingRight) Flip();
     }
@@ -371,13 +374,20 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     {
         isWallSliding = false;
         rb.gravityScale = baseGravity;
+
+        // Para o som de deslizar
+        if (playerSounds != null) playerSounds.UpdateWallSlideSound(false);
     }
 
     public void DoWallJump(Vector2 force)
     {
+        // Toca o som de Wall Jump
+        if (playerSounds != null) playerSounds.PlayWallJumpSound();
+
         StopAllCoroutines();
         StartCoroutine(WallJumpCoroutine(force));
     }
+
 
     private IEnumerator WallJumpCoroutine(Vector2 force)
     {

@@ -25,7 +25,12 @@ public class AudioManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject); // Para persistir entre cenas
+
+            // CORREÇÃO: Remove o objeto de qualquer pai para torná-lo um "Root GameObject".
+            // Isso previne o erro "DontDestroyOnLoad only works for root GameObjects".
+            transform.SetParent(null);
+
+            DontDestroyOnLoad(gameObject);
             UpdateMusicVolume();
         }
         else

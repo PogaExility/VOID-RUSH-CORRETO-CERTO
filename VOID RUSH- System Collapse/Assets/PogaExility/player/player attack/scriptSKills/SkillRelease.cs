@@ -19,10 +19,16 @@ public class SkillRelease : MonoBehaviour
 
 
 
+    private PlayerSounds playerSounds;
+
     void Awake()
     {
         movement = GetComponent<AdvancedPlayerMovement2D>();
         playerController = GetComponent<PlayerController>();
+
+        // Busca o componente de som
+        playerSounds = GetComponent<PlayerSounds>();
+        if (playerSounds == null) playerSounds = GetComponentInChildren<PlayerSounds>();
     }
 
     void Update()
@@ -222,34 +228,34 @@ public class SkillRelease : MonoBehaviour
         switch (skill.actionToPerform)
         {
             case MovementSkillType.SuperJump:
-                // --- VERSÃO SIMPLIFICADA E CORRETA ---
-                // A lógica de "pode pular?" é a única coisa que importa aqui.
-                // O PlayerController já garantiu que não estamos na parede.
                 if (movement.CanJumpFromGround() || currentAirJumps > 0)
                 {
                     if (!movement.IsGrounded())
                     {
                         currentAirJumps--;
                     }
+                    // O som de Pulo Básico já é tocado dentro do movement.DoJump, 
+                    // mas se quiser um som específico de skill, poderia tocar aqui.
+                    // Por enquanto deixamos o padrão.
                     movement.DoJump(skill.jumpForce);
                     return true;
                 }
-                return false; // Falha se não puder pular
-
-            // --- O RESTO DAS SUAS AÇÕES, INTACTAS ---
+                return false;
 
             case MovementSkillType.Dash:
-                // CORREÇÃO: Envie o 'skill' inteiro, não seus parâmetros separados.
+                // Som de Dash será tocado na corrotina
                 currentActionCoroutine = StartCoroutine(ExecuteDashCoroutine(skill));
                 return true;
-
 
             case MovementSkillType.WallDash:
+                // Som de WallDash será tocado na corrotina
                 currentActionCoroutine = StartCoroutine(ExecuteDashCoroutine(skill));
                 return true;
 
-            // Em SkillRelease.cs -> ExecuteAction
             case MovementSkillType.DashJump:
+                // TOCA SOM DE DASH JUMP
+                if (playerSounds != null) playerSounds.PlayDashJumpSound();
+
                 float horizontalInput = Input.GetAxisRaw("Horizontal");
                 Vector2 launchDirection;
                 if (Mathf.Abs(horizontalInput) > 0.1f)
@@ -260,53 +266,61 @@ public class SkillRelease : MonoBehaviour
                 {
                     launchDirection = movement.GetFacingDirection();
                 }
-                // 4. CHAMA O NOVO DoLaunch COM A DIREÇÃO CORRETA
                 movement.DoLaunch(skill.dashJump_DashSpeed, skill.dashJump_JumpForce, launchDirection, skill.dashJump_GravityScaleOnFall, skill.dashJump_ParabolaDamping);
                 return true;
 
             case MovementSkillType.WallJump:
+                // O som de Wall Jump já está sendo chamado dentro do movement.DoWallJump,
+                // que configuramos no passo anterior.
                 movement.DoWallJump(skill.wallJumpForce);
                 return true;
 
             case MovementSkillType.WallSlide:
                 if (!movement.IsWallSliding())
                 {
+                    // O som de slide é contínuo e controlado pelo movement.StartWallSlide
                     movement.StartWallSlide(skill.wallSlideSpeed);
                     return true;
                 }
                 return false;
 
-
             case MovementSkillType.WallDashJump:
-                movement.DoWallLaunch(skill.wallDashJump_LaunchForceX, skill.wallDashJump_LaunchForceY, skill.wallDashJump_GravityScaleOnFall, skill.wallDashJump_ParabolaDamping);
-                return true; // SÓ ISSO
+                // TOCA SOM DE WALL DASH JUMP
+                if (playerSounds != null) playerSounds.PlayWallDashJumpSound();
 
+                movement.DoWallLaunch(skill.wallDashJump_LaunchForceX, skill.wallDashJump_LaunchForceY, skill.wallDashJump_GravityScaleOnFall, skill.wallDashJump_ParabolaDamping);
+                return true;
         }
         return false;
     }
 
-    // DENTRO DE SkillRelease.cs
-
     private IEnumerator ExecuteDashCoroutine(SkillSO skill)
     {
-        // Pega o estado e o Rigidbody ANTES de qualquer coisa.
         bool isWallDash = skill.actionToPerform == MovementSkillType.WallDash;
         Rigidbody2D rb = movement.GetRigidbody();
         float originalGravity = rb.gravityScale;
 
         try
         {
-            // --- FASE DE EXECUÇÃO ---
-            // Tudo que modifica o estado do jogador vai dentro do "try".
-
             if (isWallDash)
+            {
                 movement.OnWallDashStart();
+                // TOCA SOM DE WALL DASH
+                if (playerSounds != null) playerSounds.PlayWallDashSound();
+            }
             else
+            {
                 movement.OnDashStart();
+                // TOCA SOM DE DASH COMUM
+                if (playerSounds != null) playerSounds.PlayDashSound();
+            }
 
+            // ... (O resto da corrotina continua igualzinha) ...
             Vector2 direction;
             float inputX = Input.GetAxisRaw("Horizontal");
+            // ... (Lógica de direção e while loop)
 
+            // Vou replicar o trecho para você copiar e colar a função inteira se preferir:
             if (Mathf.Abs(inputX) > 0.1f && !isWallDash)
             {
                 direction = new Vector2(Mathf.Sign(inputX), 0);
@@ -332,27 +346,22 @@ public class SkillRelease : MonoBehaviour
             while (timer < skill.dashDuration)
             {
                 if (movement.IsTouchingWall() && timer > 0.1f) break;
-
                 rb.linearVelocity = new Vector2(direction.x * skill.dashSpeed, 0);
-
                 timer += Time.deltaTime;
                 yield return null;
             }
         }
         finally
         {
-            // --- FASE DE LIMPEZA (GARANTIDA) ---
-            // Este bloco SEMPRE será executado.
-
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
             rb.gravityScale = originalGravity;
 
             if (isWallDash)
-                movement.OnWallDashEnd(); // <<-- Garante que isWallDashing vira false
+                movement.OnWallDashEnd();
             else
                 movement.OnDashEnd();
 
-            currentActionCoroutine = null; // Libera para a próxima skill
+            currentActionCoroutine = null;
         }
     }
 }

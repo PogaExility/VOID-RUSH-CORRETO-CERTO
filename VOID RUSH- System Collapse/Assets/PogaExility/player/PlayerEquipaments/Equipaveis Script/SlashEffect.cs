@@ -33,6 +33,13 @@ public class SlashEffect : MonoBehaviour
     private ProjectileAnimatorController projectileAnimator;
     private Collider2D attackCollider;
     private Animator animator;
+    private SpriteRenderer spriteRenderer;
+
+    [Header("Configuração Visual")]
+    [Tooltip("Nome da Sorting Layer (Ex: 'Player', 'VFX', 'Foreground'). Isso ganha do Order in Layer.")]
+    [SerializeField] private string sortingLayerName = "Default";
+    [Tooltip("Ordem na camada. 32767 é o máximo.")]
+    [SerializeField] private int orderInLayer = 32767;
 
     // --- Controle de Lógica ---
     // Lista para garantir que cada inimigo só seja atingido uma vez por um único golpe.
@@ -46,6 +53,7 @@ public class SlashEffect : MonoBehaviour
         projectileAnimator = GetComponent<ProjectileAnimatorController>();
         attackCollider = GetComponent<Collider2D>();
         animator = GetComponent<Animator>();
+        spriteRenderer = GetComponent<SpriteRenderer>(); // <--- PEGA O RENDERER
 
         // Garante que o collider seja um trigger para não causar colisões físicas indesejadas.
         attackCollider.isTrigger = true;
@@ -56,6 +64,14 @@ public class SlashEffect : MonoBehaviour
 
     void Start()
     {
+        // --- FORÇA A ORDEM DE RENDERIZAÇÃO ---
+        // Isso garante que o efeito fique na frente, corrigindo o bug visual.
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.sortingLayerName = sortingLayerName;
+            spriteRenderer.sortingOrder = orderInLayer;
+        }
+
         // --- TOCA O SOM DO CORTE ---
         if (AudioManager.Instance != null && slashSound != null)
         {
