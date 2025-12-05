@@ -237,18 +237,25 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             return;
         }
 
-        // 2. Bloqueio por Estados de Ação ou Transição
-        if (isDashing || isWallDashing || isWallJumping || isWallSliding || isInKnockback || isCrouchingDown || isStandingUp)
+        // --- MUDANÇA: Bloqueio por DANO ---
+        // Se estiver em Knockback (tomando dano), impede qualquer controle de movimento.
+        if (isInKnockback)
         {
             return;
         }
 
-        // 3. Lógica de Parábola (Pulos forçados/Launch)
+        // 2. Bloqueio por Estados de Ação ou Transição
+        if (isDashing || isWallDashing || isWallJumping || isWallSliding || isCrouchingDown || isStandingUp)
+        {
+            return;
+        }
+
+        // ... (o restante da função continua igual)
+        // 3. Lógica de Parábola...
         if (isInParabolaArc)
         {
+            // ... (código existente da parábola) ...
             if (isIgnoringSteeringInput) return;
-
-            // Permite virar o personagem no ar durante a parábola
             bool wantsToChangeDirection = (moveInput > 0 && rb.linearVelocity.x < -0.1f) || (moveInput < 0 && rb.linearVelocity.x > 0.1f);
             if (wantsToChangeDirection)
             {
@@ -258,59 +265,28 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
             return;
         }
 
-        // 4. Bloqueio de empurrar parede no ar
+        // ... (código existente de movimentação snappy) ...
         bool isPushingAgainstWall = !isGrounded && IsTouchingWall() && ((moveInput > 0 && isTouchingWallRight) || (moveInput < 0 && isTouchingWallLeft));
         if (isPushingAgainstWall) return;
 
-        // --- NOVA FÍSICA DE MOVIMENTAÇÃO (Snappy Movement) ---
-
-        // Define a velocidade alvo
         float currentSpeed = isCrawling ? crawlSpeed : moveSpeed;
         float targetSpeed = moveInput * currentSpeed;
-
-        // Calcula a diferença entre a velocidade atual e a desejada
         float speedDiff = targetSpeed - rb.linearVelocity.x;
-
         float accelRate;
 
-        // Lógica de Aceleração vs Desaceleração vs Virada
         if (isGrounded)
         {
-            if (Mathf.Abs(targetSpeed) < 0.01f)
-            {
-                // Quer parar
-                accelRate = deceleration;
-            }
-            else if (Mathf.Sign(targetSpeed) != Mathf.Sign(rb.linearVelocity.x) && Mathf.Abs(rb.linearVelocity.x) > 0.1f)
-            {
-                // Quer virar (Turn) - Aplica força extra para evitar o "efeito sabão"
-                accelRate = turnAcceleration;
-            }
-            else
-            {
-                // Quer acelerar normal
-                accelRate = acceleration;
-            }
+            if (Mathf.Abs(targetSpeed) < 0.01f) accelRate = deceleration;
+            else if (Mathf.Sign(targetSpeed) != Mathf.Sign(rb.linearVelocity.x) && Mathf.Abs(rb.linearVelocity.x) > 0.1f) accelRate = turnAcceleration;
+            else accelRate = acceleration;
         }
         else
         {
-            // No ar, o controle é reduzido pelo multiplicador
-            if (Mathf.Abs(targetSpeed) < 0.01f)
-            {
-                // Parar no ar é um pouco mais lento (inércia)
-                accelRate = deceleration * airAccelerationMult;
-            }
-            else
-            {
-                accelRate = acceleration * airAccelerationMult;
-            }
+            if (Mathf.Abs(targetSpeed) < 0.01f) accelRate = deceleration * airAccelerationMult;
+            else accelRate = acceleration * airAccelerationMult;
         }
 
-        // Aplica a força calculada da maneira correta: Força = Massa * Aceleração
-        // Usamos Pow para suavizar a curva de força quando velocidade aproxima do alvo, 
-        // mas mantendo o "snap" inicial.
         float movementForce = speedDiff * accelRate;
-
         rb.AddForce(movementForce * Vector2.right);
     }
 
@@ -351,8 +327,8 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     #region 5. Lógica de Pulo
     public void DoJump(float multiplier)
     {
-        // --- ADICIONADO: Bloqueio físico de pulo ao rastejar ---
-        if (isCrawling || isCrouchingDown || isStandingUp)
+        // --- ADICIONADO: Bloqueio físico de pulo ao rastejar OU TOMAR DANO ---
+        if (isCrawling || isCrouchingDown || isStandingUp || isInKnockback)
         {
             return;
         }
@@ -365,7 +341,6 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         isJumping = true;
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * multiplier);
 
-        // --- LÓGICA DE SOM CORRIGIDA ---
         if (AudioManager.Instance != null && playerSounds != null && playerSounds.jumpSound != null)
         {
             AudioManager.Instance.PlaySoundEffect(playerSounds.jumpSound, transform.position);
@@ -428,15 +403,14 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
     #region 7. Lógica de Dash
     public void OnDashStart()
     {
-        // --- ADICIONADO: Bloqueio físico de dash ao rastejar ---
-        if (isCrawling || isCrouchingDown || isStandingUp)
+        // --- ADICIONADO: Bloqueio físico de dash ao rastejar OU TOMAR DANO ---
+        if (isCrawling || isCrouchingDown || isStandingUp || isInKnockback)
         {
             return;
         }
 
         isDashing = true;
 
-        // --- LÓGICA DE SOM DE DASH ---
         if (AudioManager.Instance != null && playerSounds != null && playerSounds.dashSound != null)
         {
             AudioManager.Instance.PlaySoundEffect(playerSounds.dashSound, transform.position);
@@ -580,19 +554,19 @@ public class AdvancedPlayerMovement2D : MonoBehaviour
         Debug.Log("Levantamento completado.");
     }
 
-    // Corrotina que força a conclusão se a animação demorar demais
     private IEnumerator SafetyCrouchTimer(float duration, bool isGoingDown)
     {
         yield return new WaitForSeconds(duration);
 
         if (isGoingDown && isCrouchingDown)
         {
-            Debug.LogWarning("Segurança ativada: Forçando CompleteCrouch (Evento de animação falhou?)");
+            // Removemos o Debug.LogWarning.
+            // Agora o código entende que se o tempo acabou, deve finalizar o agachamento automaticamente.
             CompleteCrouch();
         }
         else if (!isGoingDown && isStandingUp)
         {
-            Debug.LogWarning("Segurança ativada: Forçando CompleteStandUp (Evento de animação falhou?)");
+            // Removemos o Debug.LogWarning.
             CompleteStandUp();
         }
     }

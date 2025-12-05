@@ -58,6 +58,7 @@ public class PlayerController : MonoBehaviour
     private ObjetoInterativo interagivelProximo;
     private PlayerSounds playerSounds;
     private Coroutine lungeCoroutine;
+    private bool isTakingDamage = false;
     #endregion
 
     #region 2. Propriedades e Getters/Setters Públicos
@@ -94,6 +95,12 @@ public class PlayerController : MonoBehaviour
     {
         movementScript.allowMovementFlip = !isNowAiming;
         animatorController.SetAimLayerWeight(isNowAiming ? 1f : 0f);
+
+        // CORREÇÃO: Atualiza também o visual da arma (Sprite), não só a animação.
+        if (weaponHandler != null)
+        {
+            weaponHandler.UpdateAimVisuals(isNowAiming);
+        }
     }
 
     public SkillSO GetActiveJumpSkill()
@@ -119,43 +126,102 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         if (energyBar != null) energyBar.SetMaxEnergy(100f);
-        // SetPowerMode(false); <- REMOVIDO
         if (inventoryPanel != null) { inventoryPanel.SetActive(false); isInventoryOpen = false; }
         if (cursorManager != null) cursorManager.SetDefaultCursor();
         if (animatorController != null) animatorController.SetAimLayerWeight(0);
+
+        // NÃO precisamos mais assinar o OnHealthChanged para animação de dano.
+        // A animação será controlada pelo estado físico (Knockback) no Update.
+
+        if (playerStats != null)
+        {
+            // Apenas morte precisa de evento específico
+            playerStats.OnDeath += HandleDeath;
+        }
     }
+
+    void OnDestroy()
+    {
+        if (playerStats != null)
+        {
+            playerStats.OnHealthChanged -= HandleHealthChanged;
+            playerStats.OnDeath -= HandleDeath;
+        }
+    }
+    private float _lastHealthKnown; // Variável auxiliar para saber se perdemos vida
+    private void HandleHealthChanged(float current, float max)
+    {
+        // Se a vida atual for menor que a última conhecida, levamos dano
+        // (Você pode precisar inicializar _lastHealthKnown no Start com a vida cheia)
+        if (current < _lastHealthKnown && !playerStats.IsDead())
+        {
+            StartCoroutine(DamageAnimationRoutine());
+        }
+        _lastHealthKnown = current;
+    }
+
+    // Adicione esta inicialização no final do Start() também: 
+    // _lastHealthKnown = playerStats.MaxHealth; 
+
+    private void HandleDeath()
+    {
+        // A lógica de morte já é pega no UpdateAnimations via playerStats.IsDead(),
+        // mas aqui você pode travar controles extras se necessário.
+    }
+
+    private IEnumerator DamageAnimationRoutine()
+    {
+        isTakingDamage = true;
+        // Tempo estimado da animação de dano (ajuste conforme seu clipe)
+        yield return new WaitForSeconds(0.25f);
+        isTakingDamage = false;
+    }
+
 
     void Update()
     {
+        // 1. TRAVA DE MORTE (Prioridade Máxima)
+        if (playerStats.IsDead())
+        {
+            movementScript.SetMoveInput(0);
+            UpdateAnimations();
+            return;
+        }
+
+        // 2. TRAVA DE DANO (Sincronizada com a Física)
+        // Agora perguntamos diretamente ao script de movimento se ele está em Knockback.
+        // Isso garante sincronia PERFEITA: Enquanto houver força física de dano, há animação e trava.
+        if (movementScript.IsTakingDamage())
+        {
+            movementScript.SetMoveInput(0);
+            if (playerSounds != null) playerSounds.UpdateWalkingSound(false);
+
+            UpdateAnimations(); // Isso vai chamar SetAimingStateVisuals(false)
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.Tab)) { ToggleInventory(); }
 
+        // ... (Resto do Update continua igual: Inventory, Attacking, Inputs...)
         if (isInventoryOpen)
         {
             movementScript.SetMoveInput(0);
-
-            // --- CORREÇÃO ---
-            // Se o inventário estiver aberto, forçamos o som a parar IMEDIATAMENTE
-            // antes de sair da função com o 'return'.
             if (playerSounds != null) playerSounds.UpdateWalkingSound(false);
-
             return;
         }
 
         if (IsAttacking)
         {
             movementScript.SetMoveInput(0);
-            // Também paramos o som se estiver atacando parado
             if (playerSounds != null) playerSounds.UpdateWalkingSound(false);
             return;
         }
 
-        // Prioridade 1: Rastejar
         HandleCrawlInput();
-
-        // Movimento Horizontal
         movementScript.SetMoveInput(Input.GetAxisRaw("Horizontal"));
+    
 
-        // Lógica de Pouso (Landing)
+        // Lógica de Pouso
         bool isGroundedNow = movementScript.IsGrounded();
         bool justLanded = isGroundedNow && !wasGroundedLastFrame;
 
@@ -183,7 +249,7 @@ public class PlayerController : MonoBehaviour
         HandleSkillInput();
         HandleCombatInput();
         ProcessAttackBuffer();
-        HandleFootstepAudio(); 
+        HandleFootstepAudio();
         HandleWeaponSwitching();
         UpdateAnimations();
 
@@ -244,12 +310,21 @@ public class PlayerController : MonoBehaviour
 
     private void HandleCombatInput()
     {
+        // 1. Bloqueios de Movimento e Estado
         if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition()) return;
+
+        // 2. Bloqueio de Recarga
         if (weaponHandler.IsReloading) return;
 
+        // 3. BLOQUEIO DE COMBATE (Morte ou Dano)
+        // Usamos movementScript.IsTakingDamage() para saber se estamos sendo empurrados.
+        if (playerStats.IsDead() || movementScript.IsTakingDamage()) return;
+
+        // 4. Verifica se tem arma
         var activeWeapon = weaponHandler.GetActiveWeaponSlot()?.item;
         if (activeWeapon == null) return;
 
+        // 5. Input de Tiro (Meelee vs Ranged)
         if (activeWeapon.weaponType == WeaponType.Meelee)
         {
             if (Input.GetButtonDown("Fire1")) attackBuffered = true;
@@ -259,6 +334,7 @@ public class PlayerController : MonoBehaviour
             if (Input.GetButton("Fire1")) attackBuffered = true;
         }
 
+        // 6. Outros Inputs de Combate
         if (Input.GetKeyDown(KeyCode.R)) weaponHandler.HandleReloadInput();
 
         if (Input.GetKeyDown(KeyCode.F)) defenseHandler.StartBlock(blockSkill);
@@ -343,7 +419,10 @@ public class PlayerController : MonoBehaviour
     #region 6. Sistema de Combate e Física
     private void ProcessAttackBuffer()
     {
-        if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition())
+        // BLOQUEIO DE BUFFER:
+        // Se estiver rastejando, morto ou LEVANDO DANO (Físico), cancela o ataque agendado.
+        // Substituímos a variável local 'isTakingDamage' pela checagem direta no script de movimento.
+        if (movementScript.IsCrawling() || movementScript.IsOnCrawlTransition() || playerStats.IsDead() || movementScript.IsTakingDamage())
         {
             attackBuffered = false;
             return;
@@ -412,13 +491,30 @@ public class PlayerController : MonoBehaviour
     #region 7. Animação e Áudio
     private void UpdateAnimations()
     {
-        // 1. Prioridade Máxima: Ataque
+        // 1. Prioridade SUPREMA: Morte
+        if (playerStats.IsDead())
+        {
+            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.morrendo);
+            SetAimingStateVisuals(false); // Esconde a arma ao morrer
+            return;
+        }
+
+        // 2. Prioridade ALTA: Dano (Sincronizado com a Física)
+        // Se o corpo está sendo empurrado (Knockback), toca a animação de dano e esconde a arma.
+        if (movementScript.IsTakingDamage())
+        {
+            animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.dano);
+            SetAimingStateVisuals(false); // Esconde a arma para não bugar o visual
+            return;
+        }
+
+        // 3. Prioridade: Ataque
         if (IsAttacking) return;
 
-        // 2. Transição de Agachar (não interromper)
+        // 4. Transição de Agachar
         if (movementScript.IsOnCrawlTransition()) return;
 
-        // 3. Escalada
+        // 5. Escalada
         if (movementScript.IsClimbing())
         {
             float vInput = movementScript.GetVerticalInput();
@@ -427,7 +523,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // 4. Rastejar
+        // 6. Rastejar
         if (movementScript.IsCrawling())
         {
             animatorController.PlayState(AnimatorTarget.PlayerBody, PlayerAnimState.rastejando);
@@ -435,39 +531,44 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // 5. Definição de Estados Normais
+        // 7. Definição de Estados de Movimento (Padrão)
         PlayerAnimState desiredState;
 
-        if (playerStats.IsDead())
-        {
-            desiredState = PlayerAnimState.morrendo;
-        }
-        else if (isLanding && !isInAimMode)
+        if (isLanding && !isInAimMode)
         {
             desiredState = PlayerAnimState.pousando;
         }
-        // --- AQUI ESTAVA FALTANDO O DASH ---
         else if (movementScript.IsDashing() || movementScript.IsWallDashing())
         {
-            // Se estiver no chão toca "dash", se estiver no ar toca "dashAereo"
             desiredState = movementScript.IsGrounded() ? PlayerAnimState.dash : PlayerAnimState.dashAereo;
         }
-        // -----------------------------------
         else if (!movementScript.IsGrounded() || movementScript.IsIgnoringPlatforms())
         {
-            // Lógica Aérea
             if (movementScript.IsWallSliding()) desiredState = PlayerAnimState.derrapagem;
             else if (movementScript.GetVerticalVelocity() > 0.1f) desiredState = PlayerAnimState.pulando;
             else desiredState = PlayerAnimState.falling;
         }
         else // No chão
         {
-            // Lógica Terrestre
-            if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f) desiredState = PlayerAnimState.andando;
-            else desiredState = PlayerAnimState.parado;
+            if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f)
+            {
+                desiredState = PlayerAnimState.andando;
+            }
+            else
+            {
+                // Lógica de Pouca Vida
+                if (playerStats.IsHealthLow())
+                {
+                    desiredState = PlayerAnimState.poucaVidaParado;
+                }
+                else
+                {
+                    desiredState = PlayerAnimState.parado;
+                }
+            }
         }
 
-        // 6. Verifica se é uma Ação (Dash, Pouso, Dano) para interromper a mira
+        // 8. Verifica interrupção da mira (Dash, Pouso, etc.)
         bool isDesiredStateAnAction = IsActionState(desiredState);
 
         if (isDesiredStateAnAction)
@@ -477,6 +578,7 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
+            // Se acabou a ação que interrompia, restaura a mira se estiver equipada
             if (isActionInterruptingAim)
             {
                 isActionInterruptingAim = false;
@@ -484,9 +586,15 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // 7. Aplica a animação (Mira ou Normal)
+        // 9. Aplica a animação Final
         if (isInAimMode)
         {
+            // --- CORREÇÃO IMPORTANTE ---
+            // Se voltamos para o modo de mira (depois de um dano ou morte cancelada),
+            // precisamos garantir que o visual da arma seja religado.
+            SetAimingStateVisuals(true);
+
+            // Seleciona o clipe correto da camada de mira (Cotoco)
             if (!movementScript.IsGrounded() || movementScript.IsIgnoringPlatforms())
             {
                 animatorController.PlayState(AnimatorTarget.PlayerBody, movementScript.GetVerticalVelocity() > 0.1f ? PlayerAnimState.pulandoCotoco : PlayerAnimState.fallingCotoco, 1);
@@ -502,11 +610,10 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
+            // Modo normal (sem arma ou ação que cancela mira)
             animatorController.PlayState(AnimatorTarget.PlayerBody, desiredState, 0);
         }
     }
-
-    // Função Auxiliar para saber o que interrompe a mira (Dash interrompe mira!)
     private bool IsActionState(PlayerAnimState state)
     {
         switch (state)

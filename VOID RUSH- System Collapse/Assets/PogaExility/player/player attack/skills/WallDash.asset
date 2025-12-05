@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   skillName: WallDash
   cooldownDuration: 0
-  energyCost: 0
+  energyCost: 10
   skillClass: 0
+  skillTier: 0
   requiredKeys: 
   triggerKeys: 71000000
   cancelIfKeysHeld: 20000000

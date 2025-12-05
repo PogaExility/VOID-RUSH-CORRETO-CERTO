@@ -55,33 +55,42 @@ public class PlayerAnimatorController : MonoBehaviour
     private int cotocoLayerIndex;
 
     #region State Hashes
+    // Hashes Básicos
     private static readonly int ParadoHash = Animator.StringToHash("parado");
     private static readonly int AndandoHash = Animator.StringToHash("andando");
     private static readonly int PulandoHash = Animator.StringToHash("pulando");
     private static readonly int FallingHash = Animator.StringToHash("falling");
     private static readonly int DashHash = Animator.StringToHash("dash");
     private static readonly int DerrapagemHash = Animator.StringToHash("derrapagem");
-    private static readonly int BlockHash = Animator.StringToHash("block");
     private static readonly int PousandoHash = Animator.StringToHash("pousando");
-    private static readonly int ParryHash = Animator.StringToHash("parry");
-    private static readonly int DashAereoHash = Animator.StringToHash("dashAereo");
-    private static readonly int FlipHash = Animator.StringToHash("flip");
-    private static readonly int DanoHash = Animator.StringToHash("dano");
-    private static readonly int MorrendoHash = Animator.StringToHash("morrendo");
-    private static readonly int PoucaVidaParadoHash = Animator.StringToHash("poucaVidaParado");
-    private static readonly int ParadoCotocoHash = Animator.StringToHash("paradoCotoco");
-    private static readonly int AndarCotocoHash = Animator.StringToHash("andarCotoco");
-    private static readonly int PulandoCotocoHash = Animator.StringToHash("pularCotoco");
-    private static readonly int FallingCotocoHash = Animator.StringToHash("fallingCotoco");
-    private static readonly int ReloadingHash = Animator.StringToHash("recarregando");
-    private static readonly int Combo1Hash = Animator.StringToHash("Combo1");
-    private static readonly int Combo2Hash = Animator.StringToHash("Combo2");
-    private static readonly int Combo3Hash = Animator.StringToHash("Combo3");
     private static readonly int AbaixandoHash = Animator.StringToHash("abaixando");
     private static readonly int RastejandoHash = Animator.StringToHash("rastejando");
     private static readonly int LevantandoHash = Animator.StringToHash("levantando");
     private static readonly int SubindoEscadaHash = Animator.StringToHash("subindoEscada");
     private static readonly int DescendoEscadaHash = Animator.StringToHash("descendoEscada");
+
+    // Hashes de Combate/Ação
+    private static readonly int BlockHash = Animator.StringToHash("block");
+    private static readonly int ParryHash = Animator.StringToHash("parry");
+    private static readonly int DashAereoHash = Animator.StringToHash("dashAereo");
+    private static readonly int FlipHash = Animator.StringToHash("flip");
+    private static readonly int ReloadingHash = Animator.StringToHash("recarregando");
+
+    // CORREÇÃO: Certifique-se que estes nomes existem no seu Animator
+    private static readonly int DanoHash = Animator.StringToHash("dano");
+    private static readonly int MorrendoHash = Animator.StringToHash("morrendo");
+
+    // Hashes do Cotoco (Mira) - CORRIGIDO O NOME "pular" para "pulando"
+    private static readonly int ParadoCotocoHash = Animator.StringToHash("paradoCotoco");
+    private static readonly int AndarCotocoHash = Animator.StringToHash("andarCotoco");
+    private static readonly int PulandoCotocoHash = Animator.StringToHash("pulandoCotoco"); // <--- AQUI ESTAVA O ERRO PROVAVELMENTE
+    private static readonly int FallingCotocoHash = Animator.StringToHash("fallingCotoco");
+
+    // Hashes de Combo
+    private static readonly int PoucaVidaParadoHash = Animator.StringToHash("poucaVidaParado");
+    private static readonly int Combo1Hash = Animator.StringToHash("Combo1");
+    private static readonly int Combo2Hash = Animator.StringToHash("Combo2");
+    private static readonly int Combo3Hash = Animator.StringToHash("Combo3");
     #endregion
 
 
@@ -112,16 +121,33 @@ public class PlayerAnimatorController : MonoBehaviour
         Animator targetAnimator = GetTargetAnimator(target);
         if (targetAnimator == null) return;
 
-        // RESTAURADO: Verifica se o estado já é o atual para não reiniciar a animação
+        int stateHash = GetStateHash(state);
+
+        // --- CORREÇÃO DE SEGURANÇA ---
+        // Antes: Só checava a variável do script.
+        // Agora: Checa se a Unity REALMENTE está tocando a animação certa.
         if (currentStateByTarget.TryGetValue(target, out PlayerAnimState currentState))
         {
-            if (currentState == state) return;
+            if (currentState == state)
+            {
+                // Se o script diz que está tocando, vamos confirmar com o Animator
+                if (targetAnimator.GetCurrentAnimatorStateInfo(layer).shortNameHash == stateHash)
+                {
+                    // Está tocando mesmo, então não faz nada para não reiniciar o clipe
+                    return;
+                }
+                // Se chegou aqui, é porque o script achou que estava tocando, mas o Animator estava em outra.
+                // Então deixamos passar para FORÇAR o Play novamente.
+            }
         }
 
         currentStateByTarget[target] = state;
-        int stateHash = GetStateHash(state);
 
-        if (layer >= targetAnimator.layerCount) layer = 0;
+        // Se for morte, forçamos um Debug para você saber que o código funcionou
+        if (state == PlayerAnimState.morrendo)
+        {
+            Debug.Log($"[ANIMATOR] Tentando tocar estado: morrendo (Hash: {stateHash}). Verifique se o nome no Animator é exatamente 'morrendo'.");
+        }
 
         targetAnimator.Play(stateHash, layer, 0f);
     }
@@ -182,6 +208,7 @@ public class PlayerAnimatorController : MonoBehaviour
             targetAnimator.speed = speed;
         }
     }
+
     private int GetStateHash(PlayerAnimState state)
     {
         switch (state)
@@ -197,8 +224,12 @@ public class PlayerAnimatorController : MonoBehaviour
             case PlayerAnimState.parry: return ParryHash;
             case PlayerAnimState.dashAereo: return DashAereoHash;
             case PlayerAnimState.flip: return FlipHash;
+
+            // --- ADIÇÕES PARA MORTE E DANO ---
             case PlayerAnimState.dano: return DanoHash;
             case PlayerAnimState.morrendo: return MorrendoHash;
+            // ---------------------------------
+
             case PlayerAnimState.poucaVidaParado: return PoucaVidaParadoHash;
             case PlayerAnimState.paradoCotoco: return ParadoCotocoHash;
             case PlayerAnimState.andarCotoco: return AndarCotocoHash;

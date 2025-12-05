@@ -22,16 +22,26 @@ public class HealthBar : MonoBehaviour
 
     private Coroutine healthUpdateCoroutine;
 
+
+    private void Start()
+    {
+        // Garante a atualização correta no primeiro frame,
+        // logo após o PlayerStats ter terminado de inicializar no Awake.
+        if (playerStats != null)
+        {
+            HandleHealthChanged(playerStats.CurrentHealth, playerStats.MaxHealth);
+        }
+    }
     private void OnEnable()
     {
         if (playerStats != null)
         {
             playerStats.OnHealthChanged += HandleHealthChanged;
 
-            // Sincroniza a barra de vida com os valores atuais no início.
-            // Acessamos a propriedade pública _currentHealth diretamente se precisarmos do valor inicial.
-            // Vamos assumir que começa cheio para simplificar a primeira chamada.
-            HandleHealthChanged(playerStats.MaxHealth, playerStats.MaxHealth);
+            // MUDANÇA AQUI:
+            // Antes estava passando (playerStats.MaxHealth, playerStats.MaxHealth), o que forçava a barra a encher visualmente.
+            // Agora passamos (playerStats.CurrentHealth, playerStats.MaxHealth) para respeitar o dano que o jogador já tem.
+            HandleHealthChanged(playerStats.CurrentHealth, playerStats.MaxHealth);
         }
         else
         {

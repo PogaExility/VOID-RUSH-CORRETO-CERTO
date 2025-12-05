@@ -44,6 +44,9 @@ public class PlayerStats : MonoBehaviour
     public float MaxHealth => baseMaxHealth + _healthBonus;
     public float MaxBlockGauge => baseMaxBlockGauge + _blockGaugeBonus;
 
+    // ADIÇÃO AQUI: Propriedade pública para ler a variável privada _currentHealth
+    public float CurrentHealth => _currentHealth;
+
     public event Action<float, float> OnHealthChanged;
     public event Action<float, float> OnBlockGaugeChanged;
     public event Action OnDeath;
@@ -78,36 +81,47 @@ public class PlayerStats : MonoBehaviour
     }
     public void TakeDamage(float amount, Vector2 attackDirection, float incomingKnockbackPower)
     {
-        // 1. Checagem de Invencibilidade por tempo (Dano tomado anteriormente)
+        // 1. Checagem de Invencibilidade (Se já levou dano recentemente, ignora)
         if (isInvincible) return;
 
-        // 2. NOVA CHECAGEM: Imortalidade durante o Dash (I-Frames)
-        // Se estiver dando Dash ou WallDash, ignora o dano completamente.
+        // 2. Checagem de Imortalidade durante Dash (Esquiva)
         if (movementScript != null && (movementScript.IsDashing() || movementScript.IsWallDashing()))
         {
             return;
         }
 
+        // 3. Aplica o Dano
         _currentHealth -= amount;
-        if (_currentHealth < 0) _currentHealth = 0;
 
+        // 4. Trava de segurança: Se a vida cair de 0, forçamos ela a ser 0.
+        // Isso é crucial para o método IsDead() retornar true corretamente.
+        if (_currentHealth <= 0)
+        {
+            _currentHealth = 0;
+        }
+
+        // 5. Notifica a UI (Barra de vida) com o valor já corrigido (0 ou positivo)
         OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
 
+        // 6. Verifica se sobreviveu ou morreu
         if (_currentHealth > 0)
         {
-            // --- INÍCIO DA LÓGICA DE KNOCKBACK DINÂMICO ---
+            // --- LÓGICA DE KNOCKBACK DINÂMICO ---
+            // Calcula se a força do ataque supera a resistência do jogador
             float finalForce = incomingKnockbackPower - knockbackResistance;
 
             if (finalForce > 0)
             {
                 movementScript.ExecuteKnockback(finalForce, attackDirection);
             }
-            // --- FIM DA LÓGICA DE KNOCKBACK DINÂMICO ---
 
+            // --- ATIVA I-FRAMES (Invencibilidade temporária) ---
             StartCoroutine(InvincibilityCoroutine());
         }
         else
         {
+            // --- MORTE ---
+            // Dispara o evento que o PlayerController está escutando para tocar a animação "morrendo"
             OnDeath?.Invoke();
         }
     }
@@ -154,10 +168,7 @@ public class PlayerStats : MonoBehaviour
         isInvincible = false;
     }
 
-    public void Update()
-    {
-        CheckLowHealthAnimation();
-    }
+  
     public void DrainBlockGauge(float amount)
     {
         _currentBlockGauge -= amount;
@@ -185,20 +196,11 @@ public class PlayerStats : MonoBehaviour
         if (_currentBlockGauge > MaxBlockGauge) _currentBlockGauge = MaxBlockGauge;
         OnBlockGaugeChanged?.Invoke(_currentBlockGauge, MaxBlockGauge);
     }
-    private void CheckLowHealthAnimation()
-    {
-        // Condições: pouca vida, parado, no chão, e não em outro estado prioritário
-        if (_currentHealth / MaxHealth <= lowHealthThreshold &&
-            !GetComponent<AdvancedPlayerMovement2D>().IsMoving() &&
-            GetComponent<AdvancedPlayerMovement2D>().IsGrounded() &&
-            animatorController.GetCurrentAnimatorStateInfo(0).IsName("parado")) // Só substitui a animação de parado
-        {
-          //  animatorController.PlayState(PlayerAnimState.poucaVidaParado);
-        }
-    }
+ 
     public bool IsHealthLow()
     {
-        return _currentHealth / MaxHealth <= lowHealthThreshold;
+        // Retorna verdadeiro se a vida atual for menor ou igual a 25% (ou o que você configurou)
+        return (_currentHealth / MaxHealth) <= lowHealthThreshold;
     }
 
     internal void TakeDamage(float danoAoContato)

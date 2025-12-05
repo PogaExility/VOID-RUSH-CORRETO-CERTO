@@ -28,7 +28,7 @@ MonoBehaviour:
   forbiddenStates: 0500000007000000
   jumpForce: 0.7
   airJumps: 0
-  gravityScaleOnFall: 24
+  gravityScaleOnFall: 36
   coyoteTime: 0
   wallJumpForce: {x: 10, y: 12}
   wallSlideSpeed: 2

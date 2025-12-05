@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   skillName: DashJump
   cooldownDuration: 0
-  energyCost: 0
+  energyCost: 25
   skillClass: 0
   skillTier: 0
   requiredKeys: 20000000

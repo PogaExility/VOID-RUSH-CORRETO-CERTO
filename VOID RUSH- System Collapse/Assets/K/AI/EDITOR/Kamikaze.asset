@@ -58,5 +58,5 @@ MonoBehaviour:
   attackSound: {fileID: 0}
   damageSound: {fileID: 0}
   deathSound: {fileID: 0}
-  explosionSound: {fileID: 0}
+  explosionSound: {fileID: 8300000, guid: abdf749f802407c478758e8d284105b1, type: 3}
   fuseSound: {fileID: 0}
